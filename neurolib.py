@@ -1,37 +1,22 @@
-# import matlab.engine
+# not that this library requires Matlab installed (2015b) and the Chronux
+# package in the search path: http://chronux.org/
+
+import matlab.engine
+import matlab
 import glob
 import numpy as np
-from typing import List, Any
+from typing import List, Any, Dict, Tuple
 import matplotlib.pyplot as plt
 import pytest
+import h5py
+import warnings
 # import pandas as pd
-# import re
-
+import re
 
 file = str
 Dir = str
 dat = str
-m = 1  # matlab.engine.start_matlab()
-
-
-def voltage_spectrogram(file: str, num_tapers: int=5, eng=m) -> None:
-    """Create spectrogram plot of voltages with reasonable parameters."""
-    {"tapers": [4, 7], "Fs": 40000, "fpass": [1, 100], "pad": 1, }
-
-    # m.eval
-    #     params = struct('tapers', [4 7], 'Fs', 40000, 'fpass', [1 100],...
-    #        'pad', 1, 'trialave', 1);
-    #     t_start = 15; % seconds
-    #     t_end = 30; % seconds
-    #     [S,t,f] = mtspecgramc(melrd{1}(t_start*40000:t_end*40000,:),...
-    #         [.5  .125], params);
-    #     h1 = figure;
-    #     imagesc(t,flip(f),10*log(S')) % convert to decibel, transpose & flip
-    #     set(gca,'YTickLabel',flipud(get(gca,'YTickLabel')));
-    #     xlabel('time [sec]'); ylabel('Frequency');
-    #     title('MelRd');
-    #     colorbar
-    #      nargout=0)
+m = matlab.engine.start_matlab()
 
 
 def _lines_with_float(path: file):
@@ -102,16 +87,15 @@ def read_mcs_dat(my_path: Dir) -> (List[np.ndarray]):
     for dat in dat_files:
         filtered = _lines_with_float(dat)
         try:
-            channel = np.loadtxt(filtered, float)
+            # ignore npyio.py:891: UserWarning: loadtxt: Empty input file:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", lineno=891)
+                channel = np.loadtxt(filtered, float)
         except StopIteration:
             # if generator is empty, this will save numpy from crashing
             channel = np.array([])
 
         channels.append(channel)
-        # try:
-        #    channel = np.loadtxt(_filtered_file_generator(dat), skiprows=1)
-        # except:
-        #    channel = np.array([])
 
     if not channels:
         raise ValueError("Unexpected format in .dat files")
@@ -119,8 +103,32 @@ def read_mcs_dat(my_path: Dir) -> (List[np.ndarray]):
     return(channels)
 
 
-def test_last_spike_time():
-    assert False
+def read_hdf5_voltages(file: file) -> (np.ndarray):
+    r"""
+    Read HDF5 file from MCS and return Numpy Array.
+
+    Args:
+        file: file ending in .h5
+
+    Returns:
+        2D ndarray, where first dimension is the number of channels (expected
+        to be 60) and the second dimension is voltage for a given sampling
+        frequency (by default 40kHz)
+
+    Tests:
+    >>> dset = read_hdf5_voltages('tests/sample-mcs-mea-recording.h5')
+    >>> dset.shape
+    (60, 2)
+    >>> dset[0,:]
+    array([86, 39], dtype=int32)
+    """
+    # verify extension matches .hdf, .h4, .hdf4, .he2, .h5, .hdf5, .he5
+    if re.search(r'\.h[de]?f?[f245]$', file) is None:
+        raise ValueError("Must supply HDF5 file (.h5)")
+
+    recording = h5py.File(file, 'r')
+    return np.array(recording[
+        "Data/Recording_0/AnalogStream/Stream_0/ChannelData"], dtype='int32')
 
 
 def last_spike_time(channels: List[np.ndarray]) -> (float):
@@ -129,13 +137,22 @@ def last_spike_time(channels: List[np.ndarray]) -> (float):
 
     Tests:
     >>> last_spike_time(read_mcs_dat('tests/sample_dat/'))
-    False
+    19.970800000000001
     """
-    pass
+    last_spike_time = 0
+    for channel in channels:
+        if channel.size != 0:
+            last_spike_time = max(last_spike_time, np.amax(channel))
+
+    if last_spike_time <= 0:
+        raise ValueError("Last spike time cannot be zero/negative")
+
+    return(last_spike_time)
 
 
-def test_spike_histogram():
-    assert(False)
+def test_spike_histogram(channels):
+    # final bin should have two spikes
+    assert spike_histogram(channels)[0][199] == 2
 
 
 def spike_histogram(channels: List[np.ndarray], bin_width: float=0.1) -> (Any):
@@ -147,10 +164,10 @@ def spike_histogram(channels: List[np.ndarray], bin_width: float=0.1) -> (Any):
         bin_width: Size of histogram bin width in seconds.
 
     Returns:
-        matplotlib pyplot figure (can call .show() to display)
+        matplotlib pyplot figure (can call .show() to display).
 
     Raises:
-        N/A
+        ValueError for bad bin_width.
     """
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -158,24 +175,151 @@ def spike_histogram(channels: List[np.ndarray], bin_width: float=0.1) -> (Any):
     if bin_width <= 0:
         raise ValueError("bin_width must be greater than zero")
 
-    last_spike_time = 0
-    for channel in channels:
-        if channel.size != 0:
-            last_spike_time = max(last_spike_time, np.amax(channel))
+    last_time = last_spike_time(channels)
 
-    if last_spike_time <= 0:
-        raise ValueError("Last spike time cannot be zero/negative")
+    # add bin_width to last_time so histogram includes final edge
+    bins = np.arange(0, np.ceil(last_time) + bin_width, bin_width)
+    # flatten List[ndarray] -> ndarray & plot histogram
+    all_spikes = np.hstack(channels)
 
-    bins = np.arange(0, int(last_spike_time), bin_width)
-    ax.hist([item for sublist in channels for item in sublist], bins)
-    return(fig)
+    ax.hist(all_spikes, bins)
+    # commented out so Jupyter does not plot twice
+    return(np.histogram(all_spikes, bins))
+
+# Functions for working with MATLAB below
 
 
-# Wrappers for Chronux functions below
+def test_ndarray_to_matlab():
+    assert matlab.double([[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9], [10, 11]]]) \
+        == ndarray_to_matlab(np.reshape(np.arange(12), (2, 3, 2)))
 
-# need to check if in function (def snipped) can get rid of superflous ':' when
-# final parameter is of format x: str
-# by using backreferences
+
+def ndarray_to_matlab(nd: np.ndarray) -> (matlab.double):
+    r"""
+    Convert ndarray to matlab matrix of float.
+
+    Args:
+        nd: ndarray of dtype int or float
+
+    Returns:
+        MATLAB matrix of integers.
+
+    Raises:
+        N/A
+
+    Tests:
+    >>> ndarray_to_matlab(np.arange(3))
+    matlab.double([[0.0,1.0,2.0]])
+    >>> ndarray_to_matlab(np.reshape(np.arange(6),(3,2)))
+    matlab.double([[0.0,1.0],[2.0,3.0],[4.0,5.0]])
+    """
+    # create generator
+    nditer = np.nditer(nd, order='F')
+    # create list with comprehension then convert to MATLAB double
+    row = matlab.double([float(i) for i in nditer])
+    # turn row in matrix
+    row.reshape(nd.shape)
+    return row
+
+
+def plot_voltage_spectrogram(file: file, time: Tuple=None, channel: int=None,
+                             tapers: int=4,
+                             window_size: float=0.5, window_step: float=0.125,
+                             params: Dict={"tapers": matlab.double([4, 7]),
+                                           "Fs": 40000.0,
+                                           "fpass": matlab.double([1, 100]),
+                                           "pad": 1.0,
+                                           "trialave": 1.0}) -> (Any):
+    r"""
+    Use multitaper method to plot spectrogram.
+
+    Expects HDF5 file exported from MCS. Calls mtspecgramc for computation.
+
+    Args:
+
+    Returns:
+        None; plots with matplotlib.
+
+    Raises:
+        N/A
+    """
+    S = mtspecgramc(
+        file, time, channel, tapers, window_size, window_step, params)
+    ax = plt.subplot('111')
+    # extent will change the axis labels, with y reversed
+    implot = ax.imshow(10 * np.log(np.transpose(S)), aspect='auto',
+                       extent=[time[0], time[1], 100, 0])
+
+    # invert y axis so 0 Hz is at bottom
+    plt.gca().invert_yaxis()
+    # show colorbar to see numeric values for intensity
+    plt.colorbar(implot)
+    plt.title("Spectrogram")
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Frequency (Hz)")
+
+
+def mtspecgramc(file: file, time: Tuple=None, channel: int=None, tapers: int=4,
+                window_size: float=0.5, window_step: float=0.125,
+                params: Dict={"tapers": matlab.double([4, 7]),
+                              "Fs": 40000.0,
+                              "fpass": matlab.double([1, 100]),
+                              "pad": 1.0,
+                              "trialave": 1.0}) -> (np.ndarray):
+    r"""
+    Multi-taper time-frequency spectrum - continuous process.
+
+    A wrapper for the Chronux function mtspecgramc. Usage of this function
+    requires Matlab--tested with 2015b. See 'The Chronux Manual'
+    for further information on this function.
+
+    Args:
+        file: must be HDF5
+        time: a tuple of form (start, end) in seconds
+        channel: specify an individual channel (e.g. 0-59), else use all
+        window_size: size in seconds of window
+        window_step: size in seconds of window step (often 25-50% of
+            window_size)
+        tapers: construct params with this number of tapers. Do not use with
+            params.
+        params: for Chronux mtspecgramc
+
+    Returns:
+        S: power
+
+    Raises:
+        N/A
+    """
+    # construct string for matlab index of time
+    if time is None:
+        time_str = ':'
+    else:
+        time_str = '{start}:{end}'.format(start=time[0] * params['Fs'] + 1,
+                                          end=time[1] * params['Fs'])
+
+    # construct string for matlab index of channel
+    if channel is None:
+        channel_str = ':'
+    else:
+        channel_str = str(channel)
+
+    # TODO tapers follows suggested values for
+    if tapers is not None:
+        params['tapers'] = matlab.double([tapers, tapers * 2 - 1])
+
+    m.workspace['params'] = params
+    m.workspace['win'] = matlab.double([window_size, window_step])
+    m.eval("""recording = double(hdf5read('{hdf5}',...
+        '/Data/Recording_0/AnalogStream/Stream_0/ChannelData'));""".format(
+        hdf5=file), nargout=0)
+
+    S = m.eval("""mtspecgramc(recording({time_str},{channel_str}),...
+               win,params);""".format(time_str=time_str,
+                                      channel_str=channel_str), nargout=1)
+    m.eval('clearvars params win recording', nargout=0)
+    return np.array(S)
+
+# Pytest modules
 
 
 @pytest.fixture(scope="module")
@@ -185,6 +329,3 @@ def channels():
 
 if __name__ == "__main__":
     pytest.main([__file__, '--doctest-modules'])
-    channels = read_mcs_dat('tests/sample_dat/')
-    fig = spike_histogram(channels)
-    fig.show()
