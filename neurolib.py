@@ -45,7 +45,10 @@ def _lines_with_float(path: file):
     return
 
 
-def read_mcs_dat(my_path: Dir) -> (List[np.ndarray]):
+def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
+                 ignore_channels: List[int]=[],
+                 channel_dict: Dict=None,
+                 warn: bool=False) -> (List[np.ndarray]):
     """
     Take directory with MCS raw voltage for each channel, returns numpy array.
 
@@ -61,6 +64,11 @@ def read_mcs_dat(my_path: Dir) -> (List[np.ndarray]):
 
     Args:
         my_path: string corresponding to directory containing MCS DAT files.
+        channel_dict: Dict with keys as MCS label and values as desired
+            channel index in returned List. To ignore a channel, set value
+            to None.
+        warn: if True, will warn when .dat files are not read because their
+            label (two numbers prior to .dat) is not in channel_dict
 
     Returns:
         List of numpy arrays.
@@ -70,21 +78,71 @@ def read_mcs_dat(my_path: Dir) -> (List[np.ndarray]):
 
     Tests:
     >>> channels = read_mcs_dat('tests/sample_dat/')
+    >>> channels[14] is None
+    True
+    $>>> channels[MCS_60_MAP[13]]
+    array([], dtype=float64)
     >>> len(channels)
-    2
-    >>> channels
-    [array([ 19.9308,  19.9708]), array([], dtype=float64)]
+    60
+    >>> c = [x for x in channels if x is not None and x.size != 0]
+    >>> c
+    [array([ 19.9308,  19.9708])]
+
     """
+    if channel_dict is None:
+        # map of channel in HDF5 file to MCS Label. Seemingly arbitrary
+        # can be found in "Data/Recording_0/AnalogStream/Stream_0/InfoChannel"
+        channel_dict = {47: 0, 48: 1, 46: 2, 45: 3, 38: 4, 37: 5, 28: 6, 36: 7,
+                        27: 8, 17: 9, 26: 10, 16: 11, 35: 12, 25: 13, 15: 14,
+                        14: 15, 24: 16, 34: 17, 13: 18, 23: 19, 12: 20, 22: 21,
+                        33: 22, 21: 23, 32: 24, 31: 25, 44: 26, 43: 27, 41: 28,
+                        42: 29, 52: 30, 51: 31, 53: 32, 54: 33, 61: 34, 62: 35,
+                        71: 36, 63: 37, 72: 38, 82: 39, 73: 40, 83: 41, 64: 42,
+                        74: 43, 84: 44, 85: 45, 75: 46, 65: 47, 86: 48, 76: 49,
+                        87: 50, 77: 51, 66: 52, 78: 53, 67: 54, 68: 55, 55: 56,
+                        56: 57, 58: 58, 57: 59}
+
+    if only_channels is not None:
+        for k, v in channel_dict.items():
+            if v not in only_channels:
+                del channel_dict[k]
+
+    # remove channels from mapping & ignore
+    for k, v in channel_dict.items():
+        if v in ignore_channels:
+            channel_dict[k] = None
+
     dat_files = glob.glob(my_path + '/*.dat')
 
     if not dat_files:
         raise ValueError("No .dat files found")
 
-    channels = []
+    # initialize list; None will remain for channel_dict
+    channels = [None] * len(channel_dict)
 
     # generator that filters out lines unable to be converted to a float
 
     for dat in dat_files:
+        # read dat channel label
+        match = re.search(r'(\d\d)\.dat$', dat)
+        index = int(match.group(1))
+        # verify we have mapping for label
+        if index not in channel_dict:
+            if warn is True:
+                warnings.warn(
+                    "Ignored '{f}': Not in channel_dict".format(f=dat))
+            continue
+
+        # For consistency, we map MCS Label to channel number read in by HDF5
+        index = channel_dict[index]
+
+        # skip bad channels while leaving initialized None as placeholder
+        if index is None:
+            if warn is True:
+                warnings.warn(
+                    "Ignored '{f}': index is None".format(f=dat))
+            continue
+
         filtered = _lines_with_float(dat)
         try:
             # ignore npyio.py:891: UserWarning: loadtxt: Empty input file:
@@ -93,9 +151,12 @@ def read_mcs_dat(my_path: Dir) -> (List[np.ndarray]):
                 channel = np.loadtxt(filtered, float)
         except StopIteration:
             # if generator is empty, this will save numpy from crashing
+            if warn is True:
+                warnings.warn(
+                    "No spikes found in '{f}'".format(f=dat))
             channel = np.array([])
 
-        channels.append(channel)
+        channels[index] = channel
 
     if not channels:
         raise ValueError("Unexpected format in .dat files")
@@ -141,7 +202,7 @@ def last_spike_time(channels: List[np.ndarray]) -> (float):
     """
     last_spike_time = 0
     for channel in channels:
-        if channel.size != 0:
+        if channel is not None and channel.size != 0:
             last_spike_time = max(last_spike_time, np.amax(channel))
 
     if last_spike_time <= 0:
@@ -179,11 +240,10 @@ def spike_histogram(channels: List[np.ndarray], bin_width: float=0.1) -> (Any):
 
     # add bin_width to last_time so histogram includes final edge
     bins = np.arange(0, np.ceil(last_time) + bin_width, bin_width)
-    # flatten List[ndarray] -> ndarray & plot histogram
-    all_spikes = np.hstack(channels)
-
+    # flatten List[ndarray] -> ndarray
+    all_spikes = np.hstack([c for c in channels if c is not None])
+    # plot histogram
     ax.hist(all_spikes, bins)
-    # commented out so Jupyter does not plot twice
     return(np.histogram(all_spikes, bins))
 
 # Functions for working with MATLAB below
@@ -222,8 +282,10 @@ def ndarray_to_matlab(nd: np.ndarray) -> (matlab.double):
     return row
 
 
-def plot_voltage_spectrogram(file: file, time: Tuple=None, channel: int=None,
-                             tapers: int=4,
+def plot_voltage_spectrogram(file: file, time: Tuple=None, tapers: int=4,
+                             average: bool=True,
+                             channels: Any=[x for x in range(60)],
+                             ignore_channels: List[int]=None,
                              window_size: float=0.5, window_step: float=0.125,
                              params: Dict={"tapers": matlab.double([4, 7]),
                                            "Fs": 40000.0,
@@ -243,24 +305,58 @@ def plot_voltage_spectrogram(file: file, time: Tuple=None, channel: int=None,
     Raises:
         N/A
     """
-    S = mtspecgramc(
-        file, time, channel, tapers, window_size, window_step, params)
-    ax = plt.subplot('111')
-    # extent will change the axis labels, with y reversed
-    implot = ax.imshow(10 * np.log(np.transpose(S)), aspect='auto',
-                       extent=[time[0], time[1], 100, 0])
+    if average is True or type(channels) is int:
+        params['trialave'] = 1.0
+        S = mtspecgramc(
+            file, time, channels, tapers, window_size, window_step,
+            ignore_channels, params)
+        ax = plt.subplot('111')
+        # extent will change the axis labels, with y reversed
+        implot = ax.imshow(10 * np.log(np.transpose(S)), aspect='auto',
+                           extent=[time[0], time[1], 100, 0])
 
-    # invert y axis so 0 Hz is at bottom
-    plt.gca().invert_yaxis()
-    # show colorbar to see numeric values for intensity
-    plt.colorbar(implot)
-    plt.title("Spectrogram")
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Frequency (Hz)")
+        # invert y axis so 0 Hz is at bottom
+        plt.gca().invert_yaxis()
+        # show colorbar to see numeric values for intensity
+        plt.colorbar(implot)
+        plt.title("Spectrogram")
+        plt.xlabel("Time (seconds)")
+        plt.ylabel("Frequency (Hz)")
+
+    else:
+        params['trialave'] = 0.0
+        # filter ignored channels
+        if ignore_channels is not None:
+            channels = list(
+                filter(lambda x: x not in ignore_channels, channels))
+
+        num_cols = 5
+        # determine number of rows
+        if len(channels) % num_cols == 0:
+            num_rows = len(channels) // num_cols
+        else:
+            num_rows = len(channels) // num_cols + 1
+
+        plt.rcParams['figure.figsize'] = (15.0, 2.5 * num_rows)
+
+        for i, c in enumerate(channels):
+            S = mtspecgramc(
+                file, time, c, tapers, window_size, window_step, None, params)
+            ax = plt.subplot(num_rows, num_cols, i + 1)
+            implot = ax.imshow(10 * np.log(np.transpose(S)), aspect='auto',
+                               extent=[time[0], time[1], 100, 0])
+            plt.gca().invert_yaxis()
+            plt.colorbar(implot)
+            plt.title("Channel " + str(c))
+
+        plt.rcParams['figure.figsize'] = (6.0, 4.0)
 
 
-def mtspecgramc(file: file, time: Tuple=None, channel: int=None, tapers: int=4,
-                window_size: float=0.5, window_step: float=0.125,
+def mtspecgramc(file: file, time: Tuple=None,
+                channels: Any=[x for x in range(60)], tapers: int=5,
+                window_size: float=0.5,
+                window_step: float=0.125,
+                ignore_channels: List[int]=None,
                 params: Dict={"tapers": matlab.double([4, 7]),
                               "Fs": 40000.0,
                               "fpass": matlab.double([1, 100]),
@@ -276,12 +372,14 @@ def mtspecgramc(file: file, time: Tuple=None, channel: int=None, tapers: int=4,
     Args:
         file: must be HDF5
         time: a tuple of form (start, end) in seconds
-        channel: specify an individual channel (e.g. 0-59), else use all
+        channels: specify an individual channel (e.g. 0-59) or a List of
+            channels, else use all
         window_size: size in seconds of window
         window_step: size in seconds of window step (often 25-50% of
             window_size)
         tapers: construct params with this number of tapers. Do not use with
             params.
+        ignore_channels: exclude these channels from calculation
         params: for Chronux mtspecgramc
 
     Returns:
@@ -296,16 +394,24 @@ def mtspecgramc(file: file, time: Tuple=None, channel: int=None, tapers: int=4,
     else:
         time_str = '{start}:{end}'.format(start=time[0] * params['Fs'] + 1,
                                           end=time[1] * params['Fs'])
-
+    # filter ignored channels
+    if ignore_channels is not None:
+        channels = list(filter(lambda x: x not in ignore_channels, channels))
     # construct string for matlab index of channel
-    if channel is None:
+    # adjust for 1-index
+    if channels is None:
         channel_str = ':'
+    elif type(channels) is list:
+        channels = list(map(lambda x: x + 1, channels))
+        channel_str = '[' + ','.join(map(str, channels)) + ']'
+    elif type(channels) is int:
+        channel_str = str(channels + 1)
     else:
-        channel_str = str(channel)
+        raise ValueError(
+            "Unexpected type {t} for channels".format(t=type(channels)))
 
-    # TODO tapers follows suggested values for
     if tapers is not None:
-        params['tapers'] = matlab.double([tapers, tapers * 2 - 1])
+        params['tapers'] = matlab.double([(tapers + 1) / 2, tapers])
 
     m.workspace['params'] = params
     m.workspace['win'] = matlab.double([window_size, window_step])
