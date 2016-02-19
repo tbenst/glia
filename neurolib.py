@@ -80,7 +80,7 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
     >>> channels = read_mcs_dat('tests/sample_dat/')
     >>> channels[14] is None
     True
-    $>>> channels[MCS_60_MAP[13]]
+    >>> channels[18]
     array([], dtype=float64)
     >>> len(channels)
     60
@@ -424,6 +424,28 @@ def mtspecgramc(file: file, time: Tuple=None,
                                       channel_str=channel_str), nargout=1)
     m.eval('clearvars params win recording', nargout=0)
     return np.array(S)
+
+
+def mtspecgrampt(channel: np.ndarray, window_size: float=0.5,
+                 window_step: float=0.5, tapers: int=5,
+                 params: Dict={"tapers": matlab.double([4, 7]),
+                               "Fs": 40000.0,
+                               "fpass": matlab.double([1, 100]),
+                               "pad": 1.0,
+                               "trialave": 1.0}) -> (np.ndarray):
+    r"""
+    Multi-taper time-frequency spectrum - point process.
+    """
+    if tapers is not None:
+        params['tapers'] = matlab.double([(tapers + 1) / 2, tapers])
+    m.workspace['params'] = params
+    m.workspace['win'] = matlab.double([window_size, window_step])
+    m.workspace['channel'] = ndarray_to_matlab(channel)
+
+    S = m.eval("mtspecgrampt(channel,win,params);", nargout=1)
+
+    return(np.array(S))
+
 
 # Pytest modules
 
