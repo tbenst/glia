@@ -1,13 +1,13 @@
 from setuptools import setup
 
-setup(name='neurolib',
+setup(name='glia',
       version='0.1',
-      description='Library for working with MEA data',
-      url='https://github.com/tbenst/neuro',
+      description='Supporting Neuroscientists in analysing MEA',
+      url='https://github.com/tbenst/glia',
       author='Tyler Benster',
       author_email='tbenst@gmail.com',
       # license='None',
-      packages=['neurolib'],
+      packages=['glia'],
       zip_safe=False,
       classifiers=[
           # How mature is this project? Common values are
@@ -31,6 +31,6 @@ setup(name='neurolib',
       ],
       keywords='neuroscience mea microelectrode',
       install_requires=[
-          'numpy',  'matplotlib', 'pytest', 'h5py', 'warnings'
+          'numpy',  'matplotlib', 'pytest', 'h5py',
       ],
       )
