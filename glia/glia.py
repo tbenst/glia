@@ -3,20 +3,18 @@
 
 # import matlab.engine
 # import matlab
-# import glob
-# import numpy as np
-# from typing import List, Any, Dict, Tuple
-# import matplotlib.pyplot as plt
-# import pytest
-# import h5py
-# import warnings
-# import re
-
+import glob
+import numpy as np
+from typing import List, Any, Dict
+import matplotlib.pyplot as plt
+import pytest
+import h5py
+import warnings
+import re
 
 file = str
 Dir = str
 dat = str
-m = False  # must manually call initialize_matlab()
 
 
 def _lines_with_float(path: file):
@@ -247,14 +245,9 @@ def spike_histogram(channels: List[np.ndarray], bin_width: float=0.1) -> (Any):
     return(np.histogram(all_spikes, bins))
 
 
-
-
 # Pytest modules
 
 
 @pytest.fixture(scope="module")
 def channels():
     return read_mcs_dat('tests/sample_dat/')
-
-if __name__ == "__main__":
-    pytest.main([__file__, '--doctest-modules'])

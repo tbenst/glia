@@ -7,23 +7,14 @@
 import matlab.engine
 import matlab
 import numpy as np
+from typing import List, Any, Dict, Tuple
+import matplotlib.pyplot as plt
 
+file = str
+Dir = str
+dat = str
 
-def test_initialize_matlab():
-    ret = initialize_matlab()
-    assert ret is matlab.engine.matlabengine.MatlabEngine
-
-
-def initialize_matlab() -> (bool):
-    r"""
-    Start the MATLAB engine for Python.
-
-    This creates a MATLAB session accessible as 'neurolib.m'
-    """
-    import matlab.engine
-    import matlab
-    m = matlab.engine.start_matlab()
-    return m
+m = matlab.engine.start_matlab()
 
 
 def test_ndarray_to_matlab():
@@ -219,4 +210,4 @@ def mtspecgrampt(channel: np.ndarray, window_size: float=0.5,
 
     S = m.eval("mtspecgrampt(channel,win,params);", nargout=1)
 
-    return(np.array(S))
+    return np.array(S)

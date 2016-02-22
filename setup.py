@@ -7,7 +7,7 @@ setup(name='glia',
       author='Tyler Benster',
       author_email='tbenst@gmail.com',
       # license='None',
-      packages=['glia'],
+      packages=['glia', 'glia/matlablib'],
       zip_safe=False,
       classifiers=[
           # How mature is this project? Common values are
@@ -30,7 +30,4 @@ setup(name='glia',
           'Programming Language :: Python :: 3.4',
       ],
       keywords='neuroscience mea microelectrode',
-      install_requires=[
-          'numpy',  'matplotlib', 'pytest', 'h5py',
-      ],
       )
