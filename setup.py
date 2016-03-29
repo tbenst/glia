@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='glia',
-      version='0.1',
+      version='0.2',
       description='Supporting Neuroscientists in analysing MEA',
       url='https://github.com/tbenst/glia',
       author='Tyler Benster',
@@ -30,4 +30,7 @@ setup(name='glia',
           'Programming Language :: Python :: 3.4',
       ],
       keywords='neuroscience mea microelectrode',
+      entry_points={
+          'console_scripts': ['glia=scripts.command_line:main'],
+      },
       )

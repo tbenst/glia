@@ -1,2 +1,5 @@
-from .glia import *
-__all__ = ['glia', 'matlablib']
+__all__ = ['analysis', 'files', 'matlablib']
+
+from .analysis import *
+from .files import *
+from .plot import *

@@ -1,54 +1,109 @@
-# not that parts of this library requires Matlab (2015b) and the Chronux
-# package in the search path: http://chronux.org/
-
-# import matlab.engine
-# import matlab
-import glob
 import numpy as np
-from typing import List, Any, Dict
-import matplotlib.pyplot as plt
-import pytest
-import h5py
-import warnings
 import re
+from typing import List, Dict
+import pytest
+import glob
+import warnings
+import h5py
 
 file = str
 Dir = str
 dat = str
+SpikeUnits = List[np.ndarray]
+
+# VOLTAGE DATA
 
 
-def _lines_with_float(path: file):
-    r"""Return generator yielding lines supporting float conversion.
+def read_raw_voltage(raw_filename):
+    header = get_header(raw_filename)[0]
+    channel_start = re.search('\nStreams = ', header).span()[1]
+    channel_str = header[channel_start:-7] + ';'
+    channels = re.findall('(.._..);', channel_str)
+    num_cols = len(channels)
+    num_rows = int(np.memmap(raw_filename, offset=header[1],
+                             dtype='int16').shape[0] / num_cols)
 
-    Note that generator returned could StopIteration without yielding.
+    return np.memmap(raw_filename, shape=(num_rows, num_cols),
+                     offset=header[1],
+                     dtype='int16')
+
+
+def get_header(filename: file) -> (str):
+    header = ""
+    header_end = b'EOH\r\n'
+    num_bytes = 0
+    with open(filename, mode='rb') as file:
+        for line in file:
+            num_bytes += len(line)
+            header += line.decode("Windows-1252")
+            if line == header_end:
+                break
+    return header, num_bytes
+
+
+def sampling_rate(filename: file) -> (int):
+    header = get_header(filename)[0]
+    return int(re.search("Sample rate = (\d+)", header).group(1))
+
+
+def read_hdf5_voltages(file: file) -> (np.ndarray):
+    r"""
+    Read HDF5 file from MCS and return Numpy Array.
+
+    Args:
+        file: file ending in .h5
+
+    Returns:
+        2D ndarray, where first dimension is the number of channels (expected
+        to be 60) and the second dimension is voltage for a given sampling
+        frequency (by default 40kHz)
 
     Tests:
-    >>> x = _lines_with_float('tests/sample_dat/mcs_mea_recording_12.dat')
-    >>> next(x)
-    '19.93080\n'
-    >>> next(x)
-    '19.97080\n'
-    >>> next(x)
-    Traceback (most recent call last):
-        ...
-    StopIteration
+    >>> dset = read_hdf5_voltages('tests/sample-mcs-mea-recording.h5')
+    >>> dset.shape
+    (60, 2)
+    >>> dset[0,:]
+    array([86, 39], dtype=int32)
     """
-    with open(path, mode='r') as f:
-        for line in f:
-            try:
-                float(line)
-                yield(line)
-            except:
-                next
-    return
+    # verify extension matches .hdf, .h4, .hdf4, .he2, .h5, .hdf5, .he5
+    if re.search(r'\.h[de]?f?[f245]$', file) is None:
+        raise ValueError("Must supply HDF5 file (.h5)")
+
+    recording = h5py.File(file, 'r')
+    return np.array(recording[
+        "Data/Recording_0/AnalogStream/Stream_0/ChannelData"], dtype='int32')
+
+
+def merge_mcs_raw_files(files_to_merge: List[str], output_file_name: str
+                        ) -> (bool):
+    """Take multiple MCS raw files with header and combine into one file.
+
+    Copies header from first file. Assumes exported as int16 from MCS
+    DataTool."""
+
+    # copy header
+    with open(files_to_merge[0], mode='rb') as file:
+        with open(output_file_name, 'wb') as newfile:
+            # read header from file then write to newfile
+            for line in file:
+                newfile.write(line)
+                if line == b"EOH\r\n":
+                    break
+
+            # write new data to file
+            for data in files_to_merge:
+                volts = read_raw_voltage(data)
+                volts.tofile(newfile)
+
+# SPIKE DATA
 
 
 def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
                  ignore_channels: List[int]=[],
                  channel_dict: Dict=None,
-                 warn: bool=False) -> (List[np.ndarray]):
+                 warn: bool=False) -> (SpikeUnits):
     """
-    Take directory with MCS raw voltage for each channel, returns numpy array.
+    Take directory with MCS dat files for each channel, returns numpy array.
 
     This is intended to be used on DAT files exported from Multi Channel
     Systems spike sorting. Each number is interpreted as the time of a spike
@@ -162,87 +217,62 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
     return(channels)
 
 
-def read_hdf5_voltages(file: file) -> (np.ndarray):
-    r"""
-    Read HDF5 file from MCS and return Numpy Array.
+def read_spyking_results(filepath: str, sampling_rate: int) -> (
+        SpikeUnits):
+    """Read the results from Spyking Circus spike sorting."""
 
-    Args:
-        file: file ending in .h5
+    result_regex = re.compile('.*\.result.hdf5$')
+    if not re.match(result_regex, filepath):
+        raise ValueError('Filepath must end in "result.hdf5"')
 
-    Returns:
-        2D ndarray, where first dimension is the number of channels (expected
-        to be 60) and the second dimension is voltage for a given sampling
-        frequency (by default 40kHz)
+    result_h5 = h5py.File(filepath, 'r')
 
-    Tests:
-    >>> dset = read_hdf5_voltages('tests/sample-mcs-mea-recording.h5')
-    >>> dset.shape
-    (60, 2)
-    >>> dset[0,:]
-    array([86, 39], dtype=int32)
-    """
-    # verify extension matches .hdf, .h4, .hdf4, .he2, .h5, .hdf5, .he5
-    if re.search(r'\.h[de]?f?[f245]$', file) is None:
-        raise ValueError("Must supply HDF5 file (.h5)")
+    spike_units = []
+    for unit in result_h5["spiketimes"]:
+        spikes = np.array(
+            result_h5["spiketimes"][unit], dtype='int32') / sampling_rate
+        spike_units.append(spikes)
 
-    recording = h5py.File(file, 'r')
-    return np.array(recording[
-        "Data/Recording_0/AnalogStream/Stream_0/ChannelData"], dtype='int32')
+    return spike_units
 
 
-def last_spike_time(channels: List[np.ndarray]) -> (float):
-    r"""
-    Return time in seconds of last spike in channels array.
+# HELPER FUNCTIONS
+
+
+def _lines_with_float(path: file):
+    r"""Return generator yielding lines supporting float conversion.
+
+    Note that generator returned could StopIteration without yielding.
 
     Tests:
-    >>> last_spike_time(read_mcs_dat('tests/sample_dat/'))
-    19.970800000000001
+    >>> x = _lines_with_float('tests/sample_dat/mcs_mea_recording_12.dat')
+    >>> next(x)
+    '19.93080\n'
+    >>> next(x)
+    '19.97080\n'
+    >>> next(x)
+    Traceback (most recent call last):
+        ...
+    StopIteration
     """
-    last_spike_time = 0
-    for channel in channels:
-        if channel is not None and channel.size != 0:
-            last_spike_time = max(last_spike_time, np.amax(channel))
-
-    if last_spike_time <= 0:
-        raise ValueError("Last spike time cannot be zero/negative")
-
-    return(last_spike_time)
-
-
-def test_spike_histogram(channels):
-    # final bin should have two spikes
-    assert spike_histogram(channels)[0][199] == 2
+    with open(path, mode='r') as f:
+        for line in f:
+            try:
+                float(line)
+                yield(line)
+            except:
+                next
+    return
 
 
-def spike_histogram(channels: List[np.ndarray], bin_width: float=0.1) -> (Any):
-    """
-    Plot histogram of summed spike counts across all channels.
+def multi_glob(names_to_glob: List[str]) -> List[str]:
+    """Glob strings in list and return list of all matches."""
 
-    Args:
-        channels: List of numpy arrays; each float represents spike times.
-        bin_width: Size of histogram bin width in seconds.
+    data_files = []
 
-    Returns:
-        matplotlib pyplot figure (can call .show() to display).
-
-    Raises:
-        ValueError for bad bin_width.
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    if bin_width <= 0:
-        raise ValueError("bin_width must be greater than zero")
-
-    last_time = last_spike_time(channels)
-
-    # add bin_width to last_time so histogram includes final edge
-    bins = np.arange(0, np.ceil(last_time) + bin_width, bin_width)
-    # flatten List[ndarray] -> ndarray
-    all_spikes = np.hstack([c for c in channels if c is not None])
-    # plot histogram
-    ax.hist(all_spikes, bins)
-    return(np.histogram(all_spikes, bins))
+    for name in names_to_glob:
+        data_files.extend(glob.glob(name))
+    return data_files
 
 
 # Pytest modules

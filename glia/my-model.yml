@@ -1,0 +1,26 @@
+class_mode: categorical
+layers:
+- W_constraint: null
+  W_regularizer: null
+  activation: linear
+  activity_regularizer: null
+  b_constraint: null
+  b_regularizer: null
+  cache_enabled: true
+  custom_name: dense
+  init: glorot_uniform
+  input_dim: 100
+  input_shape: !!python/tuple [100]
+  name: Dense
+  output_dim: 64
+  trainable: true
+- {activation: relu, cache_enabled: true, custom_name: activation, name: Activation,
+  trainable: true}
+- {W_constraint: null, W_regularizer: null, activation: linear, activity_regularizer: null,
+  b_constraint: null, b_regularizer: null, cache_enabled: true, custom_name: dense,
+  init: glorot_uniform, input_dim: null, name: Dense, output_dim: 10, trainable: true}
+- {activation: softmax, cache_enabled: true, custom_name: activation, name: Activation,
+  trainable: true}
+loss: categorical_crossentropy
+name: Sequential
+optimizer: {decay: 0.0, lr: 0.009999999776482582, momentum: 0.0, name: SGD, nesterov: false}
