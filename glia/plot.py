@@ -84,7 +84,6 @@ def isi_histogram(channels: SpikeUnits, bin_width: Seconds=1/1000,
             ax.hist(channel, bins)
 
 
-
 def visualize_spikes(spike_units: SpikeUnits, fig_size=(30, 15)):
     fig = plt.figure(figsize=fig_size)
 

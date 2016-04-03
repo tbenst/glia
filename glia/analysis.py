@@ -33,6 +33,22 @@ def last_spike_time(channels: SpikeUnits) -> (float):
     return(last_spike_time)
 
 
+def construct_on_off_stimulus(analog):
+    """Take analog TTL and output indices for on/off.
+
+    Assumes first TTL is an on and second TTL is an off. Divide
+    by the sampling rate to convert to seconds."""
+
+    ttl_index = np.argwhere(np.diff(stimulus)>20000)[:,0] + 1
+    on = []
+    off = []
+    for i,v in np.ndenumerate(ttl_index):
+        if i[0]%2 == 1:
+            on.append(v)
+        else:
+            off.append(v)
+    return on, off
+
 def moving_window_gen(a, freq, win_size, win_step):
     """Generator that yields (time, data_vector) that form a moving window.
 
@@ -79,6 +95,9 @@ def spike_summary(spike_units: SpikeUnits) -> (str):
     return "Number of units: {}\nNumber of spikes: {}\n" \
            "Last spike: {} seconds".format(
                num_units, num_spikes, last_spike_time)
+
+def flatten(spike_units: SpikeUnits) -> (np.ndarray):
+    return np.hstack([c for c in spike_units if c is not None])
 
 # Pytest
 
