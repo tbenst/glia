@@ -282,11 +282,3 @@ def multi_glob(names_to_glob: List[str]) -> List[str]:
     for name in names_to_glob:
         data_files.extend(glob.glob(name))
     return data_files
-
-
-# Pytest modules
-
-
-@pytest.fixture(scope="module")
-def channels():
-    return read_mcs_dat('tests/sample_dat/')

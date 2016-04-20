@@ -10,11 +10,6 @@ ms = float
 SpikeUnits = List[np.ndarray]
 
 
-def test_spike_histogram(channels):
-    # final bin should have two spikes
-    assert spike_histogram(channels)[0][199] == 2
-
-
 def spike_histogram(channels: SpikeUnits, bin_width: Seconds=0.1,
                     time: (Seconds, Seconds)=(None, None), plot=True) -> (Any):
     """
@@ -121,3 +116,9 @@ def subplot_generator(n_charts, num_cols):
     while n <= n_charts:
         yield (num_rows, num_cols, n)
         n += 1
+
+
+@pytest.fixture(scope="module")
+def channels():
+    import files
+    return read_mcs_dat('tests/sample_dat/')
