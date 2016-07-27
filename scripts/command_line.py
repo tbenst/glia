@@ -94,8 +94,7 @@ performed, but a subset x,y can be done, using the syntax -m x,y. Steps are:
 @click.option('-c', default=8, help="Number of CPU")
 @click.option('-g', default=0, help="Number of GPU")
 def spyking_circus(filename, method, c, g):
-    """Create data file, create params & run Spyking Circus."""
-
+    """Run spyking circus."""
     command = 'spyking-circus "{}" -m {} -c {} -g {}'.format(filename,
                                                              method,
                                                              c,
@@ -112,6 +111,7 @@ def spyking_circus(filename, method, c, g):
 @click.option('-g', default=0, help="Number of GPU")
 @click.pass_context
 def run_all(context, filename, method, c, g):
+    """Create data file, create params & run Spyking Circus."""
     # call fix_header and gen_params
     context.invoke(fix_header, filename=filename)
     context.invoke(gen_params, filename=filename)

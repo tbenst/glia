@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Any
 from .analysis import last_spike_time
-import pytest
+# import pytest
 
 
 Seconds = float
@@ -118,7 +118,7 @@ def subplot_generator(n_charts, num_cols):
         n += 1
 
 
-@pytest.fixture(scope="module")
-def channels():
-    import files
-    return read_mcs_dat('tests/sample_dat/')
+# @pytest.fixture(scope="module")
+# def channels():
+#     import files
+#     return read_mcs_dat('tests/sample_dat/')

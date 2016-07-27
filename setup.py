@@ -7,7 +7,7 @@ setup(name='glia',
       author='Tyler Benster',
       author_email='tbenst@gmail.com',
       # license='None',
-      packages=['glia'],
+      packages=['glia', 'scripts'],
       zip_safe=False,
       classifiers=[
           # How mature is this project? Common values are
