@@ -2,17 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Any
 from .analysis import last_spike_time
-import pytest
+# import pytest
 
 
 Seconds = float
 ms = float
 SpikeUnits = List[np.ndarray]
-
-
-def test_spike_histogram(channels):
-    # final bin should have two spikes
-    assert spike_histogram(channels)[0][199] == 2
 
 
 def spike_histogram(channels: SpikeUnits, bin_width: Seconds=0.1,
@@ -84,7 +79,6 @@ def isi_histogram(channels: SpikeUnits, bin_width: Seconds=1/1000,
             ax.hist(channel, bins)
 
 
-
 def visualize_spikes(spike_units: SpikeUnits, fig_size=(30, 15)):
     fig = plt.figure(figsize=fig_size)
 
@@ -122,3 +116,9 @@ def subplot_generator(n_charts, num_cols):
     while n <= n_charts:
         yield (num_rows, num_cols, n)
         n += 1
+
+
+# @pytest.fixture(scope="module")
+# def channels():
+#     import files
+#     return read_mcs_dat('tests/sample_dat/')

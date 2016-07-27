@@ -1,4 +1,4 @@
-__all__ = ['analysis', 'files', 'matlablib']
+__all__ = ['analysis', 'files']
 
 from .analysis import *
 from .files import *

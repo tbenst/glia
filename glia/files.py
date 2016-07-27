@@ -1,10 +1,11 @@
 import numpy as np
 import re
 from typing import List, Dict
-import pytest
+# import pytest
 import glob
 import warnings
 import h5py
+import os
 
 file = str
 Dir = str
@@ -15,16 +16,16 @@ SpikeUnits = List[np.ndarray]
 
 
 def read_raw_voltage(raw_filename):
-    header = get_header(raw_filename)[0]
+    header, offset = get_header(raw_filename)
     channel_start = re.search('\nStreams = ', header).span()[1]
     channel_str = header[channel_start:-7] + ';'
     channels = re.findall('(.._..);', channel_str)
     num_cols = len(channels)
-    num_rows = int(np.memmap(raw_filename, offset=header[1],
+    num_rows = int(np.memmap(raw_filename, offset=offset,
                              dtype='int16').shape[0] / num_cols)
 
     return np.memmap(raw_filename, shape=(num_rows, num_cols),
-                     offset=header[1],
+                     offset=offset,
                      dtype='int16')
 
 
@@ -39,6 +40,14 @@ def get_header(filename: file) -> (str):
             if line == header_end:
                 break
     return header, num_bytes
+
+
+def get_result_path(filename: file) -> (file):
+    """Return path based on spyking circus output to subfolder."""
+    directory, name = os.path.split(filename)
+    name, ext = os.path.splitext(name)
+
+    return os.path.join(directory, name, name + '.result.hdf5')
 
 
 def sampling_rate(filename: file) -> (int):
@@ -273,11 +282,3 @@ def multi_glob(names_to_glob: List[str]) -> List[str]:
     for name in names_to_glob:
         data_files.extend(glob.glob(name))
     return data_files
-
-
-# Pytest modules
-
-
-@pytest.fixture(scope="module")
-def channels():
-    return read_mcs_dat('tests/sample_dat/')

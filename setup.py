@@ -7,7 +7,7 @@ setup(name='glia',
       author='Tyler Benster',
       author_email='tbenst@gmail.com',
       # license='None',
-      packages=['glia', 'glia/matlablib'],
+      packages=['glia', 'scripts'],
       zip_safe=False,
       classifiers=[
           # How mature is this project? Common values are
@@ -33,4 +33,6 @@ setup(name='glia',
       entry_points={
           'console_scripts': ['glia=scripts.command_line:main'],
       },
+      setup_requires=['pytest-runner'],
+      tests_require=['pytest'],
       )
