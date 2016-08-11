@@ -3,6 +3,7 @@ import requests
 import json
 import yaml
 from typing import List, Dict
+from files import sampling_rate, read_raw_voltage
 # import pytest
 
 file = str
