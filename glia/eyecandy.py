@@ -1,3 +1,9 @@
+import numpy as np
+import requests
+import json
+import yaml
+
+
 def create_eyecandy_gen(program_yaml, eyecandy_url):
     # Create program from eyecandy YAML. 
     r = requests.post(eyecandy_url + '/analysis/start-program',
