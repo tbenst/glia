@@ -2,7 +2,13 @@ import numpy as np
 import requests
 import json
 import yaml
+from typing import List, Dict
+# import pytest
 
+file = str
+Dir = str
+dat = str
+Hz = int
 Seconds = float
 ms = float
 SpikeUnits = List[np.ndarray]
