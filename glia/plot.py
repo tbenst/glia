@@ -117,6 +117,57 @@ def subplot_generator(n_charts, num_cols):
         yield (num_rows, num_cols, n)
         n += 1
 
+def subplot_generator(n_charts, num_cols):
+    """Generate arguments for matplotlib add_subplot.
+
+    Must use * to unpack the returned tuple. For example,
+
+    >>> fig = plt.figure()
+    <matplotlib.figure.Figure at 0x10fdec7b8>
+    >>> subp = subplot_generator(4,2)
+    >>> fig.add_subplot(*next(subp))
+    <matplotlib.axes._subplots.AxesSubplot at 0x112cee6d8>
+
+    """
+
+    if type(n_charts) is list:
+        n_charts = len(n_charts)
+
+    num_rows = n_charts // num_cols + (n_charts % num_cols != 0)
+    n = 1
+    while n <= n_charts:
+        yield (num_rows, num_cols, n)
+        n += 1
+
+def create_polar_scatterplot(stimulus_analytics: dict, ax = None):
+    if ax is None:
+        fig =plt.figure()
+        ax = fig.add_subplot(111, projection='polar')
+    else:
+        fig = None
+    angles = {k:count_items(v) for k,v in stimulus_analytics.items()}
+    theta = []
+    r = []
+    area = []
+    for a, counts in angles.items():
+        for spike_count, number_of_occurrences  in counts.items(): 
+            theta.append(a)
+            r.append(spike_count)
+            area.append(number_of_occurrences^3)
+    c = ax.scatter(theta, r, area)
+    c.set_alpha(0.75)
+    if fig is not None:
+        return fig
+
+
+def count_items(my_list):
+    to_return={}
+    for i in my_list:
+        try:
+            to_return[i]+=1
+        except:
+            to_return[i]=1
+    return to_return
 
 # @pytest.fixture(scope="module")
 # def channels():

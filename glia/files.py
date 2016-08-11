@@ -16,6 +16,7 @@ SpikeUnits = List[np.ndarray]
 
 
 def read_raw_voltage(raw_filename):
+    """Read in a raw file exported from MCS datatool."""
     header, offset = get_header(raw_filename)
     channel_start = re.search('\nStreams = ', header).span()[1]
     channel_str = header[channel_start:-7] + ';'
@@ -30,15 +31,18 @@ def read_raw_voltage(raw_filename):
 
 
 def get_header(filename: file) -> (str):
+    """Read the header from a MCS raw file."""
     header = ""
     header_end = b'EOH\r\n'
     num_bytes = 0
     with open(filename, mode='rb') as file:
         for line in file:
             num_bytes += len(line)
-            header += line.decode("Windows-1252")
+            header += line.decode("Windows-1252", errors='ignore')
             if line == header_end:
                 break
+            if num_bytes > 2000:
+                raise Exception('error reading header')
     return header, num_bytes
 
 
@@ -51,6 +55,7 @@ def get_result_path(filename: file) -> (file):
 
 
 def sampling_rate(filename: file) -> (int):
+    """Read the sampling rate from a MCS raw file."""
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
 
@@ -228,7 +233,8 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
 
 def read_spyking_results(filepath: str, sampling_rate: int) -> (
         SpikeUnits):
-    """Read the results from Spyking Circus spike sorting."""
+    """Read the results from Spyking Circus spike sorting
+    and gives a list of arrays."""
 
     result_regex = re.compile('.*\.result.hdf5$')
     if not re.match(result_regex, filepath):
@@ -272,13 +278,3 @@ def _lines_with_float(path: file):
             except:
                 next
     return
-
-
-def multi_glob(names_to_glob: List[str]) -> List[str]:
-    """Glob strings in list and return list of all matches."""
-
-    data_files = []
-
-    for name in names_to_glob:
-        data_files.extend(glob.glob(name))
-    return data_files

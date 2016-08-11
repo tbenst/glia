@@ -99,6 +99,7 @@ def spike_summary(spike_units: SpikeUnits) -> (str):
 def flatten(spike_units: SpikeUnits) -> (np.ndarray):
     return np.hstack([c for c in spike_units if c is not None])
 
+
 # Pytest
 
 
