@@ -25,7 +25,7 @@ def create_eyecandy_gen(program_yaml, eyecandy_url):
         done = False
         while (True):
             # Get the next stimulus using program sid
-            json = requests.get(base_url + '/analysis/program/{}'.format(sid)).json()
+            json = requests.get(eyecandy_url + '/analysis/program/{}'.format(sid)).json()
             done = json["done"]
             if done:
                 break
