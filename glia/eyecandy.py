@@ -3,6 +3,9 @@ import requests
 import json
 import yaml
 
+Seconds = float
+ms = float
+SpikeUnits = List[np.ndarray]
 
 def create_eyecandy_gen(program_yaml, eyecandy_url):
     # Create program from eyecandy YAML. 
