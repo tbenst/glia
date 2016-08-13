@@ -105,3 +105,50 @@ def flatten(spike_units: SpikeUnits) -> (np.ndarray):
 
 def setup_module(module):
     import files
+
+
+def plot_firing_rate (spikes: SpikeUnits):
+    """Take spike times of a particular spike unit and return a figure plotting 
+    1) firing rate vs spike times (green) 2) 1-Dimensional Gaussian filter of firing rate vs spike times (magenta)
+    Firing rate estimated by the interspike interval.
+    Requires 'from scipy import ndimage.'"""
+
+    y = np.diff(spikes)
+    x = spikes
+    firing_rate = 1/y
+    #add 0 to the end of the firing_rate array to account for last spike where no firing_rate is calculated 
+    #and to make x and y the same dimension
+    firing_rate = np.append(firing_rate, 0)
+    fig = plt.plot(x, firing_rate, 'green', linewidth=1)
+
+    #sigma is standard deviation for Gaussian kernel
+    sigma = 2
+    x_g1d = ndimage.gaussian_filter1d(x, sigma)
+    y_g1d = ndimage.gaussian_filter1d(firing_rate, sigma)
+
+    fig = plt.plot(x_g1d, y_g1d, 'magenta', linewidth=1)
+
+    return fig
+
+
+def count_spikes(spiketimes, x, window):
+    """Count spikes that fall within bin starting at x and ending at x+window.
+    Include spikes that fall on either bin edge"""
+    
+    #+1 to (x+window) because arange does not include the last bin edge value
+    hist = np.histogram(spiketimes, np.arange(x, x+window+1, window))
+    count = hist[0]
+    return count
+    
+    
+def estimate_firing_rate(spiketimes, window, step):
+    """Estimate instantaneous firing rate using shifting, overlapping bins.
+    Window is bin width. Step is amount bin is shifted.
+    """
+    firing_rate = []
+    spike_counts = []
+    #+1 - window is to to make the last x exactly 1 window length from the end of spiketimes. +1 because amax does not include the last element
+    for x in np.arange(0, np.amax(spiketimes)+1-window, step):
+        spike_counts = np.append(spike_counts, count_spikes(spiketimes, x, window))
+        firing_rate = np.array(spike_counts) / window
+    return firing_rate
