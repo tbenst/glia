@@ -120,7 +120,9 @@ def create_experiments(unit: np.ndarray, stimulus_list,
 
 #Analytics is a dictionary of dictionaries. The keys are the stimulus types. 
 # The values are dictionaries containing the information in stimulus (spike counts, angle, lifespan)
-def unit_analytics(experiments):
+def split_by_experiment_type(experiments: List[List[float]], stimulus_type: str,
+                   group_by: str) -> Dict[str, List[float]]:
+    """"""
     analytics = {  "WAIT":  {},  "SOLID": {},  "BAR": {},  "GRATING": {} }
     # only bars and gratings have angles. only waits and solids have a lifespan
     has_angle=re.compile(r"^(BAR|GRATING)$")

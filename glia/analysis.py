@@ -19,8 +19,10 @@ def last_spike_time(channels: SpikeUnits) -> (float):
     Return time in seconds of last spike in channels array.
 
     Tests:
-    >>> last_spike_time(read_mcs_dat('tests/sample_dat/'))
+    >> last_spike_time(read_mcs_dat('tests/sample_dat/'))
     19.970800000000001
+
+    (doctest disabled)
     """
     last_spike_time = 0
     for channel in channels:
@@ -98,14 +100,6 @@ def spike_summary(spike_units: SpikeUnits) -> (str):
 
 def flatten(spike_units: SpikeUnits) -> (np.ndarray):
     return np.hstack([c for c in spike_units if c is not None])
-
-
-# Pytest
-
-
-def setup_module(module):
-    import files
-
 
 def plot_firing_rate (spikes: SpikeUnits):
     """Take spike times of a particular spike unit and return a figure plotting 

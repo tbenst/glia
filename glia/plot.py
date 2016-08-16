@@ -94,40 +94,17 @@ def visualize_spikes(spike_units: SpikeUnits, fig_size=(30, 15)):
 
 # Helpers
 
-
 def subplot_generator(n_charts, num_cols):
     """Generate arguments for matplotlib add_subplot.
 
     Must use * to unpack the returned tuple. For example,
 
-    >>> fig = plt.figure()
+    >> fig = plt.figure()
     <matplotlib.figure.Figure at 0x10fdec7b8>
-    >>> subp = subplot_generator(4,2)
-    >>> fig.add_subplot(*next(subp))
+    >> subp = subplot_generator(4,2)
+    >> fig.add_subplot(*next(subp))
     <matplotlib.axes._subplots.AxesSubplot at 0x112cee6d8>
-
-    """
-
-    if type(n_charts) is list:
-        n_charts = len(n_charts)
-
-    num_rows = n_charts // num_cols + (n_charts % num_cols != 0)
-    n = 1
-    while n <= n_charts:
-        yield (num_rows, num_cols, n)
-        n += 1
-
-def subplot_generator(n_charts, num_cols):
-    """Generate arguments for matplotlib add_subplot.
-
-    Must use * to unpack the returned tuple. For example,
-
-    >>> fig = plt.figure()
-    <matplotlib.figure.Figure at 0x10fdec7b8>
-    >>> subp = subplot_generator(4,2)
-    >>> fig.add_subplot(*next(subp))
-    <matplotlib.axes._subplots.AxesSubplot at 0x112cee6d8>
-
+    (NOTE doctest not running)
     """
 
     if type(n_charts) is list:
