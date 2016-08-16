@@ -73,10 +73,10 @@ def read_hdf5_voltages(file: file) -> (np.ndarray):
         frequency (by default 40kHz)
 
     Tests:
-    >> dset = read_hdf5_voltages('tests/sample-mcs-mea-recording.h5')
-    >> dset.shape
+    >>> dset = read_hdf5_voltages('tests/data/sample-mcs-mea-recording.h5')
+    >>> dset.shape
     (60, 2)
-    >> dset[0,:]
+    >>> dset[0,:]
     array([86, 39], dtype=int32)
 
     (doctest disabled)
@@ -146,15 +146,15 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
         ValueError: Files of unexpected format found.
 
     Tests:
-    >> channels = read_mcs_dat('tests/sample_dat/')
-    >> channels[14] is None
+    >>> channels = read_mcs_dat('tests/data/sample_dat/')
+    >>> channels[14] is None
     True
-    >> channels[18]
+    >>> channels[18]
     array([], dtype=float64)
-    >> len(channels)
+    >>> len(channels)
     60
-    >> c = [x for x in channels if x is not None and x.size != 0]
-    >> c
+    >>> c = [x for x in channels if x is not None and x.size != 0]
+    >>> c
     [array([ 19.9308,  19.9708])]
 
     (doctest disabled)
@@ -263,12 +263,12 @@ def _lines_with_float(path: file):
     Note that generator returned could StopIteration without yielding.
 
     Tests:
-    >> x = _lines_with_float('tests/sample_dat/mcs_mea_recording_12.dat')
-    >> next(x)
+    >>> x = _lines_with_float('tests/data/sample_dat/mcs_mea_recording_12.dat')
+    >>> next(x)
     '19.93080\n'
-    >> next(x)
+    >>> next(x)
     '19.97080\n'
-    >> next(x)
+    >>> next(x)
     Traceback (most recent call last):
         ...
     StopIteration
