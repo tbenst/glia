@@ -7,10 +7,10 @@ from .analysis import last_spike_time
 
 Seconds = float
 ms = float
-SpikeUnits = List[np.ndarray]
+UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 
-def spike_histogram(channels: SpikeUnits, bin_width: Seconds=0.1,
+def spike_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=0.1,
                     time: (Seconds, Seconds)=(None, None), plot=True) -> (Any):
     """
     Plot histogram of summed spike counts across all channels.
@@ -26,7 +26,7 @@ def spike_histogram(channels: SpikeUnits, bin_width: Seconds=0.1,
     Raises:
         ValueError for bad bin_width.
     """
-
+    channels = unit_spike_trains.keys()
     if bin_width <= 0:
         raise ValueError("bin_width must be greater than zero")
 
@@ -58,9 +58,11 @@ def spike_histogram(channels: SpikeUnits, bin_width: Seconds=0.1,
         return(np.histogram(all_spikes, bins))
 
 
-def isi_histogram(channels: SpikeUnits, bin_width: Seconds=1/1000,
+def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
                   time: (Seconds, Seconds)=(0, 100/1000), average=True,
                   fig_size=(15, 30)) -> (Any):
+    channels = unit_spike_trains.keys()
+
     channels = [np.diff(c) for c in channels]
     # Unit is seconds so x is in ms for x/1000
     bins = np.arange(time[0], time[1], bin_width)
@@ -79,17 +81,19 @@ def isi_histogram(channels: SpikeUnits, bin_width: Seconds=1/1000,
             ax.hist(channel, bins)
 
 
-def visualize_spikes(spike_units: SpikeUnits, fig_size=(30, 15)):
+def visualize_spikes(unit_spike_trains: UnitSpikeTrains, fig_size=(30, 15)):
     fig = plt.figure(figsize=fig_size)
+
+    channels = unit_spike_trains.keys()
 
     # Draw each spike as black line
     ax = fig.add_subplot(211)
-    for i, unit in enumerate(spike_units):
-        ax.vlines(spike_units[i], i, i + 1)
+    for i, unit in enumerate(channels):
+        ax.vlines(channels[i], i, i + 1)
 
     # Plot histogram
     ax2 = fig.add_subplot(212)
-    ax2.plot(spike_histogram(spike_units))
+    ax2.plot(spike_histogram(channels))
 
 
 # Helpers

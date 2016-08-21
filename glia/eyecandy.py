@@ -13,7 +13,8 @@ dat = str
 Hz = int
 Seconds = float
 ms = float
-SpikeUnits = List[np.ndarray]
+UnitSpikeTrains = List[Dict[str,np.ndarray]]
+
 
 def create_eyecandy_gen(program_yaml, eyecandy_url):
     # Create program from eyecandy YAML. 
