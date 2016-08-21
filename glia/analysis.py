@@ -90,7 +90,7 @@ def spike_summary(unit_spike_trains: UnitSpikeTrains) -> (str):
     num_spikes = np.sum([len(u) for u in unit_spike_trains.keys()])
 
     last_spike_time = 0
-    for unit,spike_train in unit_spike_trains:
+    for unit,spike_train in unit_spike_trains.items():
         if spike_train.size != 0:
             last_spike_time = max(last_spike_time, np.max(spike_train))
 
