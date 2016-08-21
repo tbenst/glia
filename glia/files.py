@@ -10,7 +10,7 @@ import os
 file = str
 Dir = str
 dat = str
-UnitSpikeTrains = List[np.ndarray]
+UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 # VOLTAGE DATA
 
