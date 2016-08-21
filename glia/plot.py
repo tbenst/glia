@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Any
+from typing import List, Any, Dict
 from .analysis import last_spike_time
 # import pytest
 
