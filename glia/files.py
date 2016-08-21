@@ -10,7 +10,7 @@ import os
 file = str
 Dir = str
 dat = str
-SpikeUnits = List[np.ndarray]
+UnitSpikeTrains = List[np.ndarray]
 
 # VOLTAGE DATA
 
@@ -117,7 +117,7 @@ def merge_mcs_raw_files(files_to_merge: List[str], output_file_name: str
 def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
                  ignore_channels: List[int]=[],
                  channel_dict: Dict=None,
-                 warn: bool=False) -> (SpikeUnits):
+                 warn: bool=False) -> (UnitSpikeTrains):
     """
     Take directory with MCS dat files for each channel, returns numpy array.
 
@@ -235,7 +235,7 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
 
 
 def read_spyking_results(filepath: str, sampling_rate: int) -> (
-        SpikeUnits):
+        UnitSpikeTrains):
     """Read the results from Spyking Circus spike sorting
     and gives a list of arrays."""
 
@@ -245,11 +245,11 @@ def read_spyking_results(filepath: str, sampling_rate: int) -> (
 
     result_h5 = h5py.File(filepath, 'r')
 
-    spike_units = []
+    spike_units = {}
     for unit in result_h5["spiketimes"]:
         spikes = np.array(
             result_h5["spiketimes"][unit], dtype='int32') / sampling_rate
-        spike_units.append(spikes)
+        spike_units[unit] = spikes
 
     return spike_units
 
