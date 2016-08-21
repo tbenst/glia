@@ -1,0 +1,868 @@
+---
+version: 0.3
+
+day: 2016/06/10
+lab: Van Gelder Lab
+affiliation: University of Washington Medicine
+people:
+  - Laura Laprell
+  - Tyler Benster
+
+
+study:
+  name: Evaluating moving bar stimulus on melrd mice treated with DAD for direction selectivity
+  type: MEA
+  mea_temp: 32C
+  perfusion_temp: 34C
+  flow_rate: 2.5ml/min
+
+  data:
+    # types: mel, melrd, black6, black6rd, gnat1gnat2mel
+    - mouse: melrd
+      dob: 2016/02/10
+      gender: female
+      retinas:
+        - name: 1
+          notes: "MEA: 100um distance and 10um electrodes. perfuse with AMES for 30 min.
+                  incubation with 200uM DAD (NEW STOCK) for 7.5 min in light on/off. standard
+                  application method (i.e. refresh solution every minute). wash out for 15 min."
+          # location is either center or periphery
+          location: periphery
+          experiments:
+            - name: E1_R1_DAD_55min_contrastgratings
+              path: file=E1_R1_DAD_55min_contrastgratings
+              notes: "70x250 looks best on MEA, i.e. the most regular grating"
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 55m
+              pinhole: 1.0
+              # this is a comment. Notes are
+              stimulus:
+                # type is DLP or shutter
+                type: eyecandy
+                program:
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#000000']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#F2F2F2']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#0D0D0D']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#E5E5E5']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#1A1A1A']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#DCDCDC']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#262626']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#D1D1D1']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#333333']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#C7C7C7']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#404040']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#C0C0C0']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#4D4D4D']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#B3B3B3']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#595959']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#A9A9A9']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#666666']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#9E9E9E']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#737373']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250]
+                      - [0]
+                      - ['#919191']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: '#ffffff'
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: ['#808080']
+                         wavelength: 350
+                         time: 50
+
+                  - with_nested:
+                      - [1]
+                      - [0]
+                      - [0]
+                      - [0]
+                      - ['#777777']
+                    list:
+                      - solid: 
+                          time: 30
+                          backgroundColor: items[4]
+
+            - name: E2_R1_DAD_100min_movingbar
+              path: file=E2_R1_DAD_100min_movingbar
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 100m
+              pinhole: 0.9
+              # this is a comment. Notes are
+              stimulus:
+                # type is DLP or shutter
+                type: eyecandy
+                program:
+                  - with_nested:
+                      - [1,2,3,4] 
+                      - [45, 90, 150]
+                      - [600, 1000]
+                      - [0, PI/4, PI/2, 3*PI/4, PI, 5*PI/4, 3*PI/2, 7*PI/4, 5*PI/4, 3*PI/4, 3*PI/2, PI/2, 7*PI/4, PI/4, 0, PI]
+                    list:
+                      - wait:
+                          time: 1
+                      - solid:
+                          time: 1
+                          backgroundColor: white
+                      - wait:
+                          time: 2
+                      - bar:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: white
+                         backgroundColor: black
+
+            - name: E3_R1_DAD_145min_5s_wait5s
+              path: file=E3_R1_DAD_145min_5s_wait5s
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 145m
+              # this is a comment. Notes are
+              stimulus:
+                type: shutter
+                trigger: periodic
+                start_state: off
+                wait: 5000
+                interval: 5000
+
+            - name: E4_R1_DAD_145min_movingbar
+              path: file=E4_R1_DAD_145min_movingbar
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 145m
+              pinhole: 0.9
+              # this is a comment. Notes are
+              stimulus:
+                # type is DLP or shutter
+                type: eyecandy
+                program:
+                  - with_nested:
+                      - [1,2,3,4] 
+                      - [45, 90, 150]
+                      - [600, 1000]
+                      - [0, PI/4, PI/2, 3*PI/4, PI, 5*PI/4, 3*PI/2, 7*PI/4, 5*PI/4, 3*PI/4, 3*PI/2, PI/2, 7*PI/4, PI/4, 0, PI]
+                    list:
+                      - wait:
+                          time: 1
+                      - bar:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: white
+                         backgroundColor: black
+
+            - name: E5_R1_DAD_175min_gratings
+              path: file=E5_R1_DAD_175min_gratings
+              notes: "70x250 looks best on MEA, i.e. the most regular grating"
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 175m
+              pinhole: 0.9
+              # this is a comment. Notes are
+              stimulus:
+                # type is DLP or shutter
+                type: eyecandy
+                program:
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 350
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [120]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 270
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [90]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 250
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [45]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 100
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+            - name: E6_R1_DAD_225min_5s_wait5s
+              path: file=E6_R1_DAD_225min_5s_wait5s
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 225m
+              # this is a comment. Notes are
+              stimulus:
+                type: shutter
+                trigger: periodic
+                start_state: off
+                wait: 5000
+                interval: 5000
+
+
+        - name: 2
+          notes: "MEA: 100um distance and 10um electrodes. perfuse with AMES for 30 min.
+                  incubation with 200uM DAD (NEW STOCK) for 7.5 min in light on/off. standard
+                  application method (i.e. refresh solution every minute). wash out for 15 min."
+          # location is either center or periphery
+          location: periphery
+          experiments:
+            - name: E7_R2_DAD_45min_movingbar
+              path: file=E7_R2_DAD_45min_movingbar
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 45m
+              pinhole: 1.0
+              # this is a comment. Notes are
+              stimulus:
+                # type is DLP or shutter
+                type: eyecandy
+                program:
+                  - with_nested:
+                      - [1,2,3,4] 
+                      - [45, 90, 150]
+                      - [600, 1000]
+                      - [0, PI/4, PI/2, 3*PI/4, PI, 5*PI/4, 3*PI/2, 7*PI/4, 5*PI/4, 3*PI/4, 3*PI/2, PI/2, 7*PI/4, PI/4, 0, PI]
+                    list:
+                      - wait:
+                          time: 1
+                      - solid:
+                          time: 1
+                          backgroundColor: white
+                      - wait:
+                          time: 2
+                      - bar:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: white
+                         backgroundColor: black
+
+            - name: E8_R2_DAD_90min_gratings
+              path: file=E8_R2_DAD_90min_gratings
+              notes: "70x250 looks best on MEA, i.e. the most regular grating.
+                      light responses not too great ... exclude if results are differnt in analysis..."
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 90m
+              pinhole: 1.0
+              # this is a comment. Notes are
+              stimulus:
+                # type is DLP or shutter
+                type: eyecandy
+                program:
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [145]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 350
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [120]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 270
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [90]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 250
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+                  - with_nested:
+                      - [1, 2, 3]
+                      - [45]
+                      - [250, 400]
+                      - [0]
+                      - ['#ffffff']
+                    list:
+                      - wait:
+                          time: 2
+                      - solid:
+                          time: 1
+                          backgroundColor: items[4]
+                      - wait:
+                          time: 3
+                      - grating:
+                         width: items[1]
+                         speed: items[2]
+                         angle: items[3]
+                         barColor: items[4]
+                         backgroundColor: black
+                         wavelength: 100
+                         time: 100
+                  - with_nested:
+                      - [1]
+                      - [1]
+                      - [1]
+                      - [0]
+                      - ['#9f9f9f']
+                    list:
+                      - solid:
+                          time: 60
+                          backgroundColor: items[4]
+
+            - name: E9_R2_DAD_145min_5s_wait5s
+              path: file=E9_R2_DAD_145min_5s_wait5s
+              notes: "light responses not good. Very inconsistent and small"
+              # solution examples: AMES, DAD, PHENAQ, 
+              solution:
+                - AMES
+                - DAD
+              # time format examples: 1h2m20s, 10m, 1m20s
+              time: 225m
+              # this is a comment. Notes are
+              stimulus:
+                type: shutter
+                trigger: periodic
+                start_state: off
+                wait: 5000
+                interval: 5000
