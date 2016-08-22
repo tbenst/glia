@@ -22,3 +22,8 @@ def stimulus_start_times():
 @pytest.fixture(scope="module")
 def stimulus_list():
 	return gratings_stimulus_list
+
+@pytest.fixture(scope="module")
+def spike_train(unit_spike_trains):
+	return unit_spike_trains["temp_16"]
+

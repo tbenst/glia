@@ -92,7 +92,7 @@ def get_stimulus_from_eyecandy(start_times, eyecandy_gen):
     """Return list of tuples (start time, corresponding eyecandy_gen)"""
     # compensate for weird analog behavior at end of recording
     # start_times.pop()
-    return list((map(lambda x: (x, next(eyecandy_gen)['value']), start_times)))
+    return list((map(lambda x: {'start_time': x, 'stimulus': next(eyecandy_gen)['value']}, start_times)))
     
 def create_experiments(unit: np.ndarray, stimulus_list,
                        #is this supposed to return a list of dictionaries?

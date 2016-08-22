@@ -30,6 +30,33 @@ Analytics = Dict[str,Any]
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)
 
+def f_create_experiments(prepend_start_time=0, append_lifetime=0,
+                         append_start_time=None):
+    """
+    Split spike train into individual experiments according to stimulus list.
+
+    If append_start_time is given, ignore Lifetime and return experiments of duration
+    append_start_time + prepend_start_time.
+    """
+
+    def create_experiments(spike_train: np.ndarray,
+                           stimulus_list: List[Dict]) -> List[Dict]:
+        experiments = [{"stimulus": s[1], "spikes": []} for s in stimulus_list]
+
+        for i, stimulus in enumerate(stimulus_list):
+            start_time = stimulus_list["start_time"] - prepend_start_time
+            if append_start_time is not None:
+                end_time = start_time + stimulus_list[1]["lifetime"]/120 + append_lifetime
+            else:
+                end_time = start_time + append_start_time
+
+            bool_indices = (spike_train > start_time) and (spike_train < end_time)
+
+            experiments[i]['spikes'] = spike_train[bool_indices]
+        return experiments
+
+    return create_experiments
+
 def f_filter(function):
     return lambda x: list(filter(function, x))
 
@@ -45,8 +72,7 @@ def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]
     if type(stimulus_type) is str:
         stimulus_type = [stimulus_type]
     def anonymous(e):
-        # stimulus is from a javascript generator, so must look at value
-        if (e["stimulus"]['value']["stimulusType"] in stimulus_type ):
+        if (e["stimulus"]["stimulusType"] in stimulus_type ):
             return True
         else:
             return False
@@ -56,7 +82,7 @@ def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]
         
 def f_group_by(stimulus_parameter) -> Callable[[List[Experiment]], Dict]:
     def anonymous(accumulator,experiment):
-        parameter = experiment["stimulus"]["value"][stimulus_parameter]
+        parameter = experiment["stimulus"][stimulus_parameter]
         spikes = experiment["spikes"]
         new_accumulator = accumulator.copy()
         if parameter in new_accumulator:
@@ -68,7 +94,7 @@ def f_group_by(stimulus_parameter) -> Callable[[List[Experiment]], Dict]:
 
 def f_group_by_stimulus() -> Callable[[List[Experiment]], Dict]:
     def anonymous(accumulator,experiment):
-        parameter = str(experiment["stimulus"]["value"])
+        parameter = str(experiment["stimulus"])
         spikes = experiment["spikes"]
         new_accumulator = accumulator.copy()
         if parameter in new_accumulator:
