@@ -60,7 +60,13 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
     return create_experiments
 
 def f_filter(function):
-    return lambda x: list(filter(function, x))
+    def anonymous(x):
+        if type(x) is list:
+            return list(filter(function, x))
+        elif type(x) is dict:
+            return {k:v for (k,v) in d.items() if function(k,v)}
+    
+    return anonymous
 
 def f_reduce(function, initial_value=None) -> Callable[[List[Experiment],Any], Any]:
     def anonymous(e):
