@@ -60,11 +60,17 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
     return create_experiments
 
 def f_filter(function):
+    def filter_dict(f,d):
+        for key, val in d.items():
+            if not f(key,val):
+                continue
+            yield key, val
+
     def anonymous(x):
         if type(x) is list:
             return list(filter(function, x))
         elif type(x) is dict:
-            return {k:v if function(k,v) for (k,v) in x.items()}
+            return {k:v for (k,v) in filter_dict(x)}
     
     return anonymous
 
