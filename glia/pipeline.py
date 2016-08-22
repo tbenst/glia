@@ -64,7 +64,7 @@ def f_filter(function):
         if type(x) is list:
             return list(filter(function, x))
         elif type(x) is dict:
-            return {k:v for (k,v) in d.items() if function(k,v)}
+            return {k:v for (k,v) in x.items() if function(k,v)}
     
     return anonymous
 
