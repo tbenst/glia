@@ -70,7 +70,7 @@ def f_filter(function):
         if type(x) is list:
             return list(filter(function, x))
         elif type(x) is dict:
-            return {k:v for (k,v) in filter_dict(x)}
+            return {k:v for (k,v) in filter_dict(function,x)}
     
     return anonymous
 
