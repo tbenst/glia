@@ -30,7 +30,7 @@ Analytics = Dict[str,Any]
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)
 
-def f_create_experiments(prepend_start_time=0, append_lifetime=0,
+def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append_lifetime=0,
                          append_start_time=None):
     """
     Split spike train into individual experiments according to stimulus list.
@@ -39,18 +39,17 @@ def f_create_experiments(prepend_start_time=0, append_lifetime=0,
     append_start_time + prepend_start_time.
     """
 
-    def create_experiments(spike_train: np.ndarray,
-                           stimulus_list: List[Dict]) -> List[Dict]:
-        experiments = [{"stimulus": s[1], "spikes": []} for s in stimulus_list]
+    def create_experiments(spike_train: np.ndarray) -> List[Dict]:
+        experiments = [{"stimulus": s["stimulus"], "spikes": []} for s in stimulus_list]
 
         for i, stimulus in enumerate(stimulus_list):
-            start_time = stimulus_list["start_time"] - prepend_start_time
+            start_time = stimulus["start_time"] - prepend_start_time
             if append_start_time is not None:
-                end_time = start_time + stimulus_list[1]["lifetime"]/120 + append_lifetime
-            else:
                 end_time = start_time + append_start_time
+            else:
+                end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifetime
 
-            bool_indices = (spike_train > start_time) and (spike_train < end_time)
+            bool_indices = (spike_train > start_time) & (spike_train < end_time)
 
             experiments[i]['spikes'] = spike_train[bool_indices]
         return experiments
