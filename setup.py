@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(name='glia',
-      version='0.2',
-      description='Supporting Neuroscientists in analysing MEA',
+      version='0.4',
+      description='Elegant support functions for Neuroscientists.',
       url='https://github.com/tbenst/glia',
       author='Tyler Benster',
       author_email='tbenst@gmail.com',
