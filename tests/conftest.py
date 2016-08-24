@@ -27,3 +27,8 @@ def stimulus_list():
 def spike_train(unit_spike_trains):
 	return unit_spike_trains["temp_16"]
 
+
+@pytest.fixture(scope="module")
+def units():
+	return read_plexon_txt_file("tests/data/E1_R1_DAD_45min_movingbar.txt", uuid4())
+

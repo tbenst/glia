@@ -6,6 +6,9 @@ import glob
 import warnings
 import h5py
 import os
+import csv
+from uuid import uuid4
+from .classes import Unit
 
 file = str
 Dir = str
@@ -28,6 +31,31 @@ def read_raw_voltage(raw_filename):
     return np.memmap(raw_filename, shape=(num_rows, num_cols),
                      offset=offset,
                      dtype='int16')
+
+def read_plexon_txt_file(filepath, retina_id):
+    """Assumes export format of Channel,Unit,timestamp exported per waveform."""
+    units = {}
+    unit_dictionary = {}
+    with open(filepath) as file:
+        for row in csv.reader(file, delimiter=','):
+            channel = int(row[0])
+            unit_num = int(row[1])
+            spike_time = float(row[2])
+
+            if unit_num in unit_dictionary:
+                unit_id = unit_dictionary[unit_num].id
+            else:
+                # initialize key for both dictionaries
+                unit = Unit(retina_id, channel)
+                unit_id = unit.id
+                units[unit_id] = unit
+                unit_dictionary[unit_num] = unit.id
+            
+            units[unit_id].append(spike_time)
+
+    return units
+
+
 
 
 def get_header(filename: file) -> (str):
