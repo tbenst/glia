@@ -27,8 +27,8 @@ SpikeTrains = List[SpikeTrain]
 Analytics = Dict[str,Any]
 
 
-def apply_pipeline(pipeline, spike_trains_by_unit):
-    return {k: pipeline(v) for k,v in spike_trains_by_unit.items()}
+def apply_pipeline(pipeline, units):
+    return {k: pipeline(v.spike_train) for k,v in units.items()}
 
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)

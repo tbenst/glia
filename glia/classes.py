@@ -20,4 +20,4 @@ class Unit:
 		self.id = uuid4()
 		self.retina_id = retina_id
 		self.channel = channel
-		self.spike_train = []
+		self.spike_train = None
