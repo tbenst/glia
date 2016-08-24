@@ -43,7 +43,7 @@ def read_plexon_txt_file(filepath, retina_id):
             spike_time = float(row[2])
 
             if unit_num in unit_dictionary:
-                unit_id = unit_dictionary[unit_num].id
+                unit_id = unit_dictionary[unit_num]
             else:
                 # initialize key for both dictionaries
                 unit = Unit(retina_id, channel)
