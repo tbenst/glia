@@ -51,7 +51,7 @@ def read_plexon_txt_file(filepath, retina_id):
                 units[unit_id] = unit
                 unit_dictionary[unit_num] = unit.id
             
-            units[unit_id].append(spike_time)
+            units[unit_id].spike_train.append(spike_time)
 
     return units
 
