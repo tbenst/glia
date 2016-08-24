@@ -24,13 +24,12 @@ def f_has_stimulus_type_test(stimulus_list):
 	for each in filtered:
 		assert each["stimulus"]["stimulusType"]=="GRATING"
 
-def f_flow_test(spike_train, stimulus_list):
-	get_wait_firing_rate = glia.compose(
-	    glia.f_create_experiments(stimulus_list),
-	    glia.f_has_stimulus_type("WAIT"),
-	    glia.f_group_by_stimulus(),
-	    f_calculate_firing_rate_by_stimulus(),
-	)
-	wait_firing_rate = glia.apply_pipeline(get_wait_firing_rate,
-	                                       spike_trains_by_unit)
-	
+# def f_flow_test(spike_train, stimulus_list):
+	# get_wait_firing_rate = glia.compose(
+	#     glia.f_create_experiments(stimulus_list),
+	#     glia.f_has_stimulus_type("WAIT"),
+	#     glia.f_group_by_stimulus(),
+	#     glia.f_calculate_firing_rate_by_stimulus(),
+	# )
+	# wait_firing_rate = glia.apply_pipeline(get_wait_firing_rate,
+	#                                        spike_trains_by_unit)

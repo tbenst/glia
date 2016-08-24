@@ -42,14 +42,14 @@ def read_plexon_txt_file(filepath, retina_id):
             unit_num = int(row[1])
             spike_time = float(row[2])
 
-            if unit_num in unit_dictionary:
-                unit_id = unit_dictionary[unit_num]
+            if (channel,unit_num) in unit_dictionary:
+                unit_id = unit_dictionary[(channel,unit_num)]
             else:
                 # initialize key for both dictionaries
                 unit = Unit(retina_id, channel)
                 unit_id = unit.id
                 units[unit_id] = unit
-                unit_dictionary[unit_num] = unit.id
+                unit_dictionary[(channel,unit_num)] = unit.id
             
             units[unit_id].spike_train.append(spike_time)
 

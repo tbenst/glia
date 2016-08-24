@@ -32,3 +32,6 @@ def spike_train(unit_spike_trains):
 def units():
 	return read_plexon_txt_file("tests/data/E1_R1_DAD_45min_movingbar.txt", uuid4())
 
+@pytest.fixture(scope="module")
+def plexon_txt_filepath():
+	return "tests/data/E1_R1_DAD_45min_movingbar.txt"
