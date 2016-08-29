@@ -90,6 +90,26 @@ def sampling_rate(filename: file) -> (int):
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
 
+def read_spyking_results(filepath: str, retina_id, sampling_rate: int) -> (
+        UnitSpikeTrains):
+    """Read the results from Spyking Circus spike sorting
+    and gives a list of arrays."""
+
+    result_regex = re.compile('.*\.result.hdf5$')
+    if not re.match(result_regex, filepath):
+        raise ValueError('Filepath must end in "result.hdf5"')
+
+    result_h5 = h5py.File(filepath, 'r')
+
+    spike_units = {}
+    for unit in result_h5["spiketimes"]:
+        unit = Unit(retina_id, None)
+        unit.spike_train = np.array(
+            result_h5["spiketimes"][unit], dtype='int32') / sampling_rate
+        spike_units[unit.id] = unit
+
+    return spike_units
+
 
 def read_hdf5_voltages(file: file) -> (np.ndarray):
     r"""
@@ -264,25 +284,6 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
 
     return(channels)
 
-
-def read_spyking_results(filepath: str, sampling_rate: int) -> (
-        UnitSpikeTrains):
-    """Read the results from Spyking Circus spike sorting
-    and gives a list of arrays."""
-
-    result_regex = re.compile('.*\.result.hdf5$')
-    if not re.match(result_regex, filepath):
-        raise ValueError('Filepath must end in "result.hdf5"')
-
-    result_h5 = h5py.File(filepath, 'r')
-
-    spike_units = {}
-    for unit in result_h5["spiketimes"]:
-        spikes = np.array(
-            result_h5["spiketimes"][unit], dtype='int32') / sampling_rate
-        spike_units[unit] = spikes
-
-    return spike_units
 
 
 # HELPER FUNCTIONS
