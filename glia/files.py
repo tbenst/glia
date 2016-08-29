@@ -102,10 +102,10 @@ def read_spyking_results(filepath: str, retina_id, sampling_rate: int) -> (
     result_h5 = h5py.File(filepath, 'r')
 
     spike_units = {}
-    for unit in result_h5["spiketimes"]:
+    for template in result_h5["spiketimes"]:
         unit = Unit(retina_id, None)
         unit.spike_train = np.array(
-            result_h5["spiketimes"][unit], dtype='int32') / sampling_rate
+            result_h5["spiketimes"][template], dtype='int32') / sampling_rate
         spike_units[unit.id] = unit
 
     return spike_units
