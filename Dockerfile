@@ -1,3 +1,3 @@
 FROM scratch
 
-// dummy file to trigger a build on docker hub for jupyter-neuro
+# dummy file to trigger a build on docker hub for jupyter-neuro
