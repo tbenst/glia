@@ -1,6 +1,5 @@
-FROM scratch
+FROM alpine
 
 # dummy file to trigger a build on docker hub for jupyter-neuro
 
-ADD hello /
-CMD ["/hello"]
+CMD ["echo dummy image! use tbenst/jupyter-neuro"]
