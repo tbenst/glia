@@ -38,7 +38,7 @@ def read_plexon_txt_file(filepath, retina_id):
     unit_dictionary = {}
     with open(filepath) as file:
         for row in csv.reader(file, delimiter=','):
-            channel = int(row[0])
+            channel = row[0]
             unit_num = int(row[1])
             spike_time = float(row[2])
 
