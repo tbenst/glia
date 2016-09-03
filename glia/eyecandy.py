@@ -44,7 +44,6 @@ def open_lab_notebook(filepath):
 
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
-    study_data = lab_notebook_yaml['study']['data'][0]['retinas'][0]['experiments']
     study_data = lab_notebook_yaml['study']['data']
     for mouse in study_data:
         for retina in mouse["retinas"]:
