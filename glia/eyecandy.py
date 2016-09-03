@@ -44,10 +44,13 @@ def open_lab_notebook(filepath):
 
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
-    protocol_list = lab_notebook_yaml['study']['data'][0]['retinas'][0]['experiments']
-    for protocol in protocol_list:
-        if protocol["name"]==name:
-            return protocol
+    study_data = lab_notebook_yaml['study']['data'][0]['retinas'][0]['experiments']
+    study_data = lab_notebook_yaml['study']['data']
+    for mouse in study_data:
+        for retina in mouse["retinas"]:
+            for protocol in retina["experiments"]:
+                if protocol["name"]==name:
+                    return protocol
 
 def get_stimulus_from_protocol( protocol ):
     """Get stimulus text from protocol suitable for eye-candy."""
