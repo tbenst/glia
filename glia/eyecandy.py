@@ -97,13 +97,11 @@ def get_stimulus_from_eyecandy(start_times, eyecandy_gen):
     # start_times.pop()
     return list((map(lambda x: {'start_time': x, 'stimulus': next(eyecandy_gen)['value']}, start_times)))
 
-def dumb_stimulus(stimulus_list, file_path):
-    with open(file_path, "w") as f:
-        pickle.dump(stimulus_list, f)
+def dump_stimulus(stimulus_list, file_path):
+    pickle.dump(stimulus_list, open(file_path, "wb"))
 
 def load_stimulus(file_path):
-    with open(file_path, "r") as f:
-        pickle.load(stimulus_list, f)
+    return pickle.load(stimulus_list, open(file_path, "rb"))
 
     
 def create_experiments(unit: np.ndarray, stimulus_list,
