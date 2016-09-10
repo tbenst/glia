@@ -101,7 +101,7 @@ def dump_stimulus(stimulus_list, file_path):
     pickle.dump(stimulus_list, open(file_path, "wb"))
 
 def load_stimulus(file_path):
-    return pickle.load(stimulus_list, open(file_path, "rb"))
+    return pickle.load(open(file_path, "rb"))
 
     
 def create_experiments(unit: np.ndarray, stimulus_list,
