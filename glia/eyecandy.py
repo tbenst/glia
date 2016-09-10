@@ -2,6 +2,7 @@ import re
 import numpy as np
 import requests
 import json
+import pickle
 import yaml
 from typing import List, Dict
 from .files import sampling_rate, read_raw_voltage
@@ -95,6 +96,13 @@ def get_stimulus_from_eyecandy(start_times, eyecandy_gen):
     # compensate for weird analog behavior at end of recording
     # start_times.pop()
     return list((map(lambda x: {'start_time': x, 'stimulus': next(eyecandy_gen)['value']}, start_times)))
+
+def dump_stimulus(stimulus_list, file_path):
+    pickle.dump(stimulus_list, open(file_path, "wb"))
+
+def load_stimulus(file_path):
+    return pickle.load(open(file_path, "rb"))
+
     
 def create_experiments(unit: np.ndarray, stimulus_list,
                        #is this supposed to return a list of dictionaries?
