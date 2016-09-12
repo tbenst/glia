@@ -74,6 +74,15 @@ def f_filter(function):
     
     return anonymous
 
+def f_map(function):
+    def anonymous(x):
+        if type(x) is list:
+            return list(map(function, x))
+        elif type(x) is dict:
+            return {key: f(val) for key, val in x.items()}
+    
+    return anonymous
+
 def f_reduce(function, initial_value=None) -> Callable[[List[Experiment],Any], Any]:
     def anonymous(e):
         if initial_value is not None:
