@@ -54,7 +54,10 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
 
             bool_indices = (spike_train > start_time) & (spike_train < end_time)
 
-            experiments[i]['spikes'] = spike_train[bool_indices]
+            raw_spike_train = spike_train[bool_indices]
+
+            # normalize to start of stimulus
+            experiments[i]['spikes'] = raw_spike_train - start_time
         return experiments
 
     return create_experiments
@@ -79,7 +82,7 @@ def f_map(function):
         if type(x) is list:
             return list(map(function, x))
         elif type(x) is dict:
-            return {key: f(val) for key, val in x.items()}
+            return {key: function(val) for key, val in x.items()}
     
     return anonymous
 
@@ -102,7 +105,7 @@ def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]
     return f_filter(anonymous)
     
 
-        
+
 def f_group_by(stimulus_parameter) -> Callable[[List[Experiment]], Dict]:
     def anonymous(accumulator,experiment):
         parameter = experiment["stimulus"][stimulus_parameter]
@@ -135,3 +138,15 @@ def f_count_each_in_group() -> Callable[[Dict[str,List[SpikeTrain]]], Analytics]
             new[k] = list(map(lambda x: len(x),v))
         return new
     return create_analytics
+
+def f_calculate_firing_rate_by_stimulus():
+    def create_analytics(analytics):
+        new = {}
+        for stimulus_key, spike_trains in analytics.items():
+            stimulus = eval(stimulus_key)
+            duration = stimulus["lifespan"]/120
+            new[stimulus_key] = list(map(lambda x: len(x) / duration,
+                                       spike_trains))
+        return new
+    return create_analytics
+
