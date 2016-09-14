@@ -46,6 +46,11 @@ Detect spikes:
 Open “sort”
 Perform automatic sorting 
     `E-M: 15`
+ 
+ when finished: visually check the sorted data and `invalidate` noise spikes
+  save waveformes as: *.txt file; all units in one file. delimiter `,`
+
+  select: channel (raw), unit, timestamp
 
 
 ## Dev notes
