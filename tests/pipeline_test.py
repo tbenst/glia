@@ -13,7 +13,8 @@ def compose_test():
 # 	assert experiments[3]["stimulus"]["stimulusType"] == "GRATING"
 # 	assert len(experiments[3]["spikes"]) == 32
 
-def f_create_experiments_test(spike_train, stimulus_list):
+def f_create_experiments_test(unit, stimulus_list):
+	spike_train = unit.spike_train
 	create = glia.f_create_experiments(stimulus_list)
 	experiments = create(spike_train)
 	for e in experiments:
@@ -23,6 +24,9 @@ def f_create_experiments_test(spike_train, stimulus_list):
 		assert time==number_of_spikes
 		assert spikes[0] <= 1
 
+
+
+
 def f_has_stimulus_type_test(stimulus_list):
 	pipeline = glia.f_has_stimulus_type("GRATING")
 	filtered = pipeline(stimulus_list)
@@ -31,6 +35,18 @@ def f_has_stimulus_type_test(stimulus_list):
 
 def simulated_test(units, stimulus_list):
 	assert len(next(iter(units.values())).spike_train)==2200
+
+	test_pipeline = glia.compose(
+	    glia.f_create_experiments(stimulus_list),
+	    glia.f_has_stimulus_type(["GRATING"]),
+	    glia.f_group_by_stimulus(),
+	    glia.f_calculate_firing_rate_by_stimulus()
+	)
+
+	firing_rates = glia.apply_pipeline(test_pipeline, units)
+	for stimulus,rates in next(iter(firing_rates.values())).items():
+		for rate in rates:
+			assert rate==1
 
 # def f_flow_test(spike_train, stimulus_list):
 	# get_wait_firing_rate = glia.compose(

@@ -49,6 +49,10 @@ def units():
 	return simulated_units
 
 @pytest.fixture(scope="module")
+def unit():
+	return next(iter(units().values()))
+
+@pytest.fixture(scope="module")
 def spike_train():
 	return next(iter(units().values())).spike_train
 
