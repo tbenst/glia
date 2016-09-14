@@ -146,3 +146,8 @@ def estimate_firing_rate(spike_train, window, step):
         spike_counts = np.append(spike_counts, count_spikes(spike_train, x, window))
         firing_rate = np.array(spike_counts) / window
     return firing_rate
+
+def sort_two_arrays_by_first(a,b):
+    b = [y for (x,y) in sorted(zip(a,b))]
+    a = sorted(a)
+    return (a,b)
