@@ -110,6 +110,17 @@ def draw_spikes(ax, spike_train, ymin=0,ymax=1,color="black",alpha=0.3):
 
 # Helpers
 
+def plot_units(unit_plot_function, units, ncols=4, ax_xsize=2, ax_ysize=2, subplot_kw=None):
+    number_of_units = len(list(units.keys()))
+    nrows = np.ceil(number_of_units/ncols)
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+    axis = axis_generator(ax)
+    for unit_id, value in units.items():
+        cur_ax = next(axis)
+        cur_ax.set_title()
+        unit_plot_function(cur_ax,value)
+    return fig
+
 def subplot_generator(n_charts, num_cols):
     """Generate arguments for matplotlib add_subplot.
 

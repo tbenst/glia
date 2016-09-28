@@ -297,7 +297,6 @@ def validate_stimulus_times(stimulus_list,start_times):
                          "Try lowering the threshold".format(start_length,stimulus_length))
 
 def get_threshold(analog_file):
-    multi-""
     analog = glia.read_raw_voltage(analog_file)
     mean, sigma = analog.mean(), analog.std(ddof=1)
     return mean+3*sigma
