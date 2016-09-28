@@ -6,6 +6,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Any, Union
 
+file = str
+Dir = str
+dat = str
+Hz = int
+SpikeUnits = List[np.ndarray]
+SpikeUnits = List[np.ndarray]
+Seconds = float
+ms = float
+
+# Must have these two keys: (stimulus, spikes)
+# spikes is a list of spike times List[float]
+Experiment = Dict
+Experiments = List[Dict]
+SpikeTrain = List[float]
+# Mustbe: {"WAIT", "SOLID", "BAR", "GRATING"}
+StimulusType = str
+SpikeTrains = List[SpikeTrain]
+Analytics = Dict[str,Any]
+
+
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)
 
