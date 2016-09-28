@@ -382,52 +382,6 @@ def calculate_osi_by_speed_width(unit):
 def f_get_key(i):
     return lambda item: item[i]
 
-def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=False):
-    """Plot the average for each speed and width."""
-    # we will accumulate by angle in this dictionary and then divide
-    analytics = by_speed_width_then_angle(bar_firing_rate[unit_id])
-    speed_widths = analytics.keys()
-    speeds = sorted(list(set([speed for speed,width in speed_widths])))
-    widths = sorted(list(set([width for speed,width in speed_widths])))
-    color=iter(plt.cm.rainbow(np.linspace(0,1,len(speeds))))
-    w = iter(np.linspace(1,5,len(widths)))
-    speed_style = {speed: next(color) for speed in speeds}
-    width_style = {width: next(w) for width in widths}
-    
-    for speed_width, angle_dictionary in analytics.items():
-        speed, width = speed_width
-        line_angle = []
-        line_radius = []
-        for angle, average_number_spikes in angle_dictionary.items():
-            line_angle.append(angle)
-            line_radius.append(average_number_spikes)
-        # connect the line
-        line_angle, line_radius = sort_two_arrays_by_first(line_angle,line_radius)
-        line_angle.append(line_angle[0])
-        line_radius.append(line_radius[0])
-        ax.plot(line_angle,line_radius, linewidth=width_style[width], color=speed_style[speed], label=speed_width)
-        
-    ax.set_title('Unit: '+str(unit_id))
-    ax.set_ylabel("Firing rate (Hz)")
-    speed_style["overall"] = "white"
-    unique_speed_width = sorted(speed_widths, key=f_get_key(1))
-    unique_speed_width = sorted(unique_speed_width, key=f_get_key(0))
-    
-    columns = unique_speed_width + ["overall"]
-    colors = [speed_style[speed] for speed,width in unique_speed_width] + ['white']
-    cells = [["{:1.3f}".format(bar_dsi[unit_id][speed_width]) for speed_width in columns], \
-             ["{:1.3f}".format(bar_osi[unit_id][speed_width]) for speed_width in columns]]
-    
-    table = ax.table(cellText=cells,
-                      rowLabels=['DSI',"OSI"],
-                      colLabels=columns,
-                     colColours=colors,
-                        loc='bottom', bbox = [0,-0.2,1,0.15])
-    table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    if legend is True:
-        ax.legend()
-
 def f_calculate_peak_ifr_by_stimulus(bandwidth=0.15, bin_width=0.001, sigma=6):
     def create_analytics(analytics):
         new = {}
