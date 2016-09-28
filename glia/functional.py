@@ -1,4 +1,10 @@
 import functools
+from functools import reduce
+from typing import Dict, Callable
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import List, Any, Union
 
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)
