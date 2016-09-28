@@ -5,6 +5,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Any, Union
+from .functional import f_filter, f_map, f_reduce
 
 
 file = str
