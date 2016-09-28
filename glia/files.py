@@ -283,6 +283,25 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
 
     return(channels)
 
+def validate_stimulus_times(stimulus_list,start_times):
+    stimulus_length = len(stimulus_list)
+    start_length = len(start_times)
+    
+    if np.abs(start_length-stimulus_length) <= 1:
+        warn("length of start times and stimulus_list differ by 1")
+    elif start_length > stimulus_length:
+        raise ValueError("start_times ({}) is longer than stimulus_list ({}). " \
+                         "Try raising the threshold".format(start_length,stimulus_length))
+    elif start_length < stimulus_length:
+        raise ValueError("start_times ({}) is shorter than stimulus_list ({}). " \
+                         "Try lowering the threshold".format(start_length,stimulus_length))
+
+def get_threshold(analog_file):
+    multi-""
+    analog = glia.read_raw_voltage(analog_file)
+    mean, sigma = analog.mean(), analog.std(ddof=1)
+    return mean+3*sigma
+
 
 # HELPER FUNCTIONS
 

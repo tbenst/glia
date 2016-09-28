@@ -10,6 +10,12 @@ ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 
+def axis_generator(ax):
+    for handle in ax.reshape(-1):
+        yield(handle)    
+
+
+
 def spike_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=0.1,
                     time: (Seconds, Seconds)=(None, None), plot=True) -> (Any):
     """
@@ -96,6 +102,12 @@ def visualize_spikes(unit_spike_trains: UnitSpikeTrains, fig_size=(30, 15)):
     ax2.plot(spike_histogram(channels))
 
 
+def draw_spikes(ax, spike_train, ymin=0,ymax=1,color="black",alpha=0.3):
+    "Draw each spike as black line."
+    draw_spike = np.vectorize(lambda s: ax.vlines(s, ymin, ymax,colors=color,alpha=alpha))
+    for spike in spike_train:
+        draw_spike(spike)
+
 # Helpers
 
 def subplot_generator(n_charts, num_cols):
@@ -149,6 +161,20 @@ def count_items(my_list):
         except:
             to_return[i]=1
     return to_return
+
+def plot_ifr(ax_gen, unit, ylim=None, legend=False):
+    color=iter(plt.cm.rainbow(np.linspace(0,1,20))) #this is a hack, should not be 20
+    
+    for stimulus, ifr_list in unit.items():
+        c = next(color)
+        stim = eval(stimulus)
+        l = "speed:"+ str(stim["speed"]) + ", width:" + str(stim["width"]) + ", bar_color:"+str(stim["barColor"])
+        for trial in ifr_list:
+            ax = next(ax_gen)
+            ax.plot(trial, color=c)
+            ax.set_title(l)
+            if ylim is not None:
+                ax.set_ylim(ylim)
 
 # @pytest.fixture(scope="module")
 # def channels():
