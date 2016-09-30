@@ -233,6 +233,20 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
+
+def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, subplot_kw=None):
+    number_of_units = len(list(units.keys())) + 1
+    nrows = int(np.ceil(number_of_units/ncols))
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+    axis = glia.axis_generator(ax)
+
+    for unit_id, value in units.items():
+        cur_ax = next(axis)
+        unit_plot_function(cur_ax,unit_id, value)
+
+    return fig
+
+
 # @pytest.fixture(scope="module")
 # def channels():
 #     import files
