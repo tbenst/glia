@@ -14,56 +14,6 @@ def axis_generator(ax):
     for handle in ax.reshape(-1):
         yield(handle)    
 
-
-
-def spike_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=0.1,
-                    time: (Seconds, Seconds)=(None, None), plot=True) -> (Any):
-    """
-    Plot histogram of summed spike counts across all channels.
-
-    Args:
-        channels: List of numpy arrays; each float represents spike times.
-        bin_width: Size of histogram bin width in seconds.
-        time: Tuple of (start_time, end_time) i
-
-    Returns:
-        matplotlib pyplot figure (can call .show() to display).
-
-    Raises:
-        ValueError for bad bin_width.
-    """
-    channels = unit_spike_trains.keys()
-    if bin_width <= 0:
-        raise ValueError("bin_width must be greater than zero")
-
-    # flatten array
-    all_spikes = np.hstack([c for c in channels if c is not None])
-
-    # filter for desired range
-    start_time = time[0]
-    end_time = time[1]
-    if start_time is not None:
-        all_spikes = all_spikes[all_spikes > start_time]
-    else:
-        start_time = 0
-
-    if end_time is not None:
-        all_spikes = all_spikes[all_spikes < end_time]
-    else:
-        end_time = last_spike_time(channels)
-
-    # add bin_width to last_time so histogram includes final edge
-    bins = np.arange(start_time, np.ceil(end_time) + bin_width, bin_width)
-
-    # plot histogram
-    if plot is True:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.hist(all_spikes, bins)
-    else:
-        return(np.histogram(all_spikes, bins))
-
-
 def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
                   time: (Seconds, Seconds)=(0, 100/1000), average=True,
                   fig_size=(15, 30)) -> (Any):
@@ -85,21 +35,6 @@ def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
         for channel in channels:
             ax = fig.add_subplot(*next(subp))
             ax.hist(channel, bins)
-
-
-def visualize_spikes(unit_spike_trains: UnitSpikeTrains, fig_size=(30, 15)):
-    fig = plt.figure(figsize=fig_size)
-
-    channels = unit_spike_trains.keys()
-
-    # Draw each spike as black line
-    ax = fig.add_subplot(211)
-    for i, unit in enumerate(channels):
-        ax.vlines(channels[i], i, i + 1)
-
-    # Plot histogram
-    ax2 = fig.add_subplot(212)
-    ax2.plot(spike_histogram(channels))
 
 
 def draw_spikes(ax, spike_train, ymin=0,ymax=1,color="black",alpha=0.3):
@@ -234,7 +169,7 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
         ax.legend()
 
 
-def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, subplot_kw=None):
+def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, ylim=None, xlim=None, subplot_kw=None):
     "unit_plot_function should take ax, unit_id, value"
     number_of_units = len(list(units.keys())) + 1
     nrows = int(np.ceil(number_of_units/ncols))
@@ -244,6 +179,10 @@ def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, subp
     for unit_id, value in units.items():
         cur_ax = next(axis)
         unit_plot_function(cur_ax,unit_id, value)
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        if xlim is not None:
+            ax.set_xlim(xlim)
 
     return fig
 
