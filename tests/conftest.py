@@ -1,9 +1,11 @@
 import pytest
 import glia
-from data.stimulus_list import gratings_stimulus_list
+import numpy as np
+from uuid import uuid4
+# from data.stimulus_list import gratings_stimulus_list
 
 def assert_within(a,b,within=1):
-	assert abs(a-b) < within
+	assert abs(a-b) <= within
 
 @pytest.fixture(scope="module")
 def sampling_rate():
@@ -35,3 +37,25 @@ def units():
 @pytest.fixture(scope="module")
 def plexon_txt_filepath():
 	return "tests/data/E1_R1_DAD_45min_movingbar.txt"
+
+@pytest.fixture(scope="module")
+def units():
+	simulated_units = {}
+	for i in range(0,100):
+	    unit = glia.Unit(uuid4(),1)
+	    unit.spike_train = np.arange(0,2200,1)
+	    simulated_units[unit.id] = unit
+
+	return simulated_units
+
+@pytest.fixture(scope="module")
+def unit():
+	return next(iter(units().values()))
+
+@pytest.fixture(scope="module")
+def spike_train():
+	return next(iter(units().values())).spike_train
+
+@pytest.fixture(scope="module")
+def stimulus_list():
+    return glia.load_stimulus("tests/data/160615/E1_R1_DAD_55min_contrastgratings.stimulus")

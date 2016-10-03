@@ -4,16 +4,16 @@ from typing import List, Dict
 # import pytest
 import glob
 import warnings
+from warnings import warn
 import h5py
 import os
 import csv
-from uuid import uuid4
 from .classes import Unit
 
 file = str
 Dir = str
 dat = str
-UnitSpikeTrains = List[Dict[str,np.ndarray]]
+UnitSpikeTrains = List[Dict[str, np.ndarray]]
 
 # VOLTAGE DATA
 
@@ -32,8 +32,9 @@ def read_raw_voltage(raw_filename):
                      offset=offset,
                      dtype='int16')
 
+
 def read_plexon_txt_file(filepath, retina_id):
-    """Assumes export format of Channel,Unit,timestamp exported per waveform."""
+    """Assume export format of Channel,Unit,timestamp exported per waveform."""
     units = {}
     unit_dictionary = {}
     with open(filepath) as file:
@@ -42,23 +43,21 @@ def read_plexon_txt_file(filepath, retina_id):
             unit_num = int(row[1])
             spike_time = float(row[2])
 
-            if (channel,unit_num) in unit_dictionary:
-                unit_id = unit_dictionary[(channel,unit_num)]
+            if (channel, unit_num) in unit_dictionary:
+                unit_id = unit_dictionary[(channel, unit_num)]
             else:
                 # initialize key for both dictionaries
                 unit = Unit(retina_id, channel)
                 unit.spike_train = []
                 unit_id = unit.id
                 units[unit_id] = unit
-                unit_dictionary[(channel,unit_num)] = unit.id
-            
+                unit_dictionary[(channel, unit_num)] = unit.id
+
             units[unit_id].spike_train.append(spike_time)
     for u in units.values():
         u.spike_train = np.array(u.spike_train)
 
     return units
-
-
 
 
 def get_header(filename: file) -> (str):
@@ -89,6 +88,7 @@ def sampling_rate(filename: file) -> (int):
     """Read the sampling rate from a MCS raw file."""
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
+
 
 def read_spyking_results(filepath: str, retina_id, sampling_rate: int) -> (
         UnitSpikeTrains):
@@ -284,6 +284,23 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
 
     return(channels)
 
+def validate_stimulus_times(stimulus_list,start_times):
+    stimulus_length = len(stimulus_list)
+    start_length = len(start_times)
+    
+    if np.abs(start_length-stimulus_length) <= 1:
+        warn("length of start times and stimulus_list differ by 1")
+    elif start_length > stimulus_length:
+        raise ValueError("start_times ({}) is longer than stimulus_list ({}). " \
+                         "Try raising the threshold".format(start_length,stimulus_length))
+    elif start_length < stimulus_length:
+        raise ValueError("start_times ({}) is shorter than stimulus_list ({}). " \
+                         "Try lowering the threshold".format(start_length,stimulus_length))
+
+def get_threshold(analog_file, nsigma=3):
+    analog = read_raw_voltage(analog_file)
+    mean, sigma = analog.mean(), analog.std(ddof=1)
+    return mean+nsigma*sigma
 
 
 # HELPER FUNCTIONS
@@ -304,7 +321,7 @@ def _lines_with_float(path: file):
     Traceback (most recent call last):
         ...
     StopIteration
-    
+
     (doctest disabled)
     """
     with open(path, mode='r') as f:
