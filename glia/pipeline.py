@@ -126,3 +126,6 @@ def f_count_each_in_group() -> Callable[[Dict[str,List[SpikeTrain]]], Analytics]
             new[k] = list(map(lambda x: len(x),v))
         return new
     return create_analytics
+
+def get_unit(units):
+    return next(iter(units.items()))
