@@ -273,6 +273,8 @@ def create_stimulus_list_from_SOLID(analog_file):
     # create the.stimulus file
     glia.dump_stimulus(stimulus_list, stimulus_file)
 
+    return stimulus_list
+
 # def histogram_of_stimulus(stimulus, experiments, bins = np.arange(0,1,10/1000)):
 #     analytics = {  "WAIT":  {},  "SOLID": {},  "BAR": {},  "GRATING": {} }
 #     has_time=re.compile(r"^{}$".format(stimulus))

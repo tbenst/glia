@@ -394,3 +394,6 @@ def f_calculate_peak_ifr_by_stimulus(bandwidth=0.15, bin_width=0.001, sigma=6):
                                        spike_trains))
         return new
     return create_analytics
+
+def concatenate_by_stimulus(unit):
+    return {stimulus: np.sort(np.hstack(values)) for stimulus, values in unit.items()}

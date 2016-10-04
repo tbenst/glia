@@ -15,15 +15,17 @@ def main():
 @main.command()
 @click.argument('filename', type=click.Path(exists=True))
 @click.option('--method', '-m',
-                type=click.Choice(["direction", "orientation", "ptsh"])
+                type=click.Choice(["direction", "orientation", "ptsh"]),
+                default="all",
               help=analyze_help)
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
-@click.option("--trigger", type=click.Choice(["flicker", 'direct', "ttl"]),
-    help="""Use flicker if light sensor was on the eye candy flicker, direct if the light sensor detects the solid stimulus,
+@click.option("--output", "-o")
+@click.option("--trigger", type=click.Choice(["flicker", 'solid', "ttl"]),
+    help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
     """)
-def analyze(filename, method, trigger, eyecandy, notebook=None):
+def analyze(filename, method, trigger, eyecandy, output=None, notebook=None):
     """Analyze data recorded with eyecandy.
     """
     data_directory, data_name = os.path.split(filename)
@@ -33,6 +35,17 @@ def analyze(filename, method, trigger, eyecandy, notebook=None):
 
     if not notebook:
         notebook = glob.glob(os.path.join(data_directory, '*.yml'))[0]
+
+    try:
+        stimulus_list = glia.load_stimulus(stimulus_file)
+    except OSError:
+        if trigger is "flicker":
+            stimulus_list = create_stimulus_list_from_flicker(analog_file)
+        elif trigger is "solid":
+            stimulus_list = create_stimulus_list_from_SOLID(analog_file)
+        elif trigger is "ttl":
+            raise('not implemented')
+
 
 
 analyze_help = "Use -a to run all."
