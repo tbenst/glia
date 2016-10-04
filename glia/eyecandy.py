@@ -10,7 +10,6 @@ import os
 from uuid import uuid4, UUID
 from scipy.ndimage import filters
 from scipy import signal
-from matplotlb
 from warnings import warn
 
 from .files import sampling_rate, read_raw_voltage
@@ -50,7 +49,7 @@ def open_lab_notebook(filepath):
     with open( filepath, 'r') as f:
         y = yaml.load(f)
     return y
-get_experiment_protocol(lab_notebook_yaml, name):
+def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
     study_data = lab_notebook_yaml['study']['data']
     for mouse in study_data:
@@ -196,7 +195,7 @@ def get_start_times_of_stimulus(stimulus_type, stimulus_list):
             ret.append(t)
     return ret
 
-def create_stimulus_list_from_flicker(analog_file):
+def create_stimulus_list_from_flicker(analog_file, eyecandy_url):
     # this will catch if the .stimulus file does not exist
     threshold = get_threshold(analog_file)
     start_times = get_stimulus_start_times(analog_file, threshold)
@@ -211,7 +210,7 @@ def create_stimulus_list_from_flicker(analog_file):
 
     return stimulus_list
 
-def create_stimulus_list_from_SOLID(analog_file):
+def create_stimulus_list_from_SOLID(analog_file, eyecandy_url):
     "using the solid time as ground truth, construct estimates of intermediate stimulus time going forwards and backwards"
     threshold = get_threshold(analog_file)
     start_times = get_stimulus_start_times(analog_file, threshold)

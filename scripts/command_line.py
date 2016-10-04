@@ -4,7 +4,9 @@ import glia
 import click
 import os
 import re
+import scripts.psth as psth
 from glob import glob
+import errno
 
 
 @click.group()
@@ -13,19 +15,16 @@ def main():
 
 
 @main.command()
+@click.argument('methods', nargs=-1, type=click.Choice(["direction", "orientation", "solid", 'all']))
 @click.argument('filename', type=click.Path(exists=True))
-@click.option('--method', '-m',
-                type=click.Choice(["direction", "orientation", "ptsh"]),
-                default="all",
-              help=analyze_help)
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
 @click.option("--output", "-o")
-@click.option("--trigger", type=click.Choice(["flicker", 'solid', "ttl"]),
+@click.option("--trigger", type=click.Choice(["flicker", 'detect-solid', "ttl"]),
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
     """)
-def analyze(filename, method, trigger, eyecandy, output=None, notebook=None):
+def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     """Analyze data recorded with eyecandy.
     """
     data_directory, data_name = os.path.split(filename)
@@ -33,19 +32,47 @@ def analyze(filename, method, trigger, eyecandy, output=None, notebook=None):
     analog_file = data_directory+name+'.analog'
     stimulus_file = data_directory+name+".stimulus"
 
+    spyking_regex = re.compile('.*\.result.hdf5$')
+    if extension == ".txt":
+        units = glia.read_plexon_txt_file(filename,filename)
+    elif re.match(spyking_regex, filename):
+        units = glia.read_spyking_results(filename)
+    else:
+        raise(ValueError, 'could not read {}. Is it a plexon or spyking circus file?')
+
     if not notebook:
-        notebook = glob.glob(os.path.join(data_directory, '*.yml'))[0]
+        notebook = glob(os.path.join(data_directory, '*.yml'))[0]
+
+    if not output:
+        plot_path = data_directory+name+"-plots/"
+        try:
+            os.makedirs(plot_path)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+        output = plot_path + "{}.png"
 
     try:
         stimulus_list = glia.load_stimulus(stimulus_file)
     except OSError:
-        if trigger is "flicker":
-            stimulus_list = create_stimulus_list_from_flicker(analog_file)
-        elif trigger is "solid":
-            stimulus_list = create_stimulus_list_from_SOLID(analog_file)
-        elif trigger is "ttl":
+        if trigger == "flicker":
+            stimulus_list = create_stimulus_list_from_flicker(analog_file, eyecandy)
+        elif trigger == "detect-solid":
+            stimulus_list = create_stimulus_list_from_SOLID(analog_file, eyecandy)
+        elif trigger == "ttl":
             raise('not implemented')
 
+    all_methods = False
+    for m in methods:
+        print(m)
+        if m  == "all":
+            all_methods = True
+            print(all_methods)
+    if  all_methods or "solid" in methods:
+        psth.save_solid_unit_psth(output.format("solid_unit_psth"), units, stimulus_list)
+        psth.save_solid_unit_spike_trains(output.format("solid_unit_spike_train"), units, stimulus_list)
+
+    print("Finished")
 
 
 analyze_help = "Use -a to run all."

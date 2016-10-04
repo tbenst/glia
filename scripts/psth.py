@@ -10,6 +10,9 @@ def f_plot_solid_psth(on_time,off_time,duration,bin_width):
             ax.hist(spike_train,bins=np.arange(0,duration,bin_width),linewidth=None,ec="none",color=next(color))
         ax.axvspan(0,on_time,facecolor="gray", edgecolor="none", alpha=0.2)
         ax.axvspan(off_time,duration,facecolor="gray", edgecolor="none", alpha=0.2)
+        ax.set_title(unit_id)
+        ax.set_xlabel("relative time (s)")
+        ax.set_ylabel("spike count")
     return plot
 
 def f_plot_solid_spike_trains(on_time,off_time,duration,bin_width):
@@ -21,10 +24,14 @@ def f_plot_solid_spike_trains(on_time,off_time,duration,bin_width):
                     glia.draw_spikes(ax, spike_train, ymin=i+0.3,ymax=i+1)
         ax.axvspan(0,on_time,facecolor="gray", edgecolor="none", alpha=0.2)
         ax.axvspan(off_time,duration,facecolor="gray", edgecolor="none", alpha=0.2)
+        ax.set_title(unit_id)
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("trial # (lower is earlier)")
     return plot
 
 
 def save_solid_unit_psth(output_file, units, stimulus_list):
+	print("Creating solid unit PSTH")
 	get_solid_psth = glia.compose(
 	    glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_start_time=3),
 	    glia.f_has_stimulus_type(["SOLID"]),
@@ -37,6 +44,7 @@ def save_solid_unit_psth(output_file, units, stimulus_list):
 
 
 def save_solid_unit_spike_trains(output_file, units, stimulus_list):
+	print("Creating solid unit spike trains")
 	get_solid = glia.compose(
 	    glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_start_time=3),
 	    glia.f_has_stimulus_type(["SOLID"]),

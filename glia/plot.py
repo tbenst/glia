@@ -180,9 +180,9 @@ def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, ylim
         cur_ax = next(axis)
         unit_plot_function(cur_ax,unit_id, value)
         if ylim is not None:
-            ax.set_ylim(ylim)
+            cur_ax.set_ylim(ylim)
         if xlim is not None:
-            ax.set_xlim(xlim)
+            cur_ax.set_xlim(xlim)
 
     return fig
 
