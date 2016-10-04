@@ -4,12 +4,38 @@ import glia
 import click
 import os
 import re
+from glob import glob
 
 
 @click.group()
 def main():
     pass
 
+
+@main.command()
+@click.argument('filename', type=click.Path(exists=True))
+@click.option('--method', '-m',
+                type=click.Choice(["direction", "orientation", "ptsh"])
+              help=analyze_help)
+@click.option("--notebook", "-n", type=click.Path(exists=True))
+@click.option("--eyecandy", "-e", default="http://eyecandy:3000")
+@click.option("--trigger", type=click.Choice(["flicker", 'direct', "ttl"]),
+    help="""Use flicker if light sensor was on the eye candy flicker, direct if the light sensor detects the solid stimulus,
+    or ttl if there is a electrical impulse for each stimulus.
+    """)
+def analyze(filename, method, trigger, eyecandy, notebook=None):
+    """Analyze data recorded with eyecandy.
+    """
+    data_directory, data_name = os.path.split(filename)
+    name, extension = os.path.splitext(data_name)
+    analog_file = data_directory+name+'.analog'
+    stimulus_file = data_directory+name+".stimulus"
+
+    if not notebook:
+        notebook = glob.glob(os.path.join(data_directory, '*.yml'))[0]
+
+
+analyze_help = "Use -a to run all."
 
 @main.command()
 @click.argument('filename', type=click.Path(exists=True))
