@@ -5,6 +5,7 @@ import click
 import os
 import re
 import scripts.solid as solid
+import scripts.bar as bar
 from glob import glob
 import errno
 import traceback
@@ -18,6 +19,7 @@ def safe_run(function, args):
         function(*args)
     except Exception as exception:
         traceback.print_tb(exception.__traceback__)
+        print(exception)
         print("Error running {}. Skipping".format(function, ))
 
 @main.command()
@@ -73,11 +75,17 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         if m  == "all":
             all_methods = True
             print(all_methods)
-    if  all_methods or "solid" in methods:
+
+    if all_methods or "solid" in methods:
         safe_run(solid.save_unit_psth,
             (output.format("solid_unit_psth"), units, stimulus_list))
         safe_run(solid.save_unit_spike_trains,
             (output.format("solid_unit_spike_train"), units, stimulus_list))
+    
+    if all_methods or "direction" in methods:
+        safe_run(bar.save_unit_response_by_angle,
+            ([output.format("bar_unit_response_by_angle"), output.format("bar_population_osi_dsi")],
+                units, stimulus_list))
 
     print("Finished")
 

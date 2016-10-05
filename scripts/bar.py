@@ -1,6 +1,7 @@
 import glia
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 def f_get_key(i):
     return lambda item: item[i]
@@ -26,7 +27,7 @@ def get_fr_dsi_osi(units, stimulus_list):
 	    glia.by_speed_width_then_angle,
 	    glia.calculate_osi_by_speed_width
 	)
-	bar_osi = glia.apply_pipeline(get_bar_osi,units)
+	bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate)
 
 
 	return (bar_firing_rate, bar_dsi, bar_osi)
@@ -107,26 +108,27 @@ def plot_population_dsi_osi(ax,data):
 	    values, bins = item[1]
 	    oh[parameter] = values
 
-	fig,ax = plt.subplots(2,1)
 	dh.plot.bar(figsize=(20,20), ax=ax[0])
-	ax[0].set_title("DSI: "+data_directory+data_name)
+	ax[0].set_title("Direction Selectivity Index (DSI)")
 	oh.plot.bar(figsize=(20,20), ax=ax[1])
-	ax[1].set_title("OSI: "+data_directory+data_name)
+	ax[1].set_title("Orientation Selectivity Index (OSI)")
 
 
-def save_unit_responses_by_angle(output_files, units, stimulus_list):
+def save_unit_response_by_angle(output_files, units, stimulus_list):
 	bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
-	
+
 	def data_generator():
 		first = True
 		for unit_id in bar_firing_rate.keys():
-		    yield (unit_id, bar_firing_rate[unit_id], bar_dsi[unit_id],
-		    	bar_osi[unit_id], first)
-		    first = False
-    nplots = len(bar_firing_rate.keys()) + 1
+			yield (unit_id, bar_firing_rate[unit_id], bar_dsi[unit_id],
+				bar_osi[unit_id], first)
+			first = False
 
-    fig_unit_response = glia.plot_from_generator(plot_unit_response_by_angle,data_generator,nplots)
-    fig_unit_response.savefig(output_files[0])
-    fig_population,ax = plt.subplots()
-    glia.plot_population_dsi_osi(ax, (bar_firing_rate, bar_dsi, bar_osi))
-    fig_population.savefig(output_files[1])
+	nplots = len(bar_firing_rate.keys()) + 1
+
+	fig_unit_response = glia.plot_from_generator(plot_unit_response_by_angle,data_generator,nplots,
+		subplot_kw={"projection": "polar"})
+	fig_unit_response.savefig(output_files[0])
+	fig_population,ax = plt.subplots(2,1)
+	plot_population_dsi_osi(ax, (bar_dsi, bar_osi))
+	fig_population.savefig(output_files[1])

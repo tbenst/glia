@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from typing import List, Any, Union
 from .functional import f_filter, f_map, f_reduce
 from scipy import signal
-from classes import Unit
+from glia.classes import Unit
 
 
 file = str
@@ -31,7 +31,7 @@ Analytics = Dict[str,Any]
 
 
 def apply_pipeline(pipeline, units):
-    return {k: pipeline(v.spike_train) if (type(v) is Unit) else pipeline(v) for k,v in units.items()}
+    return {k: (pipeline(v.spike_train) if (type(v) is Unit) else pipeline(v)) for k,v in units.items()}
 
 def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append_lifetime=0,
                          append_start_time=None):

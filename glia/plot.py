@@ -168,7 +168,6 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
-
 def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, ylim=None, xlim=None, subplot_kw=None):
     "unit_plot_function should take ax, unit_id, value"
     number_of_units = len(list(units.keys())) + 1
@@ -180,9 +179,9 @@ def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, ylim
         cur_ax = next(axis)
         unit_plot_function(cur_ax,unit_id, value)
         if ylim is not None:
-            ax.set_ylim(ylim)
+            cur_ax.set_ylim(ylim)
         if xlim is not None:
-            ax.set_xlim(xlim)
+            cur_ax.set_xlim(xlim)
 
     return fig
 
@@ -192,9 +191,9 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
     fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
     axis = axis_generator(ax)
 
-    for data in data_generator:
+    for data in data_generator():
         cur_ax = next(axis)
-        unit_plot_function(cur_ax, data)
+        plot_function(cur_ax, data)
         if ylim is not None:
             cur_ax.set_ylim(ylim)
         if xlim is not None:
