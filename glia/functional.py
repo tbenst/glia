@@ -60,3 +60,15 @@ def f_reduce(function, initial_value=None) -> Callable[[List[Experiment],Any], A
         else:
             return reduce(function, e)
     return anonymous
+
+def zip_dictionaries(*dictionaries, transform_yield=None):
+    "Iterate dictionaries and yield a tuple of their values, retaining order."
+    # take keys that are in all dictionaries
+    keys = set().intersection(*dictionaries)
+
+    if transform_yield is None:
+        transform_yield = lambda v: v
+
+    for key in keys:
+        to_yield = tuple((dictionary[key] for dictionary in dictionaries))
+        yield transform_yield(to_yield)

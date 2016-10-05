@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from typing import List, Any, Union
 from .functional import f_filter, f_map, f_reduce
 from scipy import signal
+from glia.classes import Unit
 
 
 file = str
@@ -30,7 +31,7 @@ Analytics = Dict[str,Any]
 
 
 def apply_pipeline(pipeline, units):
-    return {k: pipeline(v.spike_train) for k,v in units.items()}
+    return {k: (pipeline(v.spike_train) if (type(v) is Unit) else pipeline(v)) for k,v in units.items()}
 
 def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append_lifetime=0,
                          append_start_time=None):
@@ -396,3 +397,6 @@ def f_calculate_peak_ifr_by_stimulus(bandwidth=0.15, bin_width=0.001, sigma=6):
                                        spike_trains))
         return new
     return create_analytics
+
+def concatenate_by_stimulus(unit):
+    return {stimulus: np.sort(np.hstack(values)) for stimulus, values in unit.items()}
