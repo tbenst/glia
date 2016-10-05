@@ -180,12 +180,27 @@ def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, ylim
         cur_ax = next(axis)
         unit_plot_function(cur_ax,unit_id, value)
         if ylim is not None:
+            ax.set_ylim(ylim)
+        if xlim is not None:
+            ax.set_xlim(xlim)
+
+    return fig
+
+def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize=7, ax_ysize=10, ylim=None, xlim=None, subplot_kw=None):
+    "plot each data in list_of_data using plot_function(ax, data)."
+    nrows = int(np.ceil(nplots/ncols))
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+    axis = axis_generator(ax)
+
+    for data in data_generator:
+        cur_ax = next(axis)
+        unit_plot_function(cur_ax, data)
+        if ylim is not None:
             cur_ax.set_ylim(ylim)
         if xlim is not None:
             cur_ax.set_xlim(xlim)
 
     return fig
-
 
 # @pytest.fixture(scope="module")
 # def channels():

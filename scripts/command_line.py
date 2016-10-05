@@ -4,22 +4,27 @@ import glia
 import click
 import os
 import re
-import scripts.psth as psth
+import scripts.solid as solid
 from glob import glob
 import errno
-
+import traceback
 
 @click.group()
 def main():
     pass
 
+def safe_run(function, args):
+    try:
+        function(*args)
+    except Exception as exception:
+        traceback.print_tb(exception.__traceback__)
+        print("Error running {}. Skipping".format(function, ))
 
 @main.command()
 @click.argument('methods', nargs=-1, type=click.Choice(["direction", "orientation", "solid", 'all']))
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
-@click.option("--output", "-o")
 @click.option("--trigger", type=click.Choice(["flicker", 'detect-solid', "ttl"]),
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
@@ -43,14 +48,14 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     if not notebook:
         notebook = glob(os.path.join(data_directory, '*.yml'))[0]
 
-    if not output:
-        plot_path = data_directory+name+"-plots/"
-        try:
-            os.makedirs(plot_path)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
-        output = plot_path + "{}.png"
+    # prepare_output
+    plot_path = data_directory+name+"-plots/"
+    try:
+        os.makedirs(plot_path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    output = plot_path + "{}.png"
 
     try:
         stimulus_list = glia.load_stimulus(stimulus_file)
@@ -69,8 +74,10 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
             all_methods = True
             print(all_methods)
     if  all_methods or "solid" in methods:
-        psth.save_solid_unit_psth(output.format("solid_unit_psth"), units, stimulus_list)
-        psth.save_solid_unit_spike_trains(output.format("solid_unit_spike_train"), units, stimulus_list)
+        safe_run(solid.save_unit_psth,
+            (output.format("solid_unit_psth"), units, stimulus_list))
+        safe_run(solid.save_unit_spike_trains,
+            (output.format("solid_unit_spike_train"), units, stimulus_list))
 
     print("Finished")
 
