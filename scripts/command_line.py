@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+will#!/usr/bin/env python
 
 import glia
 import click
@@ -67,7 +67,7 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         elif trigger == "detect-solid":
             stimulus_list = create_stimulus_list_from_SOLID(analog_file, eyecandy)
         elif trigger == "ttl":
-            raise('not implemented')
+            raise ValueError('not implemented')
 
     all_methods = False
     for m in methods:
