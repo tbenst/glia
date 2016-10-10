@@ -82,12 +82,7 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     for m in methods:
         if m  == "all":
             all_methods = True
-<<<<<<< HEAD
-=======
 
-    if "debug" in methods:
-        print(len(glia.get_unit(units)[1].spike_train))
->>>>>>> testing
 
     if all_methods or "solid" in methods:
         safe_run(solid.save_unit_psth,
