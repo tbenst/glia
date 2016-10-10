@@ -186,7 +186,7 @@ def plot_units(unit_plot_function, units, *arguments, ncols=4, ax_xsize=2, ax_ys
             else:
                 data.append(argument)
     else:
-        nrows = np.ceil(number_of_units/ncols)
+        nrows = int(np.ceil(number_of_units/ncols))
     
     if nrows*ncols > 200:
         nrows = int(np.floor(200/ncols))
@@ -196,14 +196,15 @@ def plot_units(unit_plot_function, units, *arguments, ncols=4, ax_xsize=2, ax_ys
     axis = axis_generator(ax)
 
     i = 0
-    for unit_id, value in units.items():
-        if i>=100:
+    for unit_id in units:
+        # print(unit_id,value)
+        if i>=nrows:
             break
         else:
             i+=1
-            
-        for plot_function, value in zip(plot_functions,data):
-            cur_ax = next(axis)
+        cur_ax = next(axis)
+        unit_data = map(lambda x: x[unit_id], data)
+        for plot_function, value in zip(plot_functions, unit_data):
             plot_function(cur_ax,unit_id,value)
     return fig
 

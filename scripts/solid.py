@@ -24,6 +24,7 @@ def f_plot_spike_trains(prepend_start_time,append_lifespan):
     def plot(ax,unit_id,value):
         trial = 0
         for v in value:
+            # print(type(v))
             stimulus, spike_train = (v["stimulus"], v["spikes"])
             lifespan = stimulus['lifespan'] / 120
             if lifespan > 5:
@@ -70,6 +71,5 @@ def save_unit_spike_trains(output_file, units, stimulus_list):
         glia.f_has_stimulus_type(["SOLID"]),
     )
     response = glia.apply_pipeline(get_solid,units)
-
     fig = glia.plot_units(f_plot_spike_trains(1,1),response,ncols=2,ax_xsize=10, ax_ysize=5)
     fig.savefig(output_file)
