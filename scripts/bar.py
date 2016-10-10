@@ -120,12 +120,16 @@ def save_unit_response_by_angle(output_files, units, stimulus_list):
 
     def data_generator():
         first = True
+        i = 0
         for unit_id in bar_firing_rate.keys():
+            if i >= 100:
+                print("plotting first 100 units")
             yield (unit_id, bar_firing_rate[unit_id], bar_dsi[unit_id],
                 bar_osi[unit_id], first)
             first = False
 
     nplots = len(bar_firing_rate.keys()) + 1
+    nplots = min(nplots,100)
     print("plotting unit response by angle")
     fig_unit_response = glia.plot_from_generator(plot_unit_response_by_angle,data_generator,nplots,
         subplot_kw={"projection": "polar"})

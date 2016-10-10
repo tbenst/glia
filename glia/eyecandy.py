@@ -114,6 +114,19 @@ def validate_stimulus_times(stimulus_list,start_times):
         raise ValueError("start_times ({}) is shorter than stimulus_list ({}). " \
                          "Try lowering the threshold".format(start_length,stimulus_length))
 
+    predicted_start_time = stimulus_list[0]["start_time"] + stimulus_list[0]["lifespan"]/120
+    for s in stimulus_list[1:]:
+        start_time = s["start_time"]
+        stimulus = s["stimulus"]
+        lifespan = stimulus["lifespan"]/120
+        try:
+            assert np.abs(start_time - predicted_start_time) < 0.5
+        except Exception as e:
+            print("malformed stimulus list--try a different trigger or adjusting the threshold.")
+            raise(e)
+        predicted_start_time =  start_time + lifespan
+
+
     
 def get_stimulus_from_eyecandy(start_times, eyecandy_gen):
     """Return list of tuples (start time, corresponding eyecandy_gen)"""

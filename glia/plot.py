@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Any, Dict
 from .analysis import last_spike_time
+from .pipeline import get_unit
 # import pytest
 
 
@@ -172,22 +173,82 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
-def plot_units(unit_plot_function, units, ncols=4, ax_xsize=7, ax_ysize=10, ylim=None, xlim=None, subplot_kw=None):
-    "unit_plot_function should take ax, unit_id, value"
-    number_of_units = len(list(units.keys())) + 1
-    nrows = int(np.ceil(number_of_units/ncols))
+def plot_units(unit_plot_function, units, *arguments, ncols=4, ax_xsize=2, ax_ysize=2,
+               subplot_kw=None):
+    """Create a giant figure with one or more plots per unit.
+    
+    Must supply an even number of arguments that alternate function, units. If one pair is provided,
+    ncols will determine the number of columns. Otherwise, each unit will get one row."""
+    
+    number_of_units = len(list(units.keys()))
+    plot_functions = [unit_plot_function]
+    data = [units]
+    
+    if not len(arguments) % 2 == 0:
+        raise ValueError("must pass an equal number of functions and units")
+    elif len(arguments) > 0:
+        # multiple plot functions were suppliedon
+        ncols = len(arguments)/2
+        nrows = number_of_units
+        for i,argument in enumerate(arguments):
+            if i % 2 == 0:
+                plot_functions.append(argument)
+            else:
+                data.append(argument)
+    else:
+        nrows = np.ceil(number_of_units/ncols)
+    
+    if nrows*ncols > 200:
+        nrows = int(np.floor(200/ncols))
+        print("only plotting first {} units".format(nrows))
+        
     fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
     axis = axis_generator(ax)
 
+    i = 0
     for unit_id, value in units.items():
-        cur_ax = next(axis)
-        unit_plot_function(cur_ax,unit_id, value)
-        if ylim is not None:
-            cur_ax.set_ylim(ylim)
-        if xlim is not None:
-            cur_ax.set_xlim(xlim)
-
+        if i>=100:
+            break
+        else:
+            i+=1
+            
+        for plot_function, value in zip(plot_functions,data):
+            cur_ax = next(axis)
+            plot_function(cur_ax,unit_id,value)
     return fig
+
+
+def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
+               subplot_kw=None):
+    "Iterate each value by unit and pass to the plot function."
+    # number of units
+    # number of values
+    ncols = len(get_unit(units)[1].values())
+    nrows = len(list(units.keys()))
+    
+    if nrows*ncols > 200:
+        nrows = int(np.floor(200/ncols))
+        print("only plotting first {} units".format(nrows))
+    
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+    axis = axis_generator(ax)
+    
+    i = 0
+    for unit_id, value in units.items():
+        if i>=200:
+            break
+        else:
+            i+=1
+        
+        if type(value) is dict:
+            gen = value.items()
+        else:
+            gen = value
+        for v in gen:
+            cur_ax = next(axis)
+            unit_plot_function(cur_ax,unit_id,v)
+    return fig
+
 
 def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize=7, ax_ysize=10, ylim=None, xlim=None, subplot_kw=None):
     "plot each data in list_of_data using plot_function(ax, data)."
@@ -203,6 +264,31 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
         if xlim is not None:
             cur_ax.set_xlim(xlim)
 
+    return fig
+
+
+def plot_unit(unit_plot_function, unit, subplot_kw=None):
+    fig, ax = plt.subplots(subplot_kw=subplot_kw)
+    fig = unit_plot_function(ax, unit[0],unit[1])
+    return fig
+
+def plot_each_for_unit(unit_plot_function, unit, subplot_kw=None):
+    "Single unit version of plot_each_by_unit."
+    unit_id = unit[0]
+    value = unit[1]
+    ncols = len(value.values())
+    fig, ax = plt.subplots(1, ncols, subplot_kw=subplot_kw)
+    axis = axis_generator(ax)
+#     axis = iter([ax])
+    
+    
+    if type(value) is dict:
+        gen = value.items()
+    else:
+        gen = value
+    for v in gen:
+        cur_ax = next(axis)
+        unit_plot_function(cur_ax,unit_id,v)
     return fig
 
 # @pytest.fixture(scope="module")

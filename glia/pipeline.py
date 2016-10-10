@@ -33,12 +33,12 @@ Analytics = Dict[str,Any]
 def apply_pipeline(pipeline, units):
     return {k: (pipeline(v.spike_train) if (type(v) is Unit) else pipeline(v)) for k,v in units.items()}
 
-def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append_lifetime=0,
+def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append_lifespan=0,
                          append_start_time=None):
     """
     Split spike train into individual experiments according to stimulus list.
 
-    If append_start_time is given, ignore Lifetime and return experiments of duration
+    If append_start_time is given, ignore lifespan and return experiments of duration
     append_start_time + prepend_start_time.
     """
 
@@ -50,7 +50,7 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
             if append_start_time is not None:
                 end_time = start_time + append_start_time
             else:
-                end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifetime + prepend_start_time
+                end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifespan + prepend_start_time
 
             bool_indices = (spike_train > start_time) & (spike_train < end_time)
 
