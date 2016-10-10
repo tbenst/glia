@@ -108,6 +108,8 @@ def f_count_each_in_group() -> Callable[[Dict[str,List[SpikeTrain]]], Analytics]
         return new
     return create_analytics
 
+
+
 def f_calculate_firing_rate_by_stimulus():
     def create_analytics(analytics):
         new = {}
