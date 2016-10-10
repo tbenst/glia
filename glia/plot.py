@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Any, Dict
@@ -11,8 +12,11 @@ UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 
 def axis_generator(ax):
-    for handle in ax.reshape(-1):
-        yield(handle)    
+    if isinstance(ax,matplotlib.axes.Axes):
+        yield(ax)
+    else:
+        for handle in ax.reshape(-1):
+            yield(handle)    
 
 def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
                   time: (Seconds, Seconds)=(0, 100/1000), average=True,

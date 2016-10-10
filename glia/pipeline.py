@@ -50,7 +50,7 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
             if append_start_time is not None:
                 end_time = start_time + append_start_time
             else:
-                end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifetime
+                end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifetime + prepend_start_time
 
             bool_indices = (spike_train > start_time) & (spike_train < end_time)
 
@@ -88,6 +88,7 @@ def f_group_by(stimulus_parameter) -> Callable[[List[Experiment]], Dict]:
 
 def f_group_by_stimulus() -> Callable[[List[Experiment]], Dict]:
     def anonymous(accumulator,experiment):
+        experiment["stimulus"].pop('stimulusIndex', None)
         parameter = str(experiment["stimulus"])
         spikes = experiment["spikes"]
         new_accumulator = accumulator.copy()
