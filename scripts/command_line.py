@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import matplotlib
+matplotlib.use("agg")
 import glia
 import click
 import os
@@ -9,6 +11,7 @@ import scripts.bar as bar
 from glob import glob
 import errno
 import traceback
+
 
 @click.group()
 def main():
@@ -22,12 +25,15 @@ def safe_run(function, args):
         print(exception)
         print("Error running {}. Skipping".format(function, ))
 
+def plot_path(directory,plot_name):
+    return os.path.join(directory,plot_name+".png")
+
 @main.command()
 @click.argument('methods', nargs=-1, type=click.Choice(["direction", "orientation", "solid", 'all']))
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
-@click.option("--trigger", type=click.Choice(["flicker", 'detect-solid', "ttl"]),
+@click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
     """)
@@ -36,8 +42,8 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     """
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
-    analog_file = data_directory+name+'.analog'
-    stimulus_file = data_directory+name+".stimulus"
+    analog_file = os.path.join(data_directory, name +'.analog')
+    stimulus_file = os.path.join(data_directory, name + ".stimulus")
 
     spyking_regex = re.compile('.*\.result.hdf5$')
     if extension == ".txt":
@@ -51,38 +57,47 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         notebook = glob(os.path.join(data_directory, '*.yml'))[0]
 
     # prepare_output
-    plot_path = data_directory+name+"-plots/"
+    plot_directory = os.path.join(data_directory, name+"-plots")
     try:
-        os.makedirs(plot_path)
+        os.makedirs(plot_directory)
+        os.chmod(plot_directory, 0o777)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
-    output = plot_path + "{}.png"
 
     try:
         stimulus_list = glia.load_stimulus(stimulus_file)
     except OSError:
+        print("No .stimulus file found. Attempting to create from .analog file via {}".format(trigger))
         if trigger == "flicker":
-            stimulus_list = create_stimulus_list_from_flicker(analog_file, eyecandy)
+            stimulus_list = glia.create_stimulus_list_from_flicker(analog_file, stimulus_file, notebook, name, eyecandy)
         elif trigger == "detect-solid":
-            stimulus_list = create_stimulus_list_from_SOLID(analog_file, eyecandy)
+            stimulus_list = glia.create_stimulus_list_from_SOLID(analog_file, stimulus_file, notebook, name, eyecandy)
         elif trigger == "ttl":
-            raise('not implemented')
+            raise ValueError('not implemented')
+        else:
+            ValueError("invalid trigger: {}".format(trigger))
 
     all_methods = False
     for m in methods:
         if m  == "all":
             all_methods = True
+<<<<<<< HEAD
+=======
+
+    if "debug" in methods:
+        print(len(glia.get_unit(units)[1].spike_train))
+>>>>>>> testing
 
     if all_methods or "solid" in methods:
         safe_run(solid.save_unit_psth,
-            (output.format("solid_unit_psth"), units, stimulus_list))
+            (plot_path(plot_directory, "solid_unit_psth"), units, stimulus_list))
         safe_run(solid.save_unit_spike_trains,
-            (output.format("solid_unit_spike_train"), units, stimulus_list))
+            (plot_path(plot_directory, "solid_unit_spike_train"), units, stimulus_list))
     
     if all_methods or "direction" in methods:
         safe_run(bar.save_unit_response_by_angle,
-            ([output.format("bar_unit_response_by_angle"), output.format("bar_population_osi_dsi")],
+            ([plot_path(plot_directory, "bar_unit_response_by_angle"), plot_path(plot_directory, "bar_population_osi_dsi")],
                 units, stimulus_list))
 
     print("Finished")

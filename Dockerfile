@@ -1,5 +1,11 @@
-FROM alpine
+FROM continuumio/anaconda3:4.0.0p0
 
-# dummy file to trigger a build on docker hub for jupyter-neuro
+# build matplotlib font cache
+RUN python -c 'import matplotlib.pyplot'
+
+RUN pip install pyyaml
+RUN pip install click
+
 ADD . /src
-CMD ["echo dummy image! use tbenst/jupyter-neuro"]
+RUN cd /src && python setup.py install
+ENTRYPOINT ["glia"]

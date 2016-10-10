@@ -5,6 +5,7 @@ import numpy as np
 def f_plot_psth(on_time,off_time,duration,bin_width):
     def plot(ax,unit_id,value):
         number_of_stimuli = len(value.values())
+        print(number_of_stimuli)
         color=iter(plt.cm.rainbow(np.linspace(0,1,number_of_stimuli)))
         for stimulus, spike_train in value.items():
             ax.hist(spike_train,bins=np.arange(0,duration,bin_width),linewidth=None,ec="none",color=next(color))
@@ -31,28 +32,28 @@ def f_plot_spike_trains(on_time,off_time,duration,bin_width):
 
 
 def save_unit_psth(output_file, units, stimulus_list):
-	print("Creating solid unit PSTH")
-	# for stimulus in stimulus_list:
+    print("Creating solid unit PSTH")
+    # for stimulus in stimulus_list:
 
-	get_psth = glia.compose(
-	    glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_start_time=3),
-	    glia.f_has_stimulus_type(["SOLID"]),
-	    glia.f_group_by_stimulus(),
-	    glia.concatenate_by_stimulus
-	)
-	psth = glia.apply_pipeline(get_psth,units)
-	fig_psth = glia.plot_units(f_plot_psth(1,2,3,0.01),psth,ncols=2,ax_xsize=10, ax_ysize=5, xlim=(0,3))
-	fig_psth.savefig(output_file)
+    get_psth = glia.compose(
+        glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_start_time=3),
+        glia.f_has_stimulus_type(["SOLID"]),
+        glia.f_group_by_stimulus(),
+        glia.concatenate_by_stimulus
+    )
+    psth = glia.apply_pipeline(get_psth,units)
+    fig_psth = glia.plot_units(f_plot_psth(1,2,3,0.01),psth,ncols=2,ax_xsize=10, ax_ysize=5, xlim=(0,3))
+    fig_psth.savefig(output_file)
 
 
 def save_unit_spike_trains(output_file, units, stimulus_list):
-	print("Creating solid unit spike trains")
-	get_solid = glia.compose(
-	    glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_start_time=3),
-	    glia.f_has_stimulus_type(["SOLID"]),
-	    glia.f_group_by_stimulus(),
-	)
-	response = glia.apply_pipeline(get_solid,units)
+    print("Creating solid unit spike trains")
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_start_time=3),
+        glia.f_has_stimulus_type(["SOLID"]),
+        glia.f_group_by_stimulus(),
+    )
+    response = glia.apply_pipeline(get_solid,units)
 
-	fig = glia.plot_units(f_plot_spike_trains(1,2,3,0.01),response,ncols=2,ax_xsize=10, ax_ysize=5, xlim=(0,3))
-	fig.savefig(output_file)
+    fig = glia.plot_units(f_plot_spike_trains(1,2,3,0.01),response,ncols=2,ax_xsize=10, ax_ysize=5, xlim=(0,3))
+    fig.savefig(output_file)

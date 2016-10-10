@@ -9,28 +9,28 @@ def f_get_key(i):
 
 def get_fr_dsi_osi(units, stimulus_list):
 
-	get_bar_firing_rate = glia.compose(
-	    glia.f_create_experiments(stimulus_list),
-	    glia.f_has_stimulus_type(["BAR"]),
-	    glia.f_group_by_stimulus(),
-	    glia.f_calculate_peak_ifr_by_stimulus(),
-	)
-	bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units)
+    get_bar_firing_rate = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        glia.f_has_stimulus_type(["BAR"]),
+        glia.f_group_by_stimulus(),
+        glia.f_calculate_peak_ifr_by_stimulus(),
+    )
+    bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units)
 
-	get_bar_dsi = glia.compose(
-	    glia.by_speed_width_then_angle,
-	    glia.calculate_dsi_by_speed_width
-	)
-	bar_dsi = glia.apply_pipeline(get_bar_dsi,bar_firing_rate)
+    get_bar_dsi = glia.compose(
+        glia.by_speed_width_then_angle,
+        glia.calculate_dsi_by_speed_width
+    )
+    bar_dsi = glia.apply_pipeline(get_bar_dsi,bar_firing_rate)
 
-	get_bar_osi = glia.compose(
-	    glia.by_speed_width_then_angle,
-	    glia.calculate_osi_by_speed_width
-	)
-	bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate)
+    get_bar_osi = glia.compose(
+        glia.by_speed_width_then_angle,
+        glia.calculate_osi_by_speed_width
+    )
+    bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate)
 
 
-	return (bar_firing_rate, bar_dsi, bar_osi)
+    return (bar_firing_rate, bar_dsi, bar_osi)
 
 
 def plot_unit_response_by_angle(ax, data):
@@ -81,60 +81,56 @@ def plot_unit_response_by_angle(ax, data):
         ax.legend()
 
 def plot_population_dsi_osi(ax,data):
-	bar_dsi, bar_osi = data
+    bar_dsi, bar_osi = data
 
-	population_dsi = pd.DataFrame.from_dict(bar_dsi, orient="index")
-	population_osi = pd.DataFrame.from_dict(bar_osi, orient="index")
+    population_dsi = pd.DataFrame.from_dict(bar_dsi, orient="index")
+    population_osi = pd.DataFrame.from_dict(bar_osi, orient="index")
 
-	number_of_units = len(bar_dsi.keys())
+    number_of_units = len(bar_dsi.keys())
 
-	def f_histogram(bins, the_range):
-	    return lambda x: np.histogram(x,bins,the_range)
+    def f_histogram(bins, the_range):
+        return lambda x: np.histogram(x,bins,the_range)
 
-	dsi_population = population_dsi.apply(f_histogram(10,(0,1))).apply(lambda counts_bins: (counts_bins[0]/number_of_units, counts_bins[1]))
-	osi_population = population_osi.apply(f_histogram(10,(0,1))).apply(lambda counts_bins: (counts_bins[0]/number_of_units, counts_bins[1]))
+    dsi_population = population_dsi.apply(f_histogram(10,(0,1))).apply(lambda counts_bins: (counts_bins[0]/number_of_units, counts_bins[1]))
+    osi_population = population_osi.apply(f_histogram(10,(0,1))).apply(lambda counts_bins: (counts_bins[0]/number_of_units, counts_bins[1]))
 
-	bins = np.arange(0,1,0.1)
-	dh = pd.DataFrame(index=bins)
-	oh = pd.DataFrame(index=bins)
+    bins = np.arange(0,1,0.1)
+    dh = pd.DataFrame(index=bins)
+    oh = pd.DataFrame(index=bins)
 
-	for item in dsi_population.iteritems():
-	    parameter = item[0]
-	    values, bins = item[1]
-	    dh[parameter] = values
-	    
-	for item in osi_population.iteritems():
-	    parameter = item[0]
-	    values, bins = item[1]
-	    oh[parameter] = values
+    for item in dsi_population.iteritems():
+        parameter = item[0]
+        values, bins = item[1]
+        dh[parameter] = values
+        
+    for item in osi_population.iteritems():
+        parameter = item[0]
+        values, bins = item[1]
+        oh[parameter] = values
 
-	dh.plot.bar(figsize=(20,20), ax=ax[0])
-	ax[0].set_title("Direction Selectivity Index (DSI)")
-	oh.plot.bar(figsize=(20,20), ax=ax[1])
-	ax[1].set_title("Orientation Selectivity Index (OSI)")
+    dh.plot.bar(figsize=(20,20), ax=ax[0])
+    ax[0].set_title("Direction Selectivity Index (DSI)")
+    oh.plot.bar(figsize=(20,20), ax=ax[1])
+    ax[1].set_title("Orientation Selectivity Index (OSI)")
 
 
 def save_unit_response_by_angle(output_files, units, stimulus_list):
-	print("Creating bar unit response by angle")
-	bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
+    print("Calculating DSI & OSI")
+    bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
 
-	def data_generator():
-		first = True
-		for unit_id in bar_firing_rate.keys():
-			yield (unit_id, bar_firing_rate[unit_id], bar_dsi[unit_id],
-				bar_osi[unit_id], first)
-			first = False
+    def data_generator():
+        first = True
+        for unit_id in bar_firing_rate.keys():
+            yield (unit_id, bar_firing_rate[unit_id], bar_dsi[unit_id],
+                bar_osi[unit_id], first)
+            first = False
 
-	nplots = len(bar_firing_rate.keys()) + 1
-
-	fig_unit_response = glia.plot_from_generator(plot_unit_response_by_angle,data_generator,nplots,
-		subplot_kw={"projection": "polar"})
-	fig_unit_response.savefig(output_files[0])
-	
-	print("Creating bar population DSI/OSI")
-	fig_population,ax = plt.subplots(2,1)
-	plot_population_dsi_osi(ax, (bar_dsi, bar_osi))
-	fig_population.savefig(output_files[1])
-
-	# print("Creating bar unit spike trains")
-	
+    nplots = len(bar_firing_rate.keys()) + 1
+    print("plotting unit response by angle")
+    fig_unit_response = glia.plot_from_generator(plot_unit_response_by_angle,data_generator,nplots,
+        subplot_kw={"projection": "polar"})
+    fig_unit_response.savefig(output_files[0])
+    fig_population,ax = plt.subplots(2,1)
+    print("plotting population by DSI & OSI")
+    plot_population_dsi_osi(ax, (bar_dsi, bar_osi))
+    fig_population.savefig(output_files[1])

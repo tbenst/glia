@@ -74,6 +74,7 @@ def get_stimulus_start_times(analog_file, threshold=10000):
     """
     #sampling rate
     fs = sampling_rate(analog_file)
+    # Note: this is specific to an arbitrary Trigger 2 - TODO
     analog = read_raw_voltage(analog_file)[:,1]
     nsamples = analog.shape[0]
     T = nsamples/fs
@@ -95,6 +96,23 @@ def get_stimulus_start_times(analog_file, threshold=10000):
     transition_times = t0 + (threshold - analog0) / slope
 
     return list(transition_times)
+
+
+def validate_stimulus_times(stimulus_list,start_times):
+    stimulus_length = len(stimulus_list)
+    start_length = len(start_times)
+    
+    if stimulus_length == 0:
+        raise ValueError("No stimulus start times detected in analog file. " \
+                         "Try lowering the threshold or changing --trigger".format(start_length,stimulus_length))
+    elif np.abs(start_length-stimulus_length) <= 1:
+        warn("length of start times ({}) and stimulus_list ({}) differ by 1".format(start_times,stimulus_length))
+    elif start_length > stimulus_length:
+        raise ValueError("start_times ({}) is longer than stimulus_list ({}). " \
+                         "Try raising the threshold".format(start_length,stimulus_length))
+    elif start_length < stimulus_length:
+        raise ValueError("start_times ({}) is shorter than stimulus_list ({}). " \
+                         "Try lowering the threshold".format(start_length,stimulus_length))
 
     
 def get_stimulus_from_eyecandy(start_times, eyecandy_gen):
@@ -195,7 +213,7 @@ def get_start_times_of_stimulus(stimulus_type, stimulus_list):
             ret.append(t)
     return ret
 
-def create_stimulus_list_from_flicker(analog_file, eyecandy_url):
+def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_fp, data_name, eyecandy_url):
     # this will catch if the .stimulus file does not exist
     threshold = get_threshold(analog_file)
     start_times = get_stimulus_start_times(analog_file, threshold)
@@ -210,15 +228,16 @@ def create_stimulus_list_from_flicker(analog_file, eyecandy_url):
 
     return stimulus_list
 
-def create_stimulus_list_from_SOLID(analog_file, eyecandy_url):
+def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp, data_name, eyecandy_url):
     "using the solid time as ground truth, construct estimates of intermediate stimulus time going forwards and backwards"
     threshold = get_threshold(analog_file)
-    start_times = get_stimulus_start_times(analog_file, threshold)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
     stimulus_protocol = get_stimulus_from_protocol(experiment_protocol)
     stimulus_gen = create_eyecandy_gen(stimulus_protocol, eyecandy_url)
     sample_rate = sampling_rate(analog_file)
+    # specific to Trigger 2 - TODO
+    analog = read_raw_voltage(analog_file)[:,1]
 
     stimuli = []
     for s in stimulus_gen:
@@ -242,8 +261,11 @@ def create_stimulus_list_from_SOLID(analog_file, eyecandy_url):
             if start_time:
                 start_time += previous_duration
             forward_start_times.append(start_time)
-
-        previous_duration = np.ceil(stimulus["lifespan"])/120
+        try:
+            previous_duration = np.ceil(stimulus["lifespan"])/120
+        except:
+            print("malformed stimulus: {}".format(stimulus))
+            raise
 
     solid_gen = reversed(flash_start_times)
     backward_start_times = []
@@ -267,10 +289,10 @@ def create_stimulus_list_from_SOLID(analog_file, eyecandy_url):
     for forward, backward, stimulus in zip(forward_start_times,backward_start_times,stimuli):
         stimulus_list.append({'start_time': maybe_average(forward,backward),'stimulus': stimulus})
     
-    glia.validate_stimulus_times(stimulus_list, start_times)
+    validate_stimulus_times(stimulus_list, stimulus_list)
 
     # create the.stimulus file
-    glia.dump_stimulus(stimulus_list, stimulus_file)
+    dump_stimulus(stimulus_list, stimulus_file)
 
     return stimulus_list
 
