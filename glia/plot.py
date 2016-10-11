@@ -17,7 +17,26 @@ def axis_generator(ax):
         yield(ax)
     else:
         for handle in ax.reshape(-1):
-            yield(handle)    
+            yield(handle)
+
+def multiple_figs(nfigs, nplots, ncol=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=None):
+    figures = []
+    axis_generators = []
+
+    if not nrows:
+        nrows = int(np.ceil(nplots/ncols))
+
+    for i in range(nfigs):
+        fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+        axis = axis_generator(ax)
+        figures.append(fig)
+        axis_generators.append(axis)
+
+    return (figures, axis_generators)
+
+def save_figs(figures, filenames):
+    for fig,name in zip(figures,filenames):
+        fig.savefig(name)
 
 def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
                   time: (Seconds, Seconds)=(0, 100/1000), average=True,
@@ -163,50 +182,24 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
-def plot_units(unit_plot_function, units, *arguments, ncols=4, ax_xsize=2, ax_ysize=2,
+def plot_units(unit_plot_function, *units_data, ncols=4, ax_xsize=2, ax_ysize=2,
                subplot_kw=None):
     """Create a giant figure with one or more plots per unit.
     
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
     ncols will determine the number of columns. Otherwise, each unit will get one row."""
-    
-    number_of_units = len(list(units.keys()))
-    plot_functions = [unit_plot_function]
-    data = [units]
-    
-    if not len(arguments) % 2 == 0:
-        raise ValueError("must pass an equal number of functions and units")
-    elif len(arguments) > 0:
-        # multiple plot functions were suppliedon
-        ncols = len(arguments)/2
-        nrows = number_of_units
-        for i,argument in enumerate(arguments):
-            if i % 2 == 0:
-                plot_functions.append(argument)
-            else:
-                data.append(argument)
-    else:
-        nrows = int(np.ceil(number_of_units/ncols))
-    
-    if nrows*ncols > 200:
-        nrows = int(np.floor(200/ncols))
-        print("only plotting first {} units".format(nrows))
-        
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
-    axis = axis_generator(ax)
 
-    i = 0
-    for unit_id in units:
-        # print(unit_id,value)
-        if i>=nrows:
-            break
-        else:
-            i+=1
-        cur_ax = next(axis)
+    number_of_units = len(list(units_data[0].keys()))
+    
+    figures,axes = multiple_figures(number_of_units)
+
+    for i, unit_id in enumerate(units_data[0]):
         unit_data = map(lambda x: x[unit_id], data)
-        for plot_function, value in zip(plot_functions, unit_data):
-            plot_function(cur_ax,unit_id,value)
-    return fig
+        if len(unit_data)==1:
+            plot_function(axes[i],unit_id,unit_data[0])
+        else:
+            plot_function(axes[i],unit_id,unit_data)
+    return figures
 
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
@@ -214,19 +207,20 @@ def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
     "Iterate each value by unit and pass to the plot function."
     # number of units
     # number of values
-    ncols = len(get_unit(units)[1].values())
-    nrows = len(list(units.keys()))
+    number_of_plots = len(get_unit(units)[1].values())
+    number_of_units = len(list(units.keys()))
     
-    if nrows*ncols > 200:
-        nrows = int(np.floor(200/ncols))
-        print("only plotting first {} units".format(nrows))
+    # if nrows*ncols > 100:
+    #     nrows = int(np.floor(100/ncols))
+    #     print("only plotting first {} units".format(nrows))
     
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
-    axis = axis_generator(ax)
+    # fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+    # axis = axis_generator(ax)
     
+    multiple_figures(number_of_units, number_of_plots)
     i = 0
     for unit_id, value in units.items():
-        if i>=200:
+        if i>=100:
             break
         else:
             i+=1
@@ -259,6 +253,7 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
 
 
 def plot_unit(unit_plot_function, unit, subplot_kw=None):
+
     fig, ax = plt.subplots(subplot_kw=subplot_kw)
     fig = unit_plot_function(ax, unit[0],unit[1])
     return fig

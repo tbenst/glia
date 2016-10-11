@@ -28,6 +28,9 @@ def safe_run(function, args):
 def plot_path(directory,plot_name):
     return os.path.join(directory,plot_name+".png")
 
+def plot_unit_path(directory,plot_name):
+    return os.path.join(directory,plot_name+"-{}.png")
+
 @main.command()
 @click.argument('methods', nargs=-1, type=click.Choice(["direction", "orientation", "solid", 'all']))
 @click.argument('filename', type=click.Path(exists=True))
@@ -88,7 +91,8 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         safe_run(solid.save_unit_psth,
             (plot_path(plot_directory, "solid_unit_psth"), units, stimulus_list))
         safe_run(solid.save_unit_spike_trains,
-            (plot_path(plot_directory, "solid_unit_spike_train"), units, stimulus_list))
+            (plot_unit_path(plot_directory, "solid_spike_train"), units, stimulus_list))
+            #TODO
     
     if all_methods or "direction" in methods:
         safe_run(bar.save_unit_response_by_angle,
