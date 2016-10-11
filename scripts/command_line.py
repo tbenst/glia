@@ -2,15 +2,18 @@
 
 import matplotlib
 matplotlib.use("agg")
+matplotlib.rcParams['figure.max_open_warning'] = 250
+
 import glia
 import click
 import os
 import re
 import scripts.solid as solid
 import scripts.bar as bar
-from glob import glob
 import errno
 import traceback
+
+from glob import glob
 
 
 @click.group()
@@ -28,8 +31,7 @@ def safe_run(function, args):
 def plot_path(directory,plot_name):
     return os.path.join(directory,plot_name+".png")
 
-def plot_unit_path(directory,plot_name):
-    return os.path.join(directory,plot_name+"-{}.png")
+
 
 @main.command()
 @click.argument('methods', nargs=-1, type=click.Choice(["direction", "orientation", "solid", 'all']))
@@ -86,19 +88,20 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         if m  == "all":
             all_methods = True
 
+    unit_pdfs = glia.open_pdfs(plot_directory, units)
 
     if all_methods or "solid" in methods:
         safe_run(solid.save_unit_psth,
-            (plot_path(plot_directory, "solid_unit_psth"), units, stimulus_list))
+            (unit_pdfs, units, stimulus_list))
         safe_run(solid.save_unit_spike_trains,
-            (plot_unit_path(plot_directory, "solid_spike_train"), units, stimulus_list))
+            (unit_pdfs, units, stimulus_list))
             #TODO
     
     if all_methods or "direction" in methods:
         safe_run(bar.save_unit_response_by_angle,
-            ([plot_path(plot_directory, "bar_unit_response_by_angle"), plot_path(plot_directory, "bar_population_osi_dsi")],
-                units, stimulus_list))
+            (unit_pdfs, units, stimulus_list))
 
+    glia.close_pdfs(unit_pdfs)
     print("Finished")
 
 

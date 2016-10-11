@@ -1,9 +1,13 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+import os
 from typing import List, Any, Dict
 from .analysis import last_spike_time
 from .pipeline import get_unit
+from matplotlib.backends.backend_pdf import PdfPages
+
 # import pytest
 
 
@@ -19,7 +23,7 @@ def axis_generator(ax):
         for handle in ax.reshape(-1):
             yield(handle)
 
-def multiple_figs(nfigs, nplots, ncol=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=None):
+def multiple_figures(nfigs, nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=None):
     figures = []
     axis_generators = []
 
@@ -33,6 +37,23 @@ def multiple_figs(nfigs, nplots, ncol=4, nrows=None, ax_xsize=4, ax_ysize=4, sub
         axis_generators.append(axis)
 
     return (figures, axis_generators)
+
+def plot_pdf_path(directory,unit_id):
+    return os.path.join(directory,unit_id+".pdf")
+
+def open_pdfs(plot_directory, units):
+    return {unit_id: PdfPages(plot_pdf_path(plot_directory, unit_id)) for unit_id in units.keys()}
+
+def add_figures_to_pdfs(figures,unit_pdfs):
+    unit_pdfs[unit_id].savefig(fig)
+
+def close_pdfs(unit_pdfs):
+    for pdf in unit_pdfs:
+        pdf.close()
+
+def close_figs(figures):
+    for fig in figures:
+        plt.close(fig)
 
 def save_figs(figures, filenames):
     for fig,name in zip(figures,filenames):
@@ -182,23 +203,29 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
-def plot_units(unit_plot_function, *units_data, ncols=4, ax_xsize=2, ax_ysize=2,
-               subplot_kw=None):
+def plot_units(unit_plot_function, *units_data, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
+               subplot_kw=None, k=lambda u,f: None):
     """Create a giant figure with one or more plots per unit.
     
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
-    ncols will determine the number of columns. Otherwise, each unit will get one row."""
+    ncols will determine the number of columns. Otherwise, each unit will get one row.
+
+    Optionally uses a continuation k after each plot completes. For example:
+    k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs)"""
 
     number_of_units = len(list(units_data[0].keys()))
     
-    figures,axes = multiple_figures(number_of_units)
+    figures,axes = multiple_figures(number_of_units,1,ncols, nrows, ax_xsize, ax_ysize,
+               subplot_kw)
 
     for i, unit_id in enumerate(units_data[0]):
-        unit_data = map(lambda x: x[unit_id], data)
+        unit_data = list(map(lambda x: x[unit_id], units_data))
         if len(unit_data)==1:
-            plot_function(axes[i],unit_id,unit_data[0])
+            unit_plot_function(axes[i],unit_id,unit_data[0])
         else:
-            plot_function(axes[i],unit_id,unit_data)
+            unit_plot_function(axes[i],unit_id,unit_data)
+        k(unit_id,figures[i])
+        sys.stdout.write('#')
     return figures
 
 

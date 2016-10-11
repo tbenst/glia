@@ -47,7 +47,7 @@ def read_plexon_txt_file(filepath, retina_id):
                 unit_id = unit_dictionary[(channel, unit_num)]
             else:
                 # initialize key for both dictionaries
-                unit = Unit(retina_id, channel)
+                unit = Unit(retina_id, channel, unit_num)
                 unit.spike_train = []
                 unit_id = unit.id
                 units[unit_id] = unit
