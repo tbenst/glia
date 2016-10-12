@@ -60,3 +60,12 @@ class Unit:
     @classmethod
     def name_lookup(self):
         return self._name_lookup
+
+class PlotFunction():
+    def __init__(self, plot_function, **kwargs):
+        "Sets kwargs as attributes."
+        self.plot_function = plot_function
+        self.__dict__.update(kwargs)
+
+    def __call__(self, ax_gen, data):
+        return self.plot_function(ax_gen, data)

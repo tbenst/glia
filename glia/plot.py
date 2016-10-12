@@ -10,6 +10,7 @@ from .pipeline import get_unit
 from .functional import zip_dictionaries
 from matplotlib.backends.backend_pdf import PdfPages
 from multiprocessing import Pool
+from functools import partial
 
 # import pytest
 
@@ -61,6 +62,7 @@ def open_pdfs(plot_directory, units,unit_name_lookup=None):
 
 def add_figure_to_unit_pdf(fig,unit_id,unit_pdfs):
     unit_pdfs[unit_id].savefig(fig)
+    return (unit_id, fig)
 
 def close_pdfs(unit_pdfs):
     for unit_id,pdf in unit_pdfs.items():
@@ -234,30 +236,27 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
 
     def data_generator():
         for unit_id, data in all_data:
-            yield (unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw)
+            yield (unit_id, data, unit_plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw)
 
     # use all available cores
     pool = Pool()
     # we use tqdm for progress bar
-    # result = tqdm(pool.imap_unordered(plot_worker, enumerate(all_data)), total=number_of_units)
-    result = tqdm(pool.imap_unordered(_plot_worker, data_generator()), total=number_of_units)
-    for unit_id,fig in result:
-        print("got something")
-        k(unit_id,fig)
+    plot_worker = partial(_plot_worker, k=k)
+    result = list(pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units)))
     pool.close()
     pool.join()
 
     return [fig for unit_id,fig in result]
 
-def _plot_worker(args):
-    print('#')
+def _plot_worker(args, k=lambda u,f: (u,f)):
     unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw = args
     if len(data)==1:
         data = data[0]
     fig = plot(plot_function, data, nplots, ncols=ncols, nrows=nrows,
         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
         figure_title=figure_title, subplot_kw=subplot_kw)
-    return (unit_id, fig)
+
+    return k(unit_id, fig)
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
                subplot_kw=None):
@@ -311,8 +310,7 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
 
 def plot(plot_function, data, nplots=1, ncols=1, nrows=None, ax_xsize=4,
             ax_ysize=4, figure_title=None, subplot_kw=None):
-    fig, ax = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize, subplot_kw=subplot_kw)
-    axes = axis_generator(ax)
+    fig, axes = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize, subplot_kw=subplot_kw)
     plot_function(axes, data)
     if figure_title is not None:
         fig.suptitle(figure_title)

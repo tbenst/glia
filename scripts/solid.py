@@ -1,55 +1,51 @@
 import glia
 import matplotlib.pyplot as plt
 import numpy as np
+from functools import partial
 
-def f_plot_psth(prepend_start_time,append_lifespan,bin_width):
-    def plot(ax_gen,data):
-        for s,spike_train in data.items():
-            ax = next(ax_gen)
-            stimulus = eval(s)
-            lifespan = stimulus["lifespan"]/120
-            # if lifespan > 5:
-            #     print("skipping stimulus longer than 5 seconds")
-            #     return None
-            duration = prepend_start_time+lifespan+append_lifespan
-            ax.hist(spike_train,bins=np.arange(0,duration,bin_width),linewidth=None,ec="none")
-            ax.axvspan(0,prepend_start_time,facecolor="gray", edgecolor="none", alpha=0.2)
-            ax.axvspan(prepend_start_time+lifespan,duration,facecolor="gray", edgecolor="none", alpha=0.2)
-            ax.set_title("Post-stimulus Time Histogram of SOLID")
-            ax.set_xlabel("relative time (s)")
-            ax.set_ylabel("spike count")
+def plot_psth(ax_gen,data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
+    for s,spike_train in data.items():
+        ax = next(ax_gen)
+        stimulus = eval(s)
+        lifespan = stimulus["lifespan"]/120
+        # if lifespan > 5:
+        #     print("skipping stimulus longer than 5 seconds")
+        #     return None
+        duration = prepend_start_time+lifespan+append_lifespan
+        ax.hist(spike_train,bins=np.arange(0,duration,bin_width),linewidth=None,ec="none")
+        ax.axvspan(0,prepend_start_time,facecolor="gray", edgecolor="none", alpha=0.2)
+        ax.axvspan(prepend_start_time+lifespan,duration,facecolor="gray", edgecolor="none", alpha=0.2)
+        ax.set_title("Post-stimulus Time Histogram of SOLID")
+        ax.set_xlabel("relative time (s)")
+        ax.set_ylabel("spike count")
 
-    return plot
 
-def f_plot_spike_trains(prepend_start_time,append_lifespan):
-    # plot_a_roster of spikes relative to stimulus on time
-    def plot(axis_gen,data):
-        ax = next(axis_gen)
-        trial = 0
-        for v in data:
-            # print(type(v))
-            stimulus, spike_train = (v["stimulus"], v["spikes"])
-            lifespan = stimulus['lifespan'] / 120
-            if lifespan > 5:
-                print("skipping stimulus longer than 5 seconds")
-                continue
-            if spike_train.size>0:
-                glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
-            
-            stimulus_end = prepend_start_time + lifespan
-            duration = stimulus_end + append_lifespan
-            ax.fill([0,prepend_start_time,prepend_start_time,0],
-                    [trial,trial,trial+1,trial+1],
-                    facecolor="gray", edgecolor="none", alpha=0.2)
-            ax.fill([stimulus_end,duration,duration,stimulus_end],
-                    [trial,trial,trial+1,trial+1],
-                    facecolor="gray", edgecolor="none", alpha=0.2)
-            trial += 1
-            
-        ax.set_title("Unit spike train per SOLID")
-        ax.set_xlabel("time (s)")
-        ax.set_ylabel("trial # (lower is earlier)")
-    return plot
+def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
+    ax = next(axis_gen)
+    trial = 0
+    for v in data:
+        # print(type(v))
+        stimulus, spike_train = (v["stimulus"], v["spikes"])
+        lifespan = stimulus['lifespan'] / 120
+        if lifespan > 5:
+            print("skipping stimulus longer than 5 seconds")
+            continue
+        if spike_train.size>0:
+            glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
+        
+        stimulus_end = prepend_start_time + lifespan
+        duration = stimulus_end + append_lifespan
+        ax.fill([0,prepend_start_time,prepend_start_time,0],
+                [trial,trial,trial+1,trial+1],
+                facecolor="gray", edgecolor="none", alpha=0.2)
+        ax.fill([stimulus_end,duration,duration,stimulus_end],
+                [trial,trial,trial+1,trial+1],
+                facecolor="gray", edgecolor="none", alpha=0.2)
+        trial += 1
+        
+    ax.set_title("Unit spike train per SOLID")
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("trial # (lower is earlier)")
 
 
 def save_unit_psth(unit_pdfs, units, stimulus_list):
@@ -62,7 +58,7 @@ def save_unit_psth(unit_pdfs, units, stimulus_list):
         glia.concatenate_by_stimulus
     )
     psth = glia.apply_pipeline(get_psth,units)
-    figures = glia.plot_units(f_plot_psth(1,1,0.01),psth,ax_xsize=10, ax_ysize=5,
+    figures = glia.plot_units(partial(plot_psth,bin_width=0.01),psth,ax_xsize=10, ax_ysize=5,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
     glia.close_figs(figures)
 
@@ -75,6 +71,6 @@ def save_unit_spike_trains(unit_pdfs, units, stimulus_list):
         glia.f_has_stimulus_type(["SOLID"]),
     )
     response = glia.apply_pipeline(get_solid,units)
-    figures = glia.plot_units(f_plot_spike_trains(1,1),response,ncols=1,ax_xsize=10, ax_ysize=5,
+    figures = glia.plot_units(plot_spike_trains,response,ncols=1,ax_xsize=10, ax_ysize=5,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
     glia.close_figs(figures)
