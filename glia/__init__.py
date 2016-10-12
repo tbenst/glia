@@ -5,3 +5,4 @@ from .plot import *
 from .pipeline import *
 from .spike_train import *
 from .functional import *
+import glia.humanhash

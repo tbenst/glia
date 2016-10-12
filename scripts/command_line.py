@@ -14,7 +14,8 @@ import errno
 import traceback
 
 from glob import glob
-
+from glia.classes import Unit
+from matplotlib.backends.backend_pdf import PdfPages
 
 @click.group()
 def main():
@@ -88,7 +89,8 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         if m  == "all":
             all_methods = True
 
-    unit_pdfs = glia.open_pdfs(plot_directory, units)
+    retina_pdf = PdfPages(glia.plot_pdf_path(plot_directory, "retina"))
+    unit_pdfs = glia.open_pdfs(plot_directory, units, Unit.name_lookup())
 
     if all_methods or "solid" in methods:
         safe_run(solid.save_unit_psth,
@@ -99,9 +101,11 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     
     if all_methods or "direction" in methods:
         safe_run(bar.save_unit_response_by_angle,
-            (unit_pdfs, units, stimulus_list))
+            (retina_pdf, unit_pdfs, units, stimulus_list))
 
     glia.close_pdfs(unit_pdfs)
+    retina_pdf.close()
+    
     print("Finished")
 
 

@@ -1,7 +1,7 @@
 from uuid import uuid4
 from hashlib import md5
 import base64
-import humanhash
+import glia.humanhash as humanhash
 
 class Mouse:
     def __init__(self, mouse_line, dob, gender):
@@ -18,24 +18,45 @@ class Retina:
         self.name = name
         self.location = location
 
+# use md5 as key to retrieve unit_name
+
 class Unit:
+    
+    _name_lookup = {}
+
     def __init__(self, retina_id, channel, unit_num):
-    	# id will be URL safe MD5 hash of spike_train
-        self.id = None
-        self.name = None
+        # id will be URL safe MD5 hash of spike_train
+        self._id = None
+        self._name = None
         self.retina_id = retina_id
         self.channel = channel
-        self.unit_num
+        self.unit_num = unit_num
         self.spike_train = None
+    
 
     @property
-    def spike_train(self):
-        return self._spike_train
+    def id(self):
+        return self._id
 
-    @spike_train.setter
-    def spike_train(self, value):
-    	unit_id = base64.urlsafe_b64encode(md5(value.tostring()).digest())
-		self.id = unit_id
-		self.name = humanhash.humanizer(unit_id)
-        self._spike_train = value
+    @property
+    def name():
+        return self._name
 
+    def initialize_id(self):
+        "Initialize id and name after adding Spike train."
+        if self.spike_train.size != 0:
+            md5_hash = md5(self.spike_train.tostring())
+            self._id = str(base64.urlsafe_b64encode(md5_hash.digest()),"utf8")
+            name = "{}-{}_".format(self.channel, self.unit_num) + \
+                humanhash.humanize(md5_hash.hexdigest())
+            self._name = name
+            self._name_lookup[self._id] = name
+        else:
+            self._id = "no-spikes"
+            self._name = "no-spikes"
+            self._name_lookup[self._id] = self._name
+        
+
+    @classmethod
+    def name_lookup(self):
+        return self._name_lookup

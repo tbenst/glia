@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os
+from tqdm import tqdm
 from typing import List, Any, Dict
 from .analysis import last_spike_time
 from .pipeline import get_unit
@@ -38,17 +39,20 @@ def multiple_figures(nfigs, nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4,
 
     return (figures, axis_generators)
 
-def plot_pdf_path(directory,unit_id):
-    return os.path.join(directory,unit_id+".pdf")
+def plot_pdf_path(directory,name):
+    return os.path.join(directory,name+".pdf")
 
-def open_pdfs(plot_directory, units):
-    return {unit_id: PdfPages(plot_pdf_path(plot_directory, unit_id)) for unit_id in units.keys()}
+def open_pdfs(plot_directory, units,unit_name_lookup=None):
+    if unit_name_lookup is not None:
+        return {unit_id: PdfPages(plot_pdf_path(plot_directory,unit_name_lookup[unit_id])) for unit_id in units.keys()}
+    else:    
+        return {unit_id: PdfPages(plot_pdf_path(plot_directory, unit_id)) for unit_id in units.keys()}
 
-def add_figures_to_pdfs(figures,unit_pdfs):
+def add_figure_to_unit_pdf(fig,unit_id,unit_pdfs):
     unit_pdfs[unit_id].savefig(fig)
 
 def close_pdfs(unit_pdfs):
-    for pdf in unit_pdfs:
+    for unit_id,pdf in unit_pdfs.items():
         pdf.close()
 
 def close_figs(figures):
@@ -203,7 +207,7 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
-def plot_units(unit_plot_function, *units_data, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
+def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
                subplot_kw=None, k=lambda u,f: None):
     """Create a giant figure with one or more plots per unit.
     
@@ -212,20 +216,20 @@ def plot_units(unit_plot_function, *units_data, ncols=1, nrows=None, ax_xsize=2,
 
     Optionally uses a continuation k after each plot completes. For example:
     k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs)"""
-
+#TODO suptitle four figure
     number_of_units = len(list(units_data[0].keys()))
     
-    figures,axes = multiple_figures(number_of_units,1,ncols, nrows, ax_xsize, ax_ysize,
+    figures,axes = multiple_figures(number_of_units,nplots,ncols, nrows, ax_xsize, ax_ysize,
                subplot_kw)
 
-    for i, unit_id in enumerate(units_data[0]):
+    # we use tqdm for progress bar
+    for i, unit_id in tqdm(enumerate(units_data[0]), total=number_of_units):
         unit_data = list(map(lambda x: x[unit_id], units_data))
         if len(unit_data)==1:
-            unit_plot_function(axes[i],unit_id,unit_data[0])
+            unit_plot_function(axes[i],unit_data[0])
         else:
-            unit_plot_function(axes[i],unit_id,unit_data)
+            unit_plot_function(axes[i],unit_data)
         k(unit_id,figures[i])
-        sys.stdout.write('#')
     return figures
 
 

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def f_plot_psth(prepend_start_time,append_lifespan,bin_width):
-    def plot(ax_gen,unit_id,value):
-        for s,spike_train in value.items():
+    def plot(ax_gen,data):
+        for s,spike_train in data.items():
             ax = next(ax_gen)
             stimulus = eval(s)
             lifespan = stimulus["lifespan"]/120
@@ -15,7 +15,7 @@ def f_plot_psth(prepend_start_time,append_lifespan,bin_width):
             ax.hist(spike_train,bins=np.arange(0,duration,bin_width),linewidth=None,ec="none")
             ax.axvspan(0,prepend_start_time,facecolor="gray", edgecolor="none", alpha=0.2)
             ax.axvspan(prepend_start_time+lifespan,duration,facecolor="gray", edgecolor="none", alpha=0.2)
-            ax.set_title(unit_id)
+            ax.set_title("Post-stimulus Time Histogram of SOLID")
             ax.set_xlabel("relative time (s)")
             ax.set_ylabel("spike count")
 
@@ -23,10 +23,10 @@ def f_plot_psth(prepend_start_time,append_lifespan,bin_width):
 
 def f_plot_spike_trains(prepend_start_time,append_lifespan):
     # plot_a_roster of spikes relative to stimulus on time
-    def plot(axis_gen,unit_id,value):
+    def plot(axis_gen,data):
         ax = next(axis_gen)
         trial = 0
-        for v in value:
+        for v in data:
             # print(type(v))
             stimulus, spike_train = (v["stimulus"], v["spikes"])
             lifespan = stimulus['lifespan'] / 120
@@ -46,7 +46,7 @@ def f_plot_spike_trains(prepend_start_time,append_lifespan):
                     facecolor="gray", edgecolor="none", alpha=0.2)
             trial += 1
             
-        ax.set_title(unit_id)
+        ax.set_title("Unit spike train per SOLID")
         ax.set_xlabel("time (s)")
         ax.set_ylabel("trial # (lower is earlier)")
     return plot
@@ -63,7 +63,7 @@ def save_unit_psth(unit_pdfs, units, stimulus_list):
     )
     psth = glia.apply_pipeline(get_psth,units)
     figures = glia.plot_units(f_plot_psth(1,1,0.01),psth,ax_xsize=10, ax_ysize=5,
-        k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs))
+        k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
     glia.close_figs(figures)
 
 
@@ -76,5 +76,5 @@ def save_unit_spike_trains(unit_pdfs, units, stimulus_list):
     )
     response = glia.apply_pipeline(get_solid,units)
     figures = glia.plot_units(f_plot_spike_trains(1,1),response,ncols=1,ax_xsize=10, ax_ysize=5,
-        k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs))
+        k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
     glia.close_figs(figures)
