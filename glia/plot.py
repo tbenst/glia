@@ -7,7 +7,9 @@ from tqdm import tqdm
 from typing import List, Any, Dict
 from .analysis import last_spike_time
 from .pipeline import get_unit
+from .functional import zip_dictionaries
 from matplotlib.backends.backend_pdf import PdfPages
+from multiprocessing import Pool
 
 # import pytest
 
@@ -38,6 +40,15 @@ def multiple_figures(nfigs, nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4,
         axis_generators.append(axis)
 
     return (figures, axis_generators)
+
+def subplots(nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=None):
+    if not nrows:
+        nrows = int(np.ceil(nplots/ncols))
+
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+    axis = axis_generator(ax)
+
+    return fig, axis
 
 def plot_pdf_path(directory,name):
     return os.path.join(directory,name+".pdf")
@@ -208,7 +219,7 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
         ax.legend()
 
 def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
-               subplot_kw=None, k=lambda u,f: None):
+               figure_title=None, subplot_kw=None, k=lambda u,f: None):
     """Create a giant figure with one or more plots per unit.
     
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
@@ -216,22 +227,37 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
 
     Optionally uses a continuation k after each plot completes. For example:
     k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs)"""
-#TODO suptitle four figure
-    number_of_units = len(list(units_data[0].keys()))
-    
-    figures,axes = multiple_figures(number_of_units,nplots,ncols, nrows, ax_xsize, ax_ysize,
-               subplot_kw)
+    number_of_units = len(units_data[0].keys())
 
+
+    all_data = zip_dictionaries(*units_data)
+
+    def data_generator():
+        for unit_id, data in all_data:
+            yield (unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw)
+
+    # use all available cores
+    pool = Pool()
     # we use tqdm for progress bar
-    for i, unit_id in tqdm(enumerate(units_data[0]), total=number_of_units):
-        unit_data = list(map(lambda x: x[unit_id], units_data))
-        if len(unit_data)==1:
-            unit_plot_function(axes[i],unit_data[0])
-        else:
-            unit_plot_function(axes[i],unit_data)
-        k(unit_id,figures[i])
-    return figures
+    # result = tqdm(pool.imap_unordered(plot_worker, enumerate(all_data)), total=number_of_units)
+    result = tqdm(pool.imap_unordered(_plot_worker, data_generator()), total=number_of_units)
+    for unit_id,fig in result:
+        print("got something")
+        k(unit_id,fig)
+    pool.close()
+    pool.join()
 
+    return [fig for unit_id,fig in result]
+
+def _plot_worker(args):
+    print('#')
+    unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw = args
+    if len(data)==1:
+        data = data[0]
+    fig = plot(plot_function, data, nplots, ncols=ncols, nrows=nrows,
+        ax_xsize=ax_xsize, ax_ysize=ax_ysize,
+        figure_title=figure_title, subplot_kw=subplot_kw)
+    return (unit_id, fig)
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
                subplot_kw=None):
@@ -283,10 +309,13 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
     return fig
 
 
-def plot_unit(unit_plot_function, unit, subplot_kw=None):
-
-    fig, ax = plt.subplots(subplot_kw=subplot_kw)
-    fig = unit_plot_function(ax, unit[0],unit[1])
+def plot(plot_function, data, nplots=1, ncols=1, nrows=None, ax_xsize=4,
+            ax_ysize=4, figure_title=None, subplot_kw=None):
+    fig, ax = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize, subplot_kw=subplot_kw)
+    axes = axis_generator(ax)
+    plot_function(axes, data)
+    if figure_title is not None:
+        fig.suptitle(figure_title)
     return fig
 
 def plot_each_for_unit(unit_plot_function, unit, subplot_kw=None):
