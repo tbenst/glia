@@ -58,9 +58,10 @@ def save_unit_psth(unit_pdfs, units, stimulus_list):
         glia.concatenate_by_stimulus
     )
     psth = glia.apply_pipeline(get_psth,units)
-    figures = glia.plot_units(partial(plot_psth,bin_width=0.01),psth,ax_xsize=10, ax_ysize=5,
+    result = glia.plot_units(partial(plot_psth,bin_width=0.01),psth,ax_xsize=10, ax_ysize=5,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    glia.close_figs(figures)
+    glia.add_to_unit_pdfs(result,unit_pdfs)
+    glia.close_figs([fig for the_id,fig in result])
 
 
 def save_unit_spike_trains(unit_pdfs, units, stimulus_list):
@@ -71,6 +72,7 @@ def save_unit_spike_trains(unit_pdfs, units, stimulus_list):
         glia.f_has_stimulus_type(["SOLID"]),
     )
     response = glia.apply_pipeline(get_solid,units)
-    figures = glia.plot_units(plot_spike_trains,response,ncols=1,ax_xsize=10, ax_ysize=5,
+    result = glia.plot_units(plot_spike_trains,response,ncols=1,ax_xsize=10, ax_ysize=5,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    glia.close_figs(figures)
+    glia.add_to_unit_pdfs(result,unit_pdfs)
+    glia.close_figs([fig for the_id,fig in result])

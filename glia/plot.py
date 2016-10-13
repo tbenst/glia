@@ -64,6 +64,10 @@ def add_figure_to_unit_pdf(fig,unit_id,unit_pdfs):
     unit_pdfs[unit_id].savefig(fig)
     return (unit_id, fig)
 
+def add_to_unit_pdfs(id_figure_tuple,unit_pdfs):
+    for unit_id,fig in id_figure_tuple:
+        add_figure_to_unit_pdf(fig,unit_id,unit_pdfs)
+
 def close_pdfs(unit_pdfs):
     for unit_id,pdf in unit_pdfs.items():
         pdf.close()
@@ -243,12 +247,13 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
     # we use tqdm for progress bar
     plot_worker = partial(_plot_worker, k=k)
     result = list(pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units)))
+
     pool.close()
     pool.join()
 
-    return [fig for unit_id,fig in result]
+    return result
 
-def _plot_worker(args, k=lambda u,f: (u,f)):
+def _plot_worker(args):
     unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw = args
     if len(data)==1:
         data = data[0]
@@ -256,7 +261,7 @@ def _plot_worker(args, k=lambda u,f: (u,f)):
         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
         figure_title=figure_title, subplot_kw=subplot_kw)
 
-    return k(unit_id, fig)
+    return (unit_id, fig)
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
                subplot_kw=None):

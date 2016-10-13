@@ -148,19 +148,23 @@ def save_unit_response_by_angle(retina_pdf, unit_pdfs, units, stimulus_list):
     else:
         ncols=1
 
-    figures = glia.plot_units(plot_unit_response_by_angle,
+    result = glia.plot_units(plot_unit_response_by_angle,
         bar_firing_rate,bar_dsi,bar_osi,
         nplots=nplots, subplot_kw={"projection": "polar"},
         ax_xsize=4, ax_ysize=5, ncols=3,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    glia.close_figs(figures)
+    glia.add_to_unit_pdfs(result,unit_pdfs)
+    glia.close_figs([fig for the_id,fig in result])
+
 
     print("plotting unit DSI/OSI table")
-    figures = glia.plot_units(plot_unit_dsi_osi_table,
+    result = glia.plot_units(plot_unit_dsi_osi_table,
         bar_firing_rate,bar_dsi,bar_osi,
         ax_xsize=6, ax_ysize=4,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    glia.close_figs(figures)
+    glia.add_to_unit_pdfs(result,unit_pdfs)
+    glia.close_figs([fig for the_id,fig in result])
+
 
 
     fig_population,ax = plt.subplots(2,1)
