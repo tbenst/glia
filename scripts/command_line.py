@@ -39,6 +39,7 @@ def plot_path(directory,plot_name):
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
+@click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
@@ -60,16 +61,11 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         raise(ValueError, 'could not read {}. Is it a plexon or spyking circus file?')
 
     if not notebook:
-        notebook = glob(os.path.join(data_directory, '*.yml'))[0]
+        notebooks = glob(os.path.join(data_directory, '*.yml'))
+        if len(notebooks)==0:
+            raise(ValueError, "no lab notebooks (.yml) were found. Either add to directory," \
+                "or specify file path with -n.")
 
-    # prepare_output
-    plot_directory = os.path.join(data_directory, name+"-plots")
-    try:
-        os.makedirs(plot_directory)
-        os.chmod(plot_directory, 0o777)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
 
     try:
         stimulus_list = glia.load_stimulus(stimulus_file)
@@ -82,29 +78,44 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
-            ValueError("invalid trigger: {}".format(trigger))
+            raise ValueError("invalid trigger: {}".format(trigger))
+
+    # prepare_output
+    plot_directory = os.path.join(data_directory, name+"-plots")
+    try:
+        os.makedirs(plot_directory)
+        os.chmod(plot_directory, 0o777)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    if output == "pdf":
+        retina_pdf = PdfPages(glia.plot_pdf_path(plot_directory, "retina"))
+        unit_pdfs = glia.open_pdfs(plot_directory, units, Unit.name_lookup())
+        figures_continuation = glia.add_to_unit_pdfs
+    elif output == "png":
+        raise ValueError("not implemented")
 
     all_methods = False
     for m in methods:
         if m  == "all":
             all_methods = True
 
-    retina_pdf = PdfPages(glia.plot_pdf_path(plot_directory, "retina"))
-    unit_pdfs = glia.open_pdfs(plot_directory, units, Unit.name_lookup())
-
     if all_methods or "solid" in methods:
         safe_run(solid.save_unit_psth,
-            (unit_pdfs, units, stimulus_list))
+            (unit_pdfs, units, stimulus_list, figures_continuation))
         safe_run(solid.save_unit_spike_trains,
-            (unit_pdfs, units, stimulus_list))
+            (unit_pdfs, units, stimulus_list, figures_continuation))
             #TODO
     
     if all_methods or "direction" in methods:
         safe_run(bar.save_unit_response_by_angle,
-            (retina_pdf, unit_pdfs, units, stimulus_list))
+            (retina_pdf, unit_pdfs, units, stimulus_list, figures_continuation))
 
-    glia.close_pdfs(unit_pdfs)
-    retina_pdf.close()
+    if output == "pdf":
+        glia.close_pdfs(unit_pdfs)
+        retina_pdf.close()
+    elif output == "png":
+        raise ValueError("not implemented")
     
     print("Finished")
 

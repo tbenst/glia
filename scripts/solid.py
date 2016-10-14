@@ -48,7 +48,7 @@ def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
     ax.set_ylabel("trial # (lower is earlier)")
 
 
-def save_unit_psth(unit_pdfs, units, stimulus_list):
+def save_unit_psth(unit_pdfs, units, stimulus_list, figures_continuation):
     print("Creating solid unit PSTH")
 
     get_psth = glia.compose(
@@ -60,11 +60,11 @@ def save_unit_psth(unit_pdfs, units, stimulus_list):
     psth = glia.apply_pipeline(get_psth,units)
     result = glia.plot_units(partial(plot_psth,bin_width=0.01),psth,ax_xsize=10, ax_ysize=5,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    glia.add_to_unit_pdfs(result,unit_pdfs)
+    figures_continuation(result,unit_pdfs)
     glia.close_figs([fig for the_id,fig in result])
 
 
-def save_unit_spike_trains(unit_pdfs, units, stimulus_list):
+def save_unit_spike_trains(unit_pdfs, units, stimulus_list, figures_continuation):
     print("Creating solid unit spike trains")
     
     get_solid = glia.compose(
@@ -74,5 +74,5 @@ def save_unit_spike_trains(unit_pdfs, units, stimulus_list):
     response = glia.apply_pipeline(get_solid,units)
     result = glia.plot_units(plot_spike_trains,response,ncols=1,ax_xsize=10, ax_ysize=5,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    glia.add_to_unit_pdfs(result,unit_pdfs)
+    figures_continuation(result,unit_pdfs)
     glia.close_figs([fig for the_id,fig in result])

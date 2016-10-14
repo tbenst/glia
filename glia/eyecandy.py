@@ -114,7 +114,7 @@ def validate_stimulus_times(stimulus_list,start_times):
         raise ValueError("start_times ({}) is shorter than stimulus_list ({}). " \
                          "Try lowering the threshold".format(start_length,stimulus_length))
 
-    predicted_start_time = stimulus_list[0]["start_time"] + stimulus_list[0]["lifespan"]/120
+    predicted_start_time = stimulus_list[0]["start_time"] + stimulus_list[0]["stimulus"]["lifespan"]/120
     for s in stimulus_list[1:]:
         start_time = s["start_time"]
         stimulus = s["stimulus"]
@@ -264,6 +264,7 @@ def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp,
     solid_gen = iter(flash_start_times)
     forward_start_times = []
 
+    # TODO: make a separate function, DRY
     start_time = None
     previous_duration = None
     for stimulus in stimuli:

@@ -105,12 +105,13 @@ def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
 
 def draw_spikes(ax, spike_train, ymin=0,ymax=1,color="black",alpha=0.3):
     "Draw each spike as black line."
-    draw_spike = np.vectorize(lambda s: ax.vlines(s, ymin, ymax,colors=color,alpha=alpha))
-    for spike in spike_train:
-        draw_spike(spike)
+    # draw_spike = np.vectorize(lambda s: ax.vlines(s, ymin, ymax,colors=color,alpha=alpha))
+    # for spike in spike_train:
+    #     draw_spike(spike)
+    ax.vlines(spike_train, ymin, ymax,colors=color,alpha=alpha)
+
 
 # Helpers
-
 
 def subplot_generator(n_charts, num_cols):
     """Generate arguments for matplotlib add_subplot.
@@ -233,6 +234,7 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
 
     Optionally uses a continuation k after each plot completes. For example:
     k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs)"""
+    print("plotting")
     number_of_units = len(units_data[0].keys())
 
 
