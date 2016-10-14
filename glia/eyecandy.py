@@ -106,7 +106,7 @@ def validate_stimulus_times(stimulus_list,start_times):
         raise ValueError("No stimulus start times detected in analog file. " \
                          "Try lowering the threshold or changing --trigger".format(start_length,stimulus_length))
     elif np.abs(start_length-stimulus_length) <= 1:
-        warn("length of start times ({}) and stimulus_list ({}) differ by 1".format(start_times,stimulus_length))
+        warn("length of start times ({}) and stimulus_list ({}) differ by 1".format(start_length,stimulus_length))
     elif start_length > stimulus_length:
         raise ValueError("start_times ({}) is longer than stimulus_list ({}). " \
                          "Try raising the threshold".format(start_length,stimulus_length))
