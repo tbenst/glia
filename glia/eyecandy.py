@@ -123,7 +123,7 @@ def validate_stimulus_times(stimulus_list,start_times):
             assert np.abs(start_time - predicted_start_time) < 0.5
         except Exception as e:
             print("malformed stimulus list--try a different trigger or adjusting the threshold.")
-            raise(e)
+            raise e
         predicted_start_time =  start_time + lifespan
 
 

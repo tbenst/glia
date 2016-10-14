@@ -195,7 +195,7 @@ def group_by_contrast(dictionary_by_stimulus):
         bar_color = int(eval(stimulus)["barColor"][1:], 16)
         contrast = (bar_color - background_color)/(bar_color + background_color)
         if contrast in contrasts:
-            raise("function not designed for multiple stimuli with the same contrast")
+            raise ValueError("function not designed for multiple stimuli with the same contrast")
         contrasts[contrast] = value
         
     return contrasts

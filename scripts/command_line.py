@@ -63,7 +63,7 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     if not notebook:
         notebooks = glob(os.path.join(data_directory, '*.yml'))
         if len(notebooks)==0:
-            raise(ValueError, "no lab notebooks (.yml) were found. Either add to directory," \
+            raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
                 "or specify file path with -n.")
 
 
