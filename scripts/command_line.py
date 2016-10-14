@@ -35,7 +35,8 @@ def plot_path(directory,plot_name):
 
 
 @main.command()
-@click.argument('methods', nargs=-1, type=click.Choice(["direction", "orientation", "solid", 'all']))
+@click.argument('methods', nargs=-1,
+    type=click.Choice(["direction", "orientation", "solid", 'all']))
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
@@ -47,6 +48,9 @@ def plot_path(directory,plot_name):
 def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     """Analyze data recorded with eyecandy.
     """
+    if len(methods)==0:
+        raise ValueError("must provide a method, (e.g. 'all'")
+        
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
@@ -58,7 +62,7 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     elif re.match(spyking_regex, filename):
         units = glia.read_spyking_results(filename)
     else:
-        raise(ValueError, 'could not read {}. Is it a plexon or spyking circus file?')
+        raise ValueError('could not read {}. Is it a plexon or spyking circus file?')
 
     if not notebook:
         notebooks = glob(os.path.join(data_directory, '*.yml'))
