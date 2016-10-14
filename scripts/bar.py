@@ -13,7 +13,7 @@ def get_fr_dsi_osi(units, stimulus_list):
         glia.f_create_experiments(stimulus_list),
         glia.f_has_stimulus_type(["BAR"]),
         glia.f_group_by_stimulus(),
-        glia.f_calculate_peak_ifr_by_stimulus(),
+        glia.f_calculate_firing_rate_by_stimulus(),
     )
     bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units)
 
