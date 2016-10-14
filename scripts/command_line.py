@@ -50,7 +50,7 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
     """
     if len(methods)==0:
         raise ValueError("must provide a method, (e.g. 'all'")
-        
+
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
@@ -69,6 +69,7 @@ def analyze(methods, filename, trigger, eyecandy, output=None, notebook=None):
         if len(notebooks)==0:
             raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
                 "or specify file path with -n.")
+        notebook=notebooks[0]
 
 
     try:
