@@ -134,7 +134,7 @@ def plot_population_dsi_osi(ax,data):
     ax[1].set_xlabel("OSI")
 
 
-def save_unit_response_by_angle(retina_pdf, unit_pdfs, units, stimulus_list, figures_continuation):
+def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
     print("Calculating DSI & OSI")
     bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
 
@@ -153,7 +153,7 @@ def save_unit_response_by_angle(retina_pdf, unit_pdfs, units, stimulus_list, fig
         nplots=nplots, subplot_kw={"projection": "polar"},
         ax_xsize=4, ax_ysize=5, ncols=3,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    figures_continuation(result,unit_pdfs)
+    c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
 
 
@@ -162,7 +162,7 @@ def save_unit_response_by_angle(retina_pdf, unit_pdfs, units, stimulus_list, fig
         bar_firing_rate,bar_dsi,bar_osi,
         ax_xsize=6, ax_ysize=4,
         k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
-    figures_continuation(result,unit_pdfs)
+    c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
 
 
@@ -170,5 +170,5 @@ def save_unit_response_by_angle(retina_pdf, unit_pdfs, units, stimulus_list, fig
     fig_population,ax = plt.subplots(2,1)
     print("plotting population by DSI & OSI")
     plot_population_dsi_osi(ax, (bar_dsi, bar_osi))
-    retina_pdf.savefig(fig_population)
+    c_add_retina_figure(fig_population)
     plt.close(fig_population)

@@ -54,11 +54,11 @@ def subplots(nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=Non
 def plot_pdf_path(directory,name):
     return os.path.join(directory,name+".pdf")
 
-def open_pdfs(plot_directory, units,unit_name_lookup=None):
+def open_pdfs(plot_directory, unit_ids,unit_name_lookup=None):
     if unit_name_lookup is not None:
-        return {unit_id: PdfPages(plot_pdf_path(plot_directory,unit_name_lookup[unit_id])) for unit_id in units.keys()}
+        return {unit_id: PdfPages(plot_pdf_path(plot_directory,unit_name_lookup[unit_id])) for unit_id in unit_ids}
     else:    
-        return {unit_id: PdfPages(plot_pdf_path(plot_directory, unit_id)) for unit_id in units.keys()}
+        return {unit_id: PdfPages(plot_pdf_path(plot_directory, unit_id)) for unit_id in unit_ids}
 
 def add_figure_to_unit_pdf(fig,unit_id,unit_pdfs):
     unit_pdfs[unit_id].savefig(fig)
