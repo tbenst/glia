@@ -10,34 +10,44 @@ def f_get_key(i):
 
 def plot_spike_trains(axis_gen,data):
     "assumes data is sorted by angle"
-    # we will use a different axis for each speed_width
+    # we will use a different axis for each speed_width & repetition
     axes = {}
     y = 0
+    trial = 0
     current_angle = None
     for d in data:
         stimulus = d["stimulus"]
         spike_train = d['spikes']
         speed_width = (stimulus["speed"], stimulus["width"])
         angle = stimulus["angle"]
-        if speed_width not in axes:
-            axes[speed_width] = next(axis_gen)
-            ax = axes[speed_width]
-        else:
-            ax = axes[speed_width]
 
         if angle!=current_angle:
+            trial = 0
             y += 1
             current_angle = angle
+        else:
+            # same angle, next trial
+            trial+=1
+
+        try:
+            ax = axes[speed_width][trial]
+        except:
+            ax = next(axis_gen)
+            if speed_width not in axes:
+                axes[speed_width] = {}
+            axes[speed_width][trial] = ax
+
         if spike_train.size>0:
             glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)        
         
-    for speed_width, ax in axes.items():
-
-        ax.set_title("Speed: {}, Width: {}".format(speed_width[0], speed_width[1]))
-        ax.set_xlabel("time (s)")
-        ax.set_ylabel("angle in radians")
-        ax.set_yticks(np.linspace(0,y+1,5))
-        ax.set_yticklabels([0,"PI/4","PI/2","3*PI/4","2*PI"])
+    for speed_width, trial in axes.items():
+        for trial, ax in trial.items():
+            ax.set_title("Trial: {}, Speed: {}, Width: {}".format(
+                trial+1,speed_width[0], speed_width[1]))
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("Bar Angle")
+            ax.set_yticks(np.linspace(0,y+1,8))
+            ax.set_yticklabels([0,"90°","45°","180°","225°","270°","315°","360°"])
 
 
 def get_fr_dsi_osi(units, stimulus_list):
@@ -216,15 +226,24 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
     )
     response = glia.apply_pipeline(get_solid,units)
 
-    speed_widths = set()
-    for key in stimulus_list:
+    speed_widths = {}
+    n_repetitions = 0
+    bar_stimuli = filter(lambda k: k['stimulus']['stimulusType']=='BAR', stimulus_list)
+    for key in bar_stimuli:
         stimulus = key['stimulus']
-        if stimulus['stimulusType'] != 'BAR':
-            continue
         speed_width = (stimulus['speed'], stimulus['width'])
-        speed_widths.add(speed_width)
-
-    nplots = len(speed_widths)
+        angle = stimulus['angle']
+        try:
+            speed_widths[speed_width][angle] += 1
+        except:
+            speed_widths[speed_width] = {angle: 1}
+    nplots = 0
+    for sw,v in speed_widths.items():
+        nreps=0
+        for a,count in v.items():
+            nreps = max(nreps,count)
+        nplots+= nreps
+    # nplots = len(speed_widths)
 
     result = glia.plot_units(plot_spike_trains,response, nplots=nplots,
         ncols=3,ax_xsize=10, ax_ysize=5,
