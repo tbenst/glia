@@ -151,6 +151,8 @@ def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
     # if all_methods or "direction" in methods:
     safe_run(bar.save_unit_response_by_angle,
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+    safe_run(bar.save_unit_spike_trains,
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
 
 @analyze.command("grating")
 @analysis_function

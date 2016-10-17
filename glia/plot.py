@@ -11,7 +11,7 @@ from .functional import zip_dictionaries
 from matplotlib.backends.backend_pdf import PdfPages
 from multiprocessing import Pool
 from functools import partial
-
+from tqdm import tqdm
 # import pytest
 
 
@@ -69,7 +69,8 @@ def add_to_unit_pdfs(id_figure_tuple,unit_pdfs):
         add_figure_to_unit_pdf(fig,unit_id,unit_pdfs)
 
 def close_pdfs(unit_pdfs):
-    for unit_id,pdf in unit_pdfs.items():
+    print("saving PDFs")
+    for unit_id,pdf in tqdm(unit_pdfs.items()):
         pdf.close()
 
 def close_figs(figures):

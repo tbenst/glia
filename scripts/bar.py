@@ -2,9 +2,33 @@ import glia
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from functools import update_wrapper, partial
 
 def f_get_key(i):
     return lambda item: item[i]
+
+
+def plot_spike_trains(axis_gen,data):
+    ax = next(axis_gen)
+    y = 0
+    current_angle = None
+    for v in data:
+        # print(type(v))
+        stimulus, spike_train = (v["stimulus"], v["spikes"])
+        lifespan = stimulus['lifespan'] / 120
+        angle = stimulus["angle"]
+        if angle!=current_angle:
+            y += 1
+            current_angle = angle
+        if spike_train.size>0:
+            glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)
+        
+        
+    ax.set_title("Unit spike train by BAR angle (combines repetitions)")
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("angle in radians")
+    ax.set_yticks(np.linspace(0,y+1,5))
+    ax.set_yticklabels([0,"PI/4","PI/2","3*PI/4","2*PI"])
 
 
 def get_fr_dsi_osi(units, stimulus_list):
@@ -172,3 +196,19 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
     plot_population_dsi_osi(ax, (bar_dsi, bar_osi))
     c_add_retina_figure(fig_population)
     plt.close(fig_population)
+
+
+
+def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+    print("Creating solid unit spike trains")
+    
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        glia.f_has_stimulus_type(["BAR"]),
+        partial(sorted, key=lambda e: e["stimulus"]["angle"])
+    )
+    response = glia.apply_pipeline(get_solid,units)
+    result = glia.plot_units(plot_spike_trains,response,ncols=1,ax_xsize=10, ax_ysize=5,
+        k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
+    c_add_unit_figures(result)
+    glia.close_figs([fig for the_id,fig in result])
