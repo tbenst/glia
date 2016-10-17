@@ -227,14 +227,11 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
         ax.legend()
 
 def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
-               figure_title=None, subplot_kw=None, k=lambda u,f: None):
+               figure_title=None, subplot_kw=None):
     """Create a giant figure with one or more plots per unit.
     
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
-    ncols will determine the number of columns. Otherwise, each unit will get one row.
-
-    Optionally uses a continuation k after each plot completes. For example:
-    k=lambda u,f: glia.add_figures_to_pdfs(f,u,unit_pdfs)"""
+    ncols will determine the number of columns. Otherwise, each unit will get one row."""
     print("plotting")
     number_of_units = len(units_data[0].keys())
 
@@ -248,7 +245,7 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
     # use all available cores
     pool = Pool()
     # we use tqdm for progress bar
-    plot_worker = partial(_plot_worker, k=k)
+    plot_worker = partial(_plot_worker)
     result = list(pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units)))
 
     pool.close()

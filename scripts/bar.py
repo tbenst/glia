@@ -9,26 +9,35 @@ def f_get_key(i):
 
 
 def plot_spike_trains(axis_gen,data):
-    ax = next(axis_gen)
+    "assumes data is sorted by angle"
+    # we will use a different axis for each speed_width
+    axes = {}
     y = 0
     current_angle = None
-    for v in data:
-        # print(type(v))
-        stimulus, spike_train = (v["stimulus"], v["spikes"])
-        lifespan = stimulus['lifespan'] / 120
+    for d in data:
+        stimulus = d["stimulus"]
+        spike_train = d['spikes']
+        speed_width = (stimulus["speed"], stimulus["width"])
         angle = stimulus["angle"]
+        if speed_width not in axes:
+            axes[speed_width] = next(axis_gen)
+            ax = axes[speed_width]
+        else:
+            ax = axes[speed_width]
+
         if angle!=current_angle:
             y += 1
             current_angle = angle
         if spike_train.size>0:
-            glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)
+            glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)        
         
-        
-    ax.set_title("Unit spike train by BAR angle (combines repetitions)")
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("angle in radians")
-    ax.set_yticks(np.linspace(0,y+1,5))
-    ax.set_yticklabels([0,"PI/4","PI/2","3*PI/4","2*PI"])
+    for speed_width, ax in axes.items():
+
+        ax.set_title("Speed: {}, Width: {}".format(speed_width[0], speed_width[1]))
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("angle in radians")
+        ax.set_yticks(np.linspace(0,y+1,5))
+        ax.set_yticklabels([0,"PI/4","PI/2","3*PI/4","2*PI"])
 
 
 def get_fr_dsi_osi(units, stimulus_list):
@@ -175,8 +184,7 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
     result = glia.plot_units(plot_unit_response_by_angle,
         bar_firing_rate,bar_dsi,bar_osi,
         nplots=nplots, subplot_kw={"projection": "polar"},
-        ax_xsize=4, ax_ysize=5, ncols=3,
-        k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
+        ax_xsize=4, ax_ysize=5, ncols=3)
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
 
@@ -184,8 +192,7 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
     print("plotting unit DSI/OSI table")
     result = glia.plot_units(plot_unit_dsi_osi_table,
         bar_firing_rate,bar_dsi,bar_osi,
-        ax_xsize=6, ax_ysize=4,
-        k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
+        ax_xsize=6, ax_ysize=4)
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
 
@@ -200,15 +207,27 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
 
 
 def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
-    print("Creating solid unit spike trains")
+    print("Creating bar unit spike trains")
     
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
         glia.f_has_stimulus_type(["BAR"]),
-        partial(sorted, key=lambda e: e["stimulus"]["angle"])
+        partial(sorted, key=lambda e: e["stimulus"]["angle"]),
     )
     response = glia.apply_pipeline(get_solid,units)
-    result = glia.plot_units(plot_spike_trains,response,ncols=1,ax_xsize=10, ax_ysize=5,
-        k=lambda u,f: glia.add_figure_to_unit_pdf(f,u,unit_pdfs))
+
+    speed_widths = set()
+    for key in stimulus_list:
+        stimulus = key['stimulus']
+        if stimulus['stimulusType'] != 'BAR':
+            continue
+        speed_width = (stimulus['speed'], stimulus['width'])
+        speed_widths.add(speed_width)
+
+    nplots = len(speed_widths)
+
+    result = glia.plot_units(plot_spike_trains,response, nplots=nplots,
+        ncols=3,ax_xsize=10, ax_ysize=5,
+        figure_title="Unit spike train by BAR angle (combines repetitions)")
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
