@@ -138,7 +138,6 @@ def all(ctx):
 @analysis_function
 def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
     "Create PTSH and raster of spikes in response to solid."
-    print("in solid")
     safe_run(solid.save_unit_psth,
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
     safe_run(solid.save_unit_spike_trains,

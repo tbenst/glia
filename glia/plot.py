@@ -65,7 +65,8 @@ def add_figure_to_unit_pdf(fig,unit_id,unit_pdfs):
     return (unit_id, fig)
 
 def add_to_unit_pdfs(id_figure_tuple,unit_pdfs):
-    for unit_id,fig in id_figure_tuple:
+    print("Adding figures to PDFs")
+    for unit_id,fig in tqdm(id_figure_tuple):
         add_figure_to_unit_pdf(fig,unit_id,unit_pdfs)
 
 def close_pdfs(unit_pdfs):
