@@ -39,7 +39,6 @@ def plot_spike_trains(axis_gen,data):
 
         if spike_train.size>0:
             glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)        
-    print(axes)
     for speed_width, trial in axes.items():
         for trial, ax in trial.items():
             ax.set_title("Trial: {}, Speed: {}, Width: {}".format(
@@ -236,7 +235,10 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
         try:
             speed_widths[speed_width][angle] += 1
         except:
-            speed_widths[speed_width] = {angle: 1}
+            if speed_width not in speed_widths:
+                speed_widths[speed_width] = {angle: 1}
+            else:
+                speed_widths[speed_width][angle] = 1
     nplots = 0
     for sw,v in speed_widths.items():
         nreps=0
@@ -244,7 +246,6 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
             nreps = max(nreps,count)
         nplots+= nreps
     # nplots = len(speed_widths)
-
     result = glia.plot_units(plot_spike_trains,response, nplots=nplots,
         ncols=3,ax_xsize=10, ax_ysize=5,
         figure_title="Unit spike train by BAR angle (combines repetitions)")
