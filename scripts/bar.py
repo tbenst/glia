@@ -248,6 +248,6 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
     # nplots = len(speed_widths)
     result = glia.plot_units(plot_spike_trains,response, nplots=nplots,
         ncols=3,ax_xsize=10, ax_ysize=5,
-        figure_title="Unit spike train by BAR angle (combines repetitions)")
+        figure_title="Unit spike train by BAR angle")
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
