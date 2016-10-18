@@ -39,7 +39,7 @@ def plot_spike_trains(axis_gen,data):
 
         if spike_train.size>0:
             glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)        
-        
+    print(axes)
     for speed_width, trial in axes.items():
         for trial, ax in trial.items():
             ax.set_title("Trial: {}, Speed: {}, Width: {}".format(
