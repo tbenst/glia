@@ -10,6 +10,7 @@ import os
 import re
 import scripts.solid as solid
 import scripts.bar as bar
+import scripts.grating as grating
 import errno
 import traceback
 from functools import update_wrapper, partial
@@ -132,6 +133,7 @@ def all(ctx):
     "Run all analyses."
     ctx.forward(solid_cmd)
     ctx.forward(bar_cmd)
+    ctx.forward(grating_cmd)
 
 
 @analyze.command("solid")
@@ -154,9 +156,14 @@ def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
 
 @analyze.command("grating")
+@click.option("-w", "--width", type=int,
+    help="Manually provide screen width for old versions of Eyecandy")
+@click.option("-h", "--height", type=int,
+    help="Manually provide screen height for old versions of Eyecandy")
 @analysis_function
-def grating_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
-    pass
+def grating_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, width, height):
+    safe_run(grating.save_unit_spike_trains,
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, width, height))
 
 # @main.command()
 # @click.argument('filename', type=click.Path(exists=True))

@@ -137,19 +137,23 @@ def f_calculate_firing_rate_by_waveperiod():
         return new
     return create_analytics
 
-def f_split_by_wavelength(screen_width, number_of_wavelengths=1):
+def f_split_by_wavelength(skip_initial=False, screen_width=None,
+        screen_height=None, number_of_wavelengths=1):
     "given a spike train, return a list of spike trains for each waveperiod."
     def split(spike_train, wavelength, speed):
         "return a list of relative-time spike_trains."
         wave_period = wavelength/speed
-        initial_wait_time = np.sqrt(2*(screen_width**2))/speed - wave_period
+        if skip_initial:
+            initial_wait_time = np.sqrt(screen_height**2 + screen_width**2)/speed - wave_period
+        else:
+            initial_wait_time = 0
         new_samples = [[]]
         i = 0
         period_start_time = initial_wait_time
         period_end_time = period_start_time + wave_period
-        for spike in spike_train:
 
-            
+        # TODO can make this much faster
+        for spike in spike_train:
             if spike < period_start_time:
                 continue
             elif (spike >= period_end_time):
@@ -162,18 +166,18 @@ def f_split_by_wavelength(screen_width, number_of_wavelengths=1):
             if (spike >= period_start_time) and (spike < period_end_time):
                 relative_spike_time = spike - period_start_time
                 new_samples[i].append(relative_spike_time)
-        return new_samples
-        
-    def create_analytics(analytics):
-        new = {}
-        for stimulus_key, spike_trains in analytics.items():
-            stimulus = eval(stimulus_key)
-            wavelength = stimulus["wavelength"]
-            speed = stimulus["speed"]
-#             a is list 
-            new[stimulus_key] = reduce(lambda a, train: a + split(train,wavelength*number_of_wavelengths,speed),
-                                       spike_trains,[])
-        return new
+        return [np.array(s) for s in new_samples]
+    
+    def split_each(e):
+        spike_train = e["spikes"]
+        stimulus = e["stimulus"]
+        wavelength = stimulus["wavelength"]
+        speed = stimulus["speed"]
+        return {"stimulus": stimulus,
+            "train_list": split(spike_train,wavelength*number_of_wavelengths,speed)}
+
+    def create_analytics(experiments):
+        return list(map(split_each,experiments))
     return create_analytics
 
 def list_average(l):
