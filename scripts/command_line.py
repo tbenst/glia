@@ -52,12 +52,13 @@ def main():
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
 @click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
+@click.option("--threshold", "-r", type=int, default=3)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
     """)
 @click.pass_context
-def analyze(ctx, filename, trigger, eyecandy, output=None, notebook=None):
+def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -88,10 +89,10 @@ def analyze(ctx, filename, trigger, eyecandy, output=None, notebook=None):
         print("No .stimulus file found. Attempting to create from .analog file via {}".format(trigger))
         if trigger == "flicker":
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy)
+                analog_file, stimulus_file, notebook, name, eyecandy, threshold)
         elif trigger == "detect-solid":
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_SOLID(
-                analog_file, stimulus_file, notebook, name, eyecandy)
+                analog_file, stimulus_file, notebook, name, eyecandy, threshold)
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
