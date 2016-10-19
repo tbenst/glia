@@ -52,7 +52,7 @@ def main():
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
 @click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
-@click.option("--threshold", "-r", type=int, default=3)
+@click.option("--threshold", "-r", type=float, default=3)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
@@ -120,7 +120,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=N
 
 @analyze.resultcallback()
 @click.pass_context
-def cleanup(ctx, results, filename, trigger, eyecandy, output=None, notebook=None):
+def cleanup(ctx, results, filename, trigger, threshold, eyecandy, output=None, notebook=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])

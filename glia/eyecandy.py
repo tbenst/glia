@@ -106,7 +106,7 @@ def validate_stimulus_times(stimulus_list,start_times):
         raise ValueError("No stimulus start times detected in analog file. " \
                          "Try lowering the threshold or changing --trigger".format(start_length,stimulus_length))
     elif np.abs(start_length-stimulus_length) <= 1:
-        warn("length of start times ({}) and stimulus_list ({}) differ by 1".format(start_lengthand,stimulus_length))
+        warn("length of start times ({}) and stimulus_list ({}) differ by 1".format(start_length,stimulus_length))
     elif start_length > stimulus_length:
         raise ValueError("start_times ({}) is longer than stimulus_list ({}). " \
                          "Try raising the threshold".format(start_length,stimulus_length))
@@ -116,6 +116,7 @@ def validate_stimulus_times(stimulus_list,start_times):
 
     predicted_start_time = stimulus_list[0]["start_time"] + stimulus_list[0]["stimulus"]["lifespan"]/120
     for s in stimulus_list[1:]:
+        print(s)
         start_time = s["start_time"]
         stimulus = s["stimulus"]
         lifespan = stimulus["lifespan"]/120
@@ -227,9 +228,9 @@ def get_start_times_of_stimulus(stimulus_type, stimulus_list):
     return ret
 
 def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, threshold=3):
+        data_name, eyecandy_url, nsigma=3):
     # this will catch if the .stimulus file does not exist
-    threshold = get_threshold(analog_file, threshold)
+    threshold = get_threshold(analog_file, nsigma)
     start_times = get_stimulus_start_times(analog_file, threshold)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
@@ -243,9 +244,9 @@ def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_f
     return stimulus_list
 
 def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, threshold=3):
+        data_name, eyecandy_url, nsigma=3):
     "using the solid time as ground truth, construct estimates of intermediate stimulus time going forwards and backwards"
-    threshold = get_threshold(analog_file, threshold)
+    threshold = get_threshold(analog_file, nsigma)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
     stimulus_protocol = get_stimulus_from_protocol(experiment_protocol)
