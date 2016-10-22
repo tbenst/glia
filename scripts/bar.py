@@ -8,11 +8,12 @@ def f_get_key(i):
     return lambda item: item[i]
 
 
-def plot_spike_trains(axis_gen,data):
+def plot_spike_trains_by_angle(axis_gen,data):
     "assumes data is sorted by angle"
     # we will use a different axis for each speed_width & repetition
     axes = {}
     y = 0
+    ymax = 0
     trial = 0
     current_angle = None
     for d in data:
@@ -24,6 +25,7 @@ def plot_spike_trains(axis_gen,data):
         if angle!=current_angle:
             trial = 0
             y += 1
+            ymax = max(y,ymax)
             current_angle = angle
         else:
             # same angle, next trial
@@ -44,9 +46,42 @@ def plot_spike_trains(axis_gen,data):
             ax.set_title("Trial: {}, Speed: {}, Width: {}".format(
                 trial+1,speed_width[0], speed_width[1]))
             ax.set_xlabel("Time (s)")
+            ax.set_xlim([0,stimulus['lifespan']/120])
             ax.set_ylabel("Bar Angle")
-            ax.set_yticks(np.linspace(0,y+1,8))
-            ax.set_yticklabels([0,"90°","45°","180°","225°","270°","315°","360°"])
+            ax.set_yticks(np.linspace(0,y+1,9))
+            ax.set_yticklabels([0,"45°","90°","135°","180°","225°","270°","315°","360°"])
+
+
+def plot_spike_trains_by_trial(axis_gen,data):
+    "ignores angle, assumes data is sorted by width"
+    # we will use a different axis for each speed_width & repetition
+    axes = {}
+    for d in data:
+        stimulus = d["stimulus"]
+        spike_train = d['spikes']
+        speed_width = (stimulus["speed"], stimulus["width"])
+
+        try:
+            ax,trial = axes[speed_width]
+            axes[speed_width] = (ax, trial+1)
+        except:
+            ax = next(axis_gen)
+            if speed_width not in axes:
+                axes[speed_width] = None
+            trial = 0
+            axes[speed_width] = (ax,trial)
+
+        if spike_train.size>0:
+            glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)        
+    for speed_width, tup in axes.items():
+        ax, trial = tup
+        ax.set_title("Speed: {}, Width: {}".format(
+            speed_width[0],speed_width[1]))
+        ax.set_xlabel("Time (s)")
+        ax.set_xlim([0,stimulus['lifespan']/120])
+        # trial is now the count
+        ax.set_ylim([0,trial])
+        ax.set_ylabel("Trial #")
 
 
 def get_fr_dsi_osi(units, stimulus_list):
@@ -213,41 +248,67 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
     c_add_retina_figure(fig_population)
     plt.close(fig_population)
 
-
-
-def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
-    print("Creating bar unit spike trains")
-    
-    get_solid = glia.compose(
-        glia.f_create_experiments(stimulus_list),
-        glia.f_has_stimulus_type(["BAR"]),
-        partial(sorted, key=lambda e: e["stimulus"]["angle"]),
-    )
-    response = glia.apply_pipeline(get_solid,units)
-
-    speed_widths = {}
-    n_repetitions = 0
+def get_nplots(stimulus_list, parameter):
     bar_stimuli = filter(lambda k: k['stimulus']['stimulusType']=='BAR', stimulus_list)
-    for key in bar_stimuli:
-        stimulus = key['stimulus']
-        speed_width = (stimulus['speed'], stimulus['width'])
-        angle = stimulus['angle']
-        try:
-            speed_widths[speed_width][angle] += 1
-        except:
-            if speed_width not in speed_widths:
-                speed_widths[speed_width] = {angle: 1}
-            else:
-                speed_widths[speed_width][angle] = 1
-    nplots = 0
-    for sw,v in speed_widths.items():
-        nreps=0
-        for a,count in v.items():
-            nreps = max(nreps,count)
-        nplots+= nreps
+
+    if parameter == "angle":
+        speed_widths = {}
+        n_repetitions = 0
+        for key in bar_stimuli:
+            stimulus = key['stimulus']
+            speed_width = (stimulus['speed'], stimulus['width'])
+            angle = stimulus['angle']
+            try:
+                speed_widths[speed_width][angle] += 1
+            except:
+                if speed_width not in speed_widths:
+                    speed_widths[speed_width] = {angle: 1}
+                else:
+                    speed_widths[speed_width][angle] = 1
+        nplots = 0
+        for sw,v in speed_widths.items():
+            nreps=0
+            for a,count in v.items():
+                nreps = max(nreps,count)
+            nplots+= nreps
+    elif parameter == "width":
+        speed_widths = set()
+        for key in bar_stimuli:
+            stimulus = key['stimulus']
+            speed = stimulus['speed']
+            width = stimulus['width']
+            speed_widths.add((speed,width))
+        nplots = len(speed_widths)
+    return nplots
+
+
+def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+        by='angle'):
+    print("Creating bar unit spike trains")
+    if by == 'angle':
+        get_solid = glia.compose(
+            glia.f_create_experiments(stimulus_list),
+            glia.f_has_stimulus_type(["BAR"]),
+            partial(sorted, key=lambda e: e["stimulus"]["angle"]),
+        )
+        nplots = get_nplots(stimulus_list,by)
+        response = glia.apply_pipeline(get_solid,units)
+        result = glia.plot_units(plot_spike_trains_by_angle,response, nplots=nplots,
+            ncols=3,ax_xsize=10, ax_ysize=5,
+            figure_title="Unit spike train by BAR angle")
+    elif by == 'width':
+        get_solid = glia.compose(
+            glia.f_create_experiments(stimulus_list),
+            glia.f_has_stimulus_type(["BAR"]),
+            partial(sorted, key=lambda e: e["stimulus"]["width"]),
+        )
+        nplots = get_nplots(stimulus_list,by)
+        response = glia.apply_pipeline(get_solid,units)
+        result = glia.plot_units(plot_spike_trains_by_trial,response, nplots=nplots,
+            ncols=3,ax_xsize=10, ax_ysize=5,
+            figure_title="Unit spike train by BAR angle")
+
+
     # nplots = len(speed_widths)
-    result = glia.plot_units(plot_spike_trains,response, nplots=nplots,
-        ncols=3,ax_xsize=10, ax_ysize=5,
-        figure_title="Unit spike train by BAR angle")
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])

@@ -2,6 +2,7 @@ import glia
 import matplotlib.pyplot as plt
 import numpy as np
 from functools import partial
+from warnings import warn
 
 def plot_psth(ax_gen,data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
     for s,spike_train in data.items():
