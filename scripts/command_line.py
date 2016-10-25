@@ -52,13 +52,16 @@ def main():
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
 @click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
-@click.option("--threshold", "-r", type=int, default=3)
-@click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "ttl"]), default="flicker",
+@click.option("--ignore-extra",  is_flag=True)
+@click.option("--fix-missing",  is_flag=True)
+@click.option("--threshold", "-r", type=float, default=9)
+@click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
     """)
 @click.pass_context
-def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=None):
+def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
+        fix_missing=False, output=None, notebook=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -76,7 +79,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=N
         raise ValueError('could not read {}. Is it a plexon or spyking circus file?')
 
     if not notebook:
-        notebooks = glob(os.path.join(data_directory, '*.yml'))
+        notebooks = glob(os.path.join(data_directory, '*.yml')) + \
+            glob(os.path.join(data_directory, '*.yaml'))
         if len(notebooks)==0:
             raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
                 "or specify file path with -n.")
@@ -87,12 +91,19 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=N
         ctx.obj["stimulus_list"] = glia.load_stimulus(stimulus_file)
     except OSError:
         print("No .stimulus file found. Attempting to create from .analog file via {}".format(trigger))
-        if trigger == "flicker":
+        if trigger == "legacy":
+            ctx.obj["stimulus_list"] = glia.legacy_create_stimulus_list_from_flicker(
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold)
+        elif trigger == "flicker":
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, threshold)
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, fix_missing)
+        elif trigger == "fix":
+            ctx.obj["stimulus_list"] = glia.alternate_create_stimulus_list_from_flicker(
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold,
+                fix_missing=True)
         elif trigger == "detect-solid":
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_SOLID(
-                analog_file, stimulus_file, notebook, name, eyecandy, threshold)
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold)
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
@@ -120,7 +131,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=N
 
 @analyze.resultcallback()
 @click.pass_context
-def cleanup(ctx, results, filename, trigger, eyecandy, threshold, output=None, notebook=None):
+def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
+        fix_missing=False, output=None, notebook=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -166,14 +178,15 @@ def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
 
 @analyze.command("bar")
-# @click.option("--method", "-m", type=click.Choice(["direction"]), default="all")
+@click.option("--by", "-b", type=click.Choice(["angle", "width"]), default="angle")
 @analysis_function
-def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by):
     # if all_methods or "direction" in methods:
-    safe_run(bar.save_unit_response_by_angle,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+    if by=="angle":
+        safe_run(bar.save_unit_response_by_angle,
+            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
     safe_run(bar.save_unit_spike_trains,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by))
 
 @analyze.command("grating")
 @click.option("-w", "--width", type=int,
