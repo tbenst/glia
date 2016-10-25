@@ -105,7 +105,7 @@ def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
             ax.hist(channel, bins)
 
 
-def draw_spikes(ax, spike_train, ymin=0,ymax=1,color="black",alpha=0.4):
+def draw_spikes(ax, spike_train, ymin=0,ymax=1,color="black",alpha=0.5):
     "Draw each spike as black line."
     # draw_spike = np.vectorize(lambda s: ax.vlines(s, ymin, ymax,colors=color,alpha=alpha))
     # for spike in spike_train:

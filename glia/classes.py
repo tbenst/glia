@@ -39,7 +39,7 @@ class Unit:
         return self._id
 
     @property
-    def name():
+    def name(self):
         return self._name
 
     def initialize_id(self):

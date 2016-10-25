@@ -120,12 +120,31 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, output=None, notebook=N
 
 @analyze.resultcallback()
 @click.pass_context
-def cleanup(ctx, results, filename, trigger, eyecandy, output=None, notebook=None):
+def cleanup(ctx, results, filename, trigger, eyecandy, threshold, output=None, notebook=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
 
     print("Finished")
+
+
+def create_cover_page(ax_gen, data):
+    ax = next(ax_gen)
+    unit_id = data
+    ax.text(0.5, 0.5,unit_id, horizontalalignment='center',
+        verticalalignment='center',
+        fontsize=32)
+    ax.set_axis_off()
+    
+@analyze.command()
+@analysis_function
+def cover(units, stimulus_list, c_add_unit_figures, c_add_retina_figureand):
+    "Add cover page."
+    data = {k:v.name for k,v in units.items()}
+    result = glia.plot_units(create_cover_page,data,ax_xsize=10, ax_ysize=5)
+    c_add_unit_figures(result)
+    glia.close_figs([fig for the_id,fig in result])
+    
 
 
 @analyze.command()
