@@ -118,7 +118,7 @@ def validate_stimulus_times(stimulus_list,start_times, stimulus_gen, ignore_extr
         print(next(stimulus_gen))
         if not ignore_extra:
             raise ValueError("More stimuli than start times detected." \
-                "Use --ignore_extra to ignore.")
+                "Use --ignore-extra to ignore.")
     except StopIteration as e:
         pass
 

@@ -37,16 +37,17 @@ def plot_spike_trains_by_angle(axis_gen,data):
             ax = next(axis_gen)
             if speed_width not in axes:
                 axes[speed_width] = {}
-            axes[speed_width][trial] = ax
+            axes[speed_width][trial] = (ax,stimulus["lifespan"]/120)
 
         if spike_train.size>0:
             glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)        
     for speed_width, trial in axes.items():
-        for trial, ax in trial.items():
+        for trial, v in trial.items():
+            ax, duration = v
             ax.set_title("Trial: {}, Speed: {}, Width: {}".format(
                 trial+1,speed_width[0], speed_width[1]))
             ax.set_xlabel("Time (s)")
-            ax.set_xlim([0,stimulus['lifespan']/120])
+            ax.set_xlim([0,duration])
             ax.set_ylabel("Bar Angle")
             ax.set_yticks(np.linspace(0,y+1,9))
             ax.set_yticklabels([0,"45°","90°","135°","180°","225°","270°","315°","360°"])
