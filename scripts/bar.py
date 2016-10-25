@@ -13,7 +13,6 @@ def plot_spike_trains_by_angle(axis_gen,data):
     # we will use a different axis for each speed_width & repetition
     axes = {}
     y = 0
-    ymax = 0
     trial = 0
     current_angle = None
     for d in data:
@@ -25,14 +24,13 @@ def plot_spike_trains_by_angle(axis_gen,data):
         if angle!=current_angle:
             trial = 0
             y += 1
-            ymax = max(y,ymax)
             current_angle = angle
         else:
             # same angle, next trial
             trial+=1
 
         try:
-            ax = axes[speed_width][trial]
+            ax = axes[speed_width][trial][0]
         except:
             ax = next(axis_gen)
             if speed_width not in axes:
@@ -40,7 +38,8 @@ def plot_spike_trains_by_angle(axis_gen,data):
             axes[speed_width][trial] = (ax,stimulus["lifespan"]/120)
 
         if spike_train.size>0:
-            glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)        
+            glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)
+
     for speed_width, trial in axes.items():
         for trial, v in trial.items():
             ax, duration = v
