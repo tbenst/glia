@@ -169,13 +169,15 @@ def all(ctx):
 
 
 @analyze.command("solid")
+@click.option("--prepend", "-p", type=float, default=1)
+@click.option("--append", "-p", tape=float, default=1)
 @analysis_function
-def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
     "Create PTSH and raster of spikes in response to solid."
     safe_run(solid.save_unit_psth,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
     safe_run(solid.save_unit_spike_trains,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
 
 @analyze.command("bar")
 @click.option("--by", "-b", type=click.Choice(["angle", "width"]), default="angle")

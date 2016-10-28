@@ -49,11 +49,11 @@ def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
     ax.set_ylabel("trial # (lower is earlier)")
 
 
-def save_unit_psth(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def save_unit_psth(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
     print("Creating solid unit PSTH")
 
     get_psth = glia.compose(
-        glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_lifespan=1),
+        glia.f_create_experiments(stimulus_list,prepend_start_time=prepend,append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
         glia.f_group_by_stimulus(),
         glia.concatenate_by_stimulus
@@ -64,11 +64,11 @@ def save_unit_psth(units, stimulus_list, c_add_unit_figures, c_add_retina_figure
     glia.close_figs([fig for the_id,fig in result])
 
 
-def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
     print("Creating solid unit spike trains")
     
     get_solid = glia.compose(
-        glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_lifespan=1),
+        glia.f_create_experiments(stimulus_list,prepend_start_time=prepend,append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
     )
     response = glia.apply_pipeline(get_solid,units)
