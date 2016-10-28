@@ -171,7 +171,7 @@ def all(ctx):
 @analyze.command("solid")
 @click.option("--prepend", "-p", type=float, default=1,
     help="plot (seconds) before SOLID start time")
-@click.option("--append", "-p", tape=float, default=1,
+@click.option("--append", "-p", type=float, default=1,
     help="plot (seconds) after SOLID end time")
 @analysis_function
 def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
