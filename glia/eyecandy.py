@@ -24,13 +24,15 @@ ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 
-def create_eyecandy_gen(program_type, program, window_width, window_height, eyecandy_url):
+def create_eyecandy_gen(program_type, program, window_width, window_height, seed,
+        eyecandy_url):
     # Create program from eyecandy YAML. 
     r = requests.post(eyecandy_url + '/analysis/start-program',
                       data={'program': program,
                            "programType": program_type,
                            'windowHeight': window_height,
-                           'windowWidth': window_width})
+                           'windowWidth': window_width,
+                           "seed": seed})
     sid = r.text
     def eyecandy_gen():
         done = False
@@ -307,7 +309,7 @@ def legacy_create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_not
     program_type, program,window_width,window_height,seed = get_program_from_experiment(
         experiment_protocol)
     stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
-        window_height, eyecandy_url)
+        window_height, seed, eyecandy_url)
     stimulus_list = get_stimulus_from_eyecandy(start_times,stimulus_gen)
     validate_stimulus_times(stimulus_list, start_times, stimulus_gen, ignore_extra)
     # create the.stimulus file
@@ -327,7 +329,7 @@ def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_f
     program_type, program,window_width,window_height,seed = get_program_from_experiment(
         experiment_protocol)
     stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
-        window_height, eyecandy_url)
+        window_height, seed, eyecandy_url)
     stimulus_list = get_stimulus_from_eyecandy(start_times,stimulus_gen, fix_missing)
     validate_stimulus_times(stimulus_list, start_times, stimulus_gen, ignore_extra)
     # create the.stimulus file
@@ -344,7 +346,7 @@ def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp,
     program_type, program,window_width,window_height,seed = get_program_from_experiment(
         experiment_protocol)
     stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
-        window_height, eyecandy_url)
+        window_height, seed, eyecandy_url)
     sample_rate = sampling_rate(analog_file)
     # specific to Trigger 2 - TODO
     analog = read_raw_voltage(analog_file)[:,1]
