@@ -24,12 +24,13 @@ ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 
-def create_eyecandy_gen(program_yaml, eyecandy_url):
+def create_eyecandy_gen(program_type, program, window_width, window_height, eyecandy_url):
     # Create program from eyecandy YAML. 
     r = requests.post(eyecandy_url + '/analysis/start-program',
-                      data={'programYAML': program_yaml,
-                           'windowHeight': 1140,
-                           'windowWidth': 912})
+                      data={'program': program,
+                           "programType": program_type,
+                           'windowHeight': window_height,
+                           'windowWidth': window_width})
     sid = r.text
     def eyecandy_gen():
         done = False
@@ -51,16 +52,31 @@ def open_lab_notebook(filepath):
     return y
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
-    study_data = lab_notebook_yaml['study']['data']
-    for mouse in study_data:
-        for retina in mouse["retinas"]:
-            for protocol in retina["experiments"]:
-                if protocol["name"]==name:
-                    return protocol
+    if type(lab_notebook_yaml) is list:
+        # version >=0.4
+        for experiment in lab_notebook_yaml:
+            if experiment["name"]==name:
+                return experiment
+    elif type(lab_notebook_yaml) is dict:
+        # version 0.3
+        study_data = lab_notebook_yaml['study']['data']
+        for mouse in study_data:
+            for retina in mouse["retinas"]:
+                for protocol in retina["experiments"]:
+                    if protocol["name"]==name:
+                        return protocol
 
-def get_stimulus_from_protocol( protocol ):
+def get_program_from_experiment(experiment):
     """Get stimulus text from protocol suitable for eye-candy."""
-    return yaml.dump(protocol['stimulus']['program'])
+    try:
+        if experiment["version"]>=0.4:
+            return (experiment["programType"],experiment["program"],
+                experiment["window_width"],experiment["window_height"],
+                experiment["seed"])
+    except:
+        # we assume a certain window height and width for older versions
+        return ("YAML",yaml.dump(experiment['stimulus']['program']),
+            912,1140,0)
 
 def get_stimulus_start_times(analog_file, threshold=10000):
     """
@@ -288,8 +304,10 @@ def legacy_create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_not
     start_times = get_stimulus_start_times(analog_file, threshold)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
-    stimulus_protocol = get_stimulus_from_protocol(experiment_protocol)
-    stimulus_gen = create_eyecandy_gen(stimulus_protocol, eyecandy_url)
+    program_type, program,window_width,window_height,seed = get_program_from_experiment(
+        experiment_protocol)
+    stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
+        window_height, eyecandy_url)
     stimulus_list = get_stimulus_from_eyecandy(start_times,stimulus_gen)
     validate_stimulus_times(stimulus_list, start_times, stimulus_gen, ignore_extra)
     # create the.stimulus file
@@ -306,8 +324,10 @@ def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_f
     start_times = get_flash_times(analog, sampling, nsigma)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
-    stimulus_protocol = get_stimulus_from_protocol(experiment_protocol)
-    stimulus_gen = create_eyecandy_gen(stimulus_protocol, eyecandy_url)
+    program_type, program,window_width,window_height,seed = get_program_from_experiment(
+        experiment_protocol)
+    stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
+        window_height, eyecandy_url)
     stimulus_list = get_stimulus_from_eyecandy(start_times,stimulus_gen, fix_missing)
     validate_stimulus_times(stimulus_list, start_times, stimulus_gen, ignore_extra)
     # create the.stimulus file
@@ -321,8 +341,10 @@ def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp,
     threshold = get_threshold(analog_file, nsigma)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
-    stimulus_protocol = get_stimulus_from_protocol(experiment_protocol)
-    stimulus_gen = create_eyecandy_gen(stimulus_protocol, eyecandy_url)
+    program_type, program,window_width,window_height,seed = get_program_from_experiment(
+        experiment_protocol)
+    stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
+        window_height, eyecandy_url)
     sample_rate = sampling_rate(analog_file)
     # specific to Trigger 2 - TODO
     analog = read_raw_voltage(analog_file)[:,1]
