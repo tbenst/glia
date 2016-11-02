@@ -355,7 +355,7 @@ def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp,
     for s in stimulus_gen:
         stimuli.append(s)
 
-    flash_start_times = get_flash_times(analog,sample_rate)
+    flash_start_times = get_flash_times(analog,sample_rate,nsigma)
     # check if number of detected flashes is equal to number of solid
     assert len(flash_start_times)==len([s for s in stimuli if s["stimulusType"]=="SOLID"])
 
