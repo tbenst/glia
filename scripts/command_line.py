@@ -52,16 +52,18 @@ def main():
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
 @click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
-@click.option("--ignore-extra",  is_flag=True)
-@click.option("--fix-missing",  is_flag=True)
-@click.option("--threshold", "-r", type=float, default=9)
+@click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
+@click.option("--fix-missing",  is_flag=True, help="Attempt to fill in missing start times, use with --ignore-extra.")
+@click.option("--threshold", "-r", type=float, default=9, help="Set the threshold in standard deviations for the legacy")
+@click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
+@click.option("--window-width", "-w", type=int)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
     """)
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, output=None, notebook=None):
+        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -93,17 +95,17 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         print("No .stimulus file found. Attempting to create from .analog file via {}".format(trigger))
         if trigger == "legacy":
             ctx.obj["stimulus_list"] = glia.legacy_create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold)
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width)
         elif trigger == "flicker":
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, fix_missing)
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, fix_missing, window_height, window_width)
         elif trigger == "fix":
             ctx.obj["stimulus_list"] = glia.alternate_create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold,
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width,
                 fix_missing=True)
         elif trigger == "detect-solid":
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_SOLID(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold)
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width)
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
@@ -132,7 +134,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @analyze.resultcallback()
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, output=None, notebook=None):
+        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])

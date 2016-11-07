@@ -300,7 +300,7 @@ def get_start_times_of_stimulus(stimulus_type, stimulus_list):
     return ret
 
 def legacy_create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, ignore_extra=False, nsigma=3):
+        data_name, eyecandy_url, ignore_extra=False, nsigma=3, override_height=None, override_width=None):
     # this will catch if the .stimulus file does not exist
     threshold = get_threshold(analog_file, nsigma)
     start_times = get_stimulus_start_times(analog_file, threshold)
@@ -308,6 +308,9 @@ def legacy_create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_not
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
     program_type, program,window_width,window_height,seed = get_program_from_experiment(
         experiment_protocol)
+    if (override_height != None):
+        window_height = override_height
+        window_width = override_width
     stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
         window_height, seed, eyecandy_url)
     stimulus_list = get_stimulus_from_eyecandy(start_times,stimulus_gen)
@@ -318,7 +321,7 @@ def legacy_create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_not
     return stimulus_list
 
 def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, ignore_extra=False, nsigma=3, fix_missing=False):
+        data_name, eyecandy_url, ignore_extra=False, nsigma=3, fix_missing=False, override_height=None, override_width=None):
     # this will catch if the .stimulus file does not exist
     threshold = get_threshold(analog_file, nsigma)
     analog = read_raw_voltage(analog_file)[:,1]
@@ -328,6 +331,9 @@ def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_f
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
     program_type, program,window_width,window_height,seed = get_program_from_experiment(
         experiment_protocol)
+    if (override_height != None):
+        window_height = override_height
+        window_width = override_width
     stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
         window_height, seed, eyecandy_url)
     stimulus_list = get_stimulus_from_eyecandy(start_times,stimulus_gen, fix_missing)
@@ -338,13 +344,16 @@ def create_stimulus_list_from_flicker(analog_file, stimulus_file, lab_notebook_f
     return stimulus_list
 
 def create_stimulus_list_from_SOLID(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, ignore_extra=False, nsigma=3):
+        data_name, eyecandy_url, ignore_extra=False, nsigma=3, override_height=None, override_width=None):
     "using the solid time as ground truth, construct estimates of intermediate stimulus time going forwards and backwards"
     threshold = get_threshold(analog_file, nsigma)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
     program_type, program,window_width,window_height,seed = get_program_from_experiment(
         experiment_protocol)
+    if (override_height != None):
+        window_height = override_height
+        window_width = override_width
     stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
         window_height, seed, eyecandy_url)
     sample_rate = sampling_rate(analog_file)
