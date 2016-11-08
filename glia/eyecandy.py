@@ -50,14 +50,15 @@ def create_eyecandy_gen(program_type, program, window_width, window_height, seed
 def open_lab_notebook(filepath):
     """Take a filepath for YAML lab notebook and return dictionary."""
     with open( filepath, 'r') as f:
-        y = yaml.load_all(f)
+        y = list(yaml.safe_load_all(f))
     return y
+    
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
     if type(lab_notebook_yaml) is list:
         # version >=0.4
         for experiment in lab_notebook_yaml:
-            if experiment["name"]==name:
+            if experiment["filename"]==name:
                 return experiment
     elif type(lab_notebook_yaml) is dict:
         # version 0.3
@@ -71,9 +72,10 @@ def get_experiment_protocol(lab_notebook_yaml, name):
 def get_program_from_experiment(experiment):
     """Get stimulus text from protocol suitable for eye-candy."""
     try:
+        # in python and comparing two identical floats is equal
         if experiment["version"]>=0.4:
             return (experiment["programType"],experiment["program"],
-                experiment["window_width"],experiment["window_height"],
+                experiment["windowWidth"],experiment["windowHeight"],
                 experiment["seed"])
     except:
         # we assume a certain window height and width for older versions
