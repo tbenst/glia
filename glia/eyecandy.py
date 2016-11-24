@@ -43,7 +43,9 @@ def create_eyecandy_gen(program_type, program, window_width, window_height, seed
             if done:
                 break
             else:
-                yield json["value"]
+                value = json["value"]
+                value["stimulusIndex"] = json["stimulusIndex"]
+                yield value
 
     return eyecandy_gen()
 
