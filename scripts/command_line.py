@@ -51,6 +51,8 @@ def main():
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
+@click.option("--calibration", "-c", default=(0.55,0.24,0.88), help="Sets the analog value for each stimulus index.")
+@click.option("--distance", "-d", default=1100, help="Sets the distance from calibration for detecting stimulus index.")
 @click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
 @click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
 @click.option("--fix-missing",  is_flag=True, help="Attempt to fill in missing start times, use with --ignore-extra.")
@@ -63,7 +65,8 @@ def main():
     """)
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None):
+        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
+        calibration=None, distance=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -88,12 +91,20 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
                 "or specify file path with -n.")
         notebook=notebooks[0]
 
+    lab_notebook = glia.open_lab_notebook(notebook)
+    experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
+    flicker_version = experiment_protocol["flickerVersion"]
 
     try:
         ctx.obj["stimulus_list"] = glia.load_stimulus(stimulus_file)
     except OSError:
-        print("No .stimulus file found. Attempting to create from .analog file via {}".format(trigger))
-        if trigger == "legacy":
+        print("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
+        if flicker_version==0.3:
+            ctx.obj["stimulus_list"] = glia.create_stimulus_list_v0_4(
+                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
+                calibration, distance)
+
+        elif trigger == "legacy":
             ctx.obj["stimulus_list"] = glia.legacy_create_stimulus_list_from_flicker(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width)
         elif trigger == "flicker":
@@ -134,7 +145,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @analyze.resultcallback()
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None):
+        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
+        calibration=None, distance=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -173,15 +185,22 @@ def all(ctx):
 @analyze.command("solid")
 @click.option("--prepend", "-p", type=float, default=1,
     help="plot (seconds) before SOLID start time")
-@click.option("--append", "-p", type=float, default=1,
+@click.option("--append", "-a", type=float, default=1,
     help="plot (seconds) after SOLID end time")
+@click.option("--wedge/--no-wedge", default=False,
+    help="Sort by flash duration")
 @analysis_function
-def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
+def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+        prepend, append, wedge):
     "Create PTSH and raster of spikes in response to solid."
     safe_run(solid.save_unit_psth,
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
-    safe_run(solid.save_unit_spike_trains,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
+    if wedge:
+        safe_run(solid.save_unit_wedges,
+            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
+    else:
+        safe_run(solid.save_unit_spike_trains,
+            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
 
 @analyze.command("bar")
 @click.option("--by", "-b", type=click.Choice(["angle", "width"]), default="angle")
