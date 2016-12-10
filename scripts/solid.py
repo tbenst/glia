@@ -28,8 +28,8 @@ def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
         # print(type(v))
         stimulus, spike_train = (v["stimulus"], v["spikes"])
         lifespan = stimulus['lifespan'] / 120
-        if lifespan > 10:
-            print("skipping stimulus longer than 10 seconds")
+        if lifespan > 20:
+            print("skipping stimulus longer than 20 seconds")
             continue
         if spike_train.size>0:
             glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)

@@ -10,6 +10,7 @@ import os
 import re
 import scripts.solid as solid
 import scripts.bar as bar
+import scripts.acuity as acuity
 import scripts.grating as grating
 import errno
 import traceback
@@ -222,6 +223,18 @@ def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by):
 def grating_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, width, height):
     safe_run(grating.save_unit_spike_trains,
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, width, height))
+
+@analyze.command("acuity")
+@click.option("--prepend", "-p", type=float, default=1,
+    help="plot (seconds) before SOLID start time")
+@click.option("--append", "-a", type=float, default=1,
+    help="plot (seconds) after SOLID end time")
+@analysis_function
+def acuity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+        prepend, append):
+    safe_run(acuity.save_acuity_chart,
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+            prepend, append))
 
 # @main.command()
 # @click.argument('filename', type=click.Path(exists=True))

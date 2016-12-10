@@ -11,7 +11,7 @@ from .functional import zip_dictionaries
 from matplotlib.backends.backend_pdf import PdfPages
 from multiprocessing import Pool
 from functools import partial
-from tqdm import tqdm
+import traceback
 # import pytest
 
 
@@ -246,13 +246,13 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
     # use all available cores
     pool = Pool()
     # we use tqdm for progress bar
-    plot_worker = partial(_plot_worker)
-    result = list(pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units)))
-
+    # for x in tqdm(data_generator(), total=number_of_units):
+    #     print("iterate",x)
+    result = pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units))
     pool.close()
     pool.join()
 
-    return result
+    return list(result)
 
 def _plot_worker(args):
     unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw = args
@@ -261,7 +261,6 @@ def _plot_worker(args):
     fig = plot(plot_function, data, nplots, ncols=ncols, nrows=nrows,
         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
         figure_title=figure_title, subplot_kw=subplot_kw)
-
     return (unit_id, fig)
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
@@ -317,7 +316,11 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
 def plot(plot_function, data, nplots=1, ncols=1, nrows=None, ax_xsize=4,
             ax_ysize=4, figure_title=None, subplot_kw=None):
     fig, axes = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize, subplot_kw=subplot_kw)
-    plot_function(axes, data)
+    try:
+        plot_function(axes, data)
+    except Exception as e:
+        print("Plot function ({}) failed: ".format(plot_function),e)
+        traceback.print_tb(e.__traceback__)
     if figure_title is not None:
         fig.suptitle(figure_title)
     return fig
@@ -340,6 +343,49 @@ def plot_each_for_unit(unit_plot_function, unit, subplot_kw=None):
         cur_ax = next(axis)
         unit_plot_function(cur_ax,unit_id,v)
     return fig
+
+def c_plot_solid(ax):
+    ax.set_title("Unit spike train per SOLID")
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("trials")
+
+def _axis_continuation_helper(continuation,axis):
+    continuation(axis)
+    return axis
+
+def axis_continuation(function):
+    """Takes a lambda that modifies the axis object, and returns the axis.
+
+    This enables a pipeline of functions that modify the axis object"""
+
+    return partial(_axis_continuation_helper,function)
+
+def plot_spike_trains(axis_gen,data,prepend_start_time=0,append_lifespan=0,
+                      continuation=c_plot_solid):
+    ax = next(axis_gen)
+    trial = 0
+    for v in data:
+        # print(type(v))
+        stimulus, spike_train = (v["stimulus"], v["spikes"])
+        lifespan = stimulus['lifespan'] / 120
+        if lifespan > 40:
+            print("skipping stimulus longer than 40 seconds")
+            continue
+        if spike_train.size>0:
+            draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
+        
+        stimulus_end = prepend_start_time + lifespan
+        duration = stimulus_end + append_lifespan
+        if stimulus_end!=duration:
+            ax.fill([0,prepend_start_time,prepend_start_time,0],
+                    [trial,trial,trial+1,trial+1],
+                    facecolor="gray", edgecolor="none", alpha=0.1)
+            ax.fill([stimulus_end,duration,duration,stimulus_end],
+                    [trial,trial,trial+1,trial+1],
+                    facecolor="gray", edgecolor="none", alpha=0.1)
+        trial += 1
+
+    continuation(ax)
 
 # @pytest.fixture(scope="module")
 # def channels():

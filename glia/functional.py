@@ -1,5 +1,5 @@
 import functools
-from functools import reduce
+from functools import reduce, partial
 from typing import Dict, Callable
 import os
 import numpy as np
@@ -28,6 +28,22 @@ Analytics = Dict[str,Any]
 
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)
+
+def _group_by_helper(a,n,key,value):
+    k = key(n)
+    v = value(n)
+    new_accumulator = a.copy()
+    if k in a:
+        new_accumulator[k].append(v)
+    else:
+        new_accumulator[k] = [v]
+    return new_accumulator
+
+def group_by(x: List[Any],key: Callable,
+             value: Callable=lambda x: x) -> Dict[Any,List[Any]]:
+    ""
+    function = partial(_group_by_helper,key=key,value=value)
+    return reduce(function,x,{})
 
 def f_filter(function):
     def filter_dict(f,d):

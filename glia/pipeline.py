@@ -75,8 +75,6 @@ def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]
             return False
     return f_filter(anonymous)
     
-
-
 def f_group_by(stimulus_parameter) -> Callable[[List[Experiment]], Dict]:
     def anonymous(accumulator,experiment):
         parameter = experiment["stimulus"][stimulus_parameter]
