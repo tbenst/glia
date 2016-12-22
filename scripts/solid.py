@@ -78,6 +78,24 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
 
+def filter_time(l):
+    return list(filter(lambda x: x["stimulus"]["lifespan"]==60, l))
+
+def save_integrity_chart(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+    print("Creating integrity chart")
+    
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_lifespan=2),
+        glia.f_has_stimulus_type(["SOLID"]),
+        filter_time
+    )
+    response = glia.apply_pipeline(get_solid,units)
+    plot_function = partial(plot_spike_trains,prepend_start_time=1,append_lifespan=2)
+    result = glia.plot_units(plot_function,response,ncols=1,ax_xsize=10, ax_ysize=5,
+                             figure_title="Integrity Test (5 Minute Spacing)")
+    c_add_unit_figures(result)
+    glia.close_figs([fig for the_id,fig in result])
+
 def save_unit_wedges(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
     print("Creating solid unit wedges")
     

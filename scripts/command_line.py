@@ -214,6 +214,12 @@ def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by):
     safe_run(bar.save_unit_spike_trains,
         (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by))
 
+@analyze.command("integrity")
+@analysis_function
+def integrity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+    safe_run(solid.save_integrity_chart,
+        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+
 @analyze.command("grating")
 @click.option("-w", "--width", type=int,
     help="Manually provide screen width for old versions of Eyecandy")

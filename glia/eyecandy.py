@@ -636,13 +636,19 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True):
         pass
 
     predicted_start_time = stimulus_list[0]["start_time"] + stimulus_list[0]["stimulus"]["lifespan"]/120
+    previous_lifespan = 0
     for s in stimulus_list[1:]:
         start_time = s["start_time"]
         stimulus = s["stimulus"]
         lifespan = stimulus["lifespan"]/120
         try:
-            assert np.abs(start_time - predicted_start_time) < 0.5
+            if previous_lifespan>10:
+                # temporary hack while eye-candy is frame based
+                assert np.abs(start_time - predicted_start_time) < previous_lifespan/20
+            else:
+                assert np.abs(start_time - predicted_start_time) < 0.5
         except Exception as e:
+            print(previous_lifespan,lifespan)
             print("malformed stimulus list--try a different trigger, adjusting the threshold, or --fix-missing.")
             print("Expected start time of {} but found {} for {}".format(
                 predicted_start_time,start_time, stimulus))
@@ -650,6 +656,7 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True):
             #     print(s['stimulus']['lifespan'], s['start_time'])
             raise
         predicted_start_time =  start_time + lifespan
+        previous_lifespan = lifespan
 
 
 

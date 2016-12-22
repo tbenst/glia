@@ -41,9 +41,51 @@ def plot_solid_versus_bar(axis_gen,data, prepend, append):
         glia.plot_spike_trains(axis_gen,sorted_bars,
             continuation=glia.compose(xlim,bar_text))
 
-def plot_motion_sensitivity():
-    pass
+def plot_motion_sensitivity(axis_gen,data,nwidths,speeds,prepend, append):
+    solids,bars_by_speed = data    
+    # We assume each band of widths is length 8 & first band is 2-16
+    # each subsequent band is twice the width
+    
+    # the list is sorted so the final bar has longest lifespan
+    max_lifespan = bars_by_speed[speeds[0]][nwidths-1]["stimulus"]["lifespan"]/120
+    
+    for i,speed in enumerate(speeds):
+        base_width = 2**(i+1)
+        next_width = base_width
+        widths = {base_width*(n+1) for n in range(8)}
+        bars_to_plot = list(filter(lambda x: x["stimulus"]["width"] in widths,
+            bars_by_speed[speed]))
+        bars_to_plot.sort(key=lambda x: x["stimulus"]["width"])
+        try:
+            assert len(bars_to_plot)==8
+        except:
+            print("width",widths)
+            print([bar["stimulus"] for bar in bars_to_plot])
+            raise
 
+        xlim = glia.axis_continuation(lambda axis: axis.set_xlim(0,max_lifespan))
+        ylim = glia.axis_continuation(lambda axis: axis.set_ylim(0,8))
+        bar_text = glia.axis_continuation(partial(c_plot_bar,
+            title="Bars with speed: {} & base width: {}".format(
+                speed,base_width)))
+        glia.plot_spike_trains(axis_gen,bars_to_plot,
+            continuation=glia.compose(xlim,bar_text,ylim))
+        
+        if i==len(speeds)-1:
+            # After the last speed, Plot solid
+            lifespans = set()
+            for w in widths:
+                light_duration = int(np.ceil(w/speed*120))
+                lifespans.add(light_duration)
+                
+            light_wedge = glia.compose(
+                partial(filter,lambda x: x["stimulus"]["lifespan"] in lifespans),
+                partial(sorted,key=lambda x: x["stimulus"]["lifespan"])
+            )
+            
+            sorted_solids = light_wedge(solids)
+            glia.plot_spike_trains(axis_gen,sorted_solids,prepend,append,continuation=xlim)
+ 
 def save_acuity_chart(units, stimulus_list, c_add_unit_figures,
                       c_add_retina_figure, prepend, append):
     "Compare SOLID light wedge to BAR response in corresponding ascending width."
@@ -76,11 +118,23 @@ def save_acuity_chart(units, stimulus_list, c_add_unit_figures,
     bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units)
 
     nspeeds = len(glia.get_unit(bars_by_speed)[1].keys())
+    sm_speeds = [60,120,240]
+    sm_nspeeds = len(sm_speeds)
 
     # we plot bar and solid for each speed
     plot_function = partial(plot_solid_versus_bar,prepend=prepend,append=append)
     result = glia.plot_units(plot_function,solids,bars_by_speed,
                              nplots=nspeeds*2,ncols=2,ax_xsize=10, ax_ysize=5)
+    c_add_unit_figures(result)
+    glia.close_figs([fig for the_id,fig in result])
+    
+    # now plot the spatial/motion test
+    plot_function = partial(plot_motion_sensitivity,prepend=prepend,append=append,
+        nwidths=8,speeds=sm_speeds)
+    result = glia.plot_units(plot_function,solids,bars_by_speed,
+                nplots=sm_nspeeds+1,ncols=4,
+                ax_xsize=10, ax_ysize=5,
+                figure_title="Spatial/Motion test - each chart has the same light duration")
     c_add_unit_figures(result)
     glia.close_figs([fig for the_id,fig in result])
 
