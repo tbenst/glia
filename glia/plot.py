@@ -368,8 +368,8 @@ def plot_spike_trains(axis_gen,data,prepend_start_time=0,append_lifespan=0,
         # print(type(v))
         stimulus, spike_train = (v["stimulus"], v["spikes"])
         lifespan = stimulus['lifespan'] / 120
-        if lifespan > 40:
-            print("skipping stimulus longer than 40 seconds")
+        if lifespan > 60:
+            print("skipping stimulus longer than 60 seconds")
             continue
         if spike_train.size>0:
             draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)

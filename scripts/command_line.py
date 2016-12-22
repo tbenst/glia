@@ -147,7 +147,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None):
+        calibration=None, distance=None, version=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -235,12 +235,18 @@ def grating_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, w
     help="plot (seconds) before SOLID start time")
 @click.option("--append", "-a", type=float, default=1,
     help="plot (seconds) after SOLID end time")
+@click.option("--version", "-v", type=float, default=2)
 @analysis_function
 def acuity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
-        prepend, append):
-    safe_run(acuity.save_acuity_chart,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
-            prepend, append))
+        prepend, append, version):
+    if version==1:
+        safe_run(acuity.save_acuity_chart,
+            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+                prepend, append))
+    else:
+        safe_run(acuity.save_acuity_chart_v2,
+            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+                prepend, append))
 
 # @main.command()
 # @click.argument('filename', type=click.Path(exists=True))
