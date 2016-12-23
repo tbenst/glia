@@ -84,5 +84,5 @@ def zip_dictionaries(*dictionaries, transform_yield=lambda v: v):
 
     for key in keys:
         value = tuple((dictionary[key] for dictionary in dictionaries))
-        to_yield = (key,value)
-        yield transform_yield(to_yield)
+        yield (key,value)
+        # yield transform_yield(to_yield)

@@ -4,6 +4,8 @@ import matplotlib
 matplotlib.use("agg")
 matplotlib.rcParams['figure.max_open_warning'] = 250
 
+
+
 import glia
 import click
 import os
@@ -14,12 +16,16 @@ import scripts.acuity as acuity
 import scripts.grating as grating
 import errno
 import traceback
+import config
+from config import logging
 from functools import update_wrapper, partial
+from tests.conftest import display_top, tracemalloc
 
 
 from glob import glob
 from glia.classes import Unit
 from matplotlib.backends.backend_pdf import PdfPages
+
 
 def analysis_function(f):
     @click.pass_context
@@ -37,8 +43,8 @@ def safe_run(function, args):
         function(*args)
     except Exception as exception:
         traceback.print_tb(exception.__traceback__)
-        print(exception)
-        print("Error running {}. Skipping".format(function, ))
+        logger.error(exception)
+        logger.error("Error running {}. Skipping".format(function, ))
 
 def plot_path(directory,plot_name):
     return os.path.join(directory,plot_name+".png")
@@ -60,6 +66,7 @@ def main():
 @click.option("--threshold", "-r", type=float, default=9, help="Set the threshold in standard deviations for the legacy")
 @click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
 @click.option("--window-width", "-w", type=int)
+@click.option("--verbose", "-v", is_flag=True)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
@@ -67,7 +74,7 @@ def main():
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None):
+        calibration=None, distance=None, verbose=False):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -75,6 +82,23 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
     stimulus_file = os.path.join(data_directory, name + ".stimulus")
+
+    # logging configuration
+    fh = logging.FileHandler(os.path.join(data_directory,name + '.log'))
+    fh.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    if verbose:
+        ch.setLevel(logging.DEBUG)
+        # tracemalloc.start()
+    else:
+        ch.setLevel(logging.WARNING)
+
+    formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s', '%H:%M:%S')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    logger.info("Verbose logging on")
 
     spyking_regex = re.compile('.*\.result.hdf5$')
     if extension == ".txt":
@@ -99,7 +123,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     try:
         ctx.obj["stimulus_list"] = glia.load_stimulus(stimulus_file)
     except OSError:
-        print("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
+        logger.warning("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
         if flicker_version==0.3:
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_v0_4(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
@@ -147,7 +171,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, version=None):
+        calibration=None, distance=None, version=None, verbose=False):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -244,9 +268,13 @@ def acuity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
             (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
                 prepend, append))
     else:
+        # snapshot = tracemalloc.take_snapshot()
+        # display_top(snapshot)
         safe_run(acuity.save_acuity_chart_v2,
             (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
                 prepend, append))
+
+
 
 # @main.command()
 # @click.argument('filename', type=click.Path(exists=True))

@@ -9,11 +9,13 @@ from .analysis import last_spike_time
 from .pipeline import get_unit
 from .functional import zip_dictionaries
 from matplotlib.backends.backend_pdf import PdfPages
-from multiprocessing import Pool
+from multiprocessing import Pool, Semaphore
 from functools import partial
 import traceback
 # import pytest
 
+import logging
+logger = logging.getLogger('glia')
 
 Seconds = float
 ms = float
@@ -228,26 +230,29 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
         ax.legend()
 
 def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
-               figure_title=None, subplot_kw=None):
+               figure_title=None, subplot_kw=None, processes=multiprocessing.cpu_count()):
     """Create a giant figure with one or more plots per unit.
     
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
     ncols will determine the number of columns. Otherwise, each unit will get one row."""
+    logger.info("plotting units")
     print("plotting")
     number_of_units = len(units_data[0].keys())
 
 
     all_data = zip_dictionaries(*units_data)
-
+    # all_data = [(k, (k,k,k)) for k in range(10)]
+    # logger.debug(all_data)
     def data_generator():
         for unit_id, data in all_data:
             yield (unit_id, data, unit_plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw)
 
     # use all available cores
-    pool = Pool()
+    pool = Pool(processes=processes)
     # we use tqdm for progress bar
     # for x in tqdm(data_generator(), total=number_of_units):
     #     print("iterate",x)
+    logger.info("passing tasks to pool")
     result = pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units))
     pool.close()
     pool.join()
@@ -255,6 +260,7 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
     return list(result)
 
 def _plot_worker(args):
+    logger.info("plot worker")
     unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw = args
     if len(data)==1:
         data = data[0]

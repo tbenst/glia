@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from functools import update_wrapper, partial
+from tests.conftest import display_top, tracemalloc
+import logging
+logger = logging.getLogger('glia')
 
 # def plot_motion_sensitivity(axis_gen,data):
 def c_plot_bar(ax, title):
@@ -44,6 +47,8 @@ def plot_solid_versus_bar(axis_gen,data, prepend, append):
 # for v2
 def plot_solid_versus_bar_for_speed(axis_gen,data, prepend, append, speed):
     # also assumes 5 contrasts
+    logger.info("plot solid versus bar for speed")
+    return None
     solids,bars_by_speed = data
     bars = bars_by_speed[speed]
     max_lifespan = max(bars,
@@ -188,7 +193,7 @@ def save_acuity_chart_v2(units, stimulus_list, c_add_unit_figures,
                       c_add_retina_figure, prepend, append):
     "Compare SOLID light wedge to BAR response in corresponding ascending width."
 
-    print("Creating acuity chart.")
+    print("Creating acuity chart v2.")
     # for each speed, create two charts--SOLID & BAR
     # the solid should only include lifespans corresponding to each width
 
@@ -223,6 +228,10 @@ def save_acuity_chart_v2(units, stimulus_list, c_add_unit_figures,
     ncolors = len(colors)
     # sm_speeds = [60,120,240]
     # sm_nspeeds = len(sm_speeds)
+
+    # print memory usage
+    # snapshot = tracemalloc.take_snapshot()
+    # display_top(snapshot)
 
     # we plot bar and solid for each speed and each of 5 colors
     for speed in sorted(speeds):
