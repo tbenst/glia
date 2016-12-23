@@ -16,8 +16,8 @@ import scripts.acuity as acuity
 import scripts.grating as grating
 import errno
 import traceback
-import config
-from config import logging
+import glia.config as config
+from glia.config import logger, logging
 from functools import update_wrapper, partial
 from tests.conftest import display_top, tracemalloc
 
@@ -58,6 +58,7 @@ def main():
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
+@click.option("--processors", "-p", help="Number of processors")
 @click.option("--calibration", "-c", default=(0.55,0.24,0.88), help="Sets the analog value for each stimulus index.")
 @click.option("--distance", "-d", default=1100, help="Sets the distance from calibration for detecting stimulus index.")
 @click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
@@ -74,7 +75,7 @@ def main():
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, verbose=False):
+        calibration=None, distance=None, verbose=False, processors=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -92,7 +93,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         # tracemalloc.start()
     else:
         ch.setLevel(logging.WARNING)
-
+    if processors!=None:
+        config.processors = processors
     formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s', '%H:%M:%S')
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
@@ -171,7 +173,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, version=None, verbose=False):
+        calibration=None, distance=None, version=None, verbose=False, processors=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
