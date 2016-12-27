@@ -241,28 +241,18 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
 
 
     processes = config.processes
-    semaphore = Semaphore(processes+max(processes/2,10))
-    # we use semaphore to slow down iterator and conserve memory
-    def generator_semaphore(x):
-        semaphore.acquire()
-        return x
 
-    all_data = zip_dictionaries(*units_data, generator_semaphore)
-    # all_data = [(k, (k,k,k)) for k in range(10)]
-    # logger.debug(all_data)
+    all_data = zip_dictionaries(*units_data)
+
     def data_generator():
         for unit_id, data in all_data:
             yield (unit_id, data, unit_plot_function, nplots, ncols, nrows,
-                ax_xsize, ax_ysize, figure_title, subplot_kw, semaphore)
+                ax_xsize, ax_ysize, figure_title, subplot_kw)
+                # ax_xsize, ax_ysize, figure_title, subplot_kw, semaphore)
 
-    # use all available cores 
-    # need to use semaphore
-    pool = Pool(processes=processes)
-    # we use tqdm for progress bar
-    # for x in tqdm(data_generator(), total=number_of_units):
-    #     print("iterate",x)
+    pool = Pool(processes)
     logger.info("passing tasks to pool")
-    result = pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units))
+    result = list(pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units)))
     pool.close()
     pool.join()
 
@@ -271,13 +261,14 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
 def _plot_worker(args):
     logger.info("plot worker")
     (unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize,
-        ax_ysize, figure_title, subplot_kw, semaphore) = args
+        ax_ysize, figure_title, subplot_kw) = args
+        # ax_ysize, figure_title, subplot_kw, semaphore) = args
     if len(data)==1:
         data = data[0]
     fig = plot(plot_function, data, nplots, ncols=ncols, nrows=nrows,
         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
         figure_title=figure_title, subplot_kw=subplot_kw)
-    semaphore.release()
+    # semaphore.release()
     return (unit_id, fig)
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
