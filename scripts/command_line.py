@@ -68,6 +68,7 @@ def main():
 @click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
 @click.option("--window-width", "-w", type=int)
 @click.option("--verbose", "-v", is_flag=True)
+@click.option("--debug", "-vv", is_flag=True)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
@@ -75,7 +76,7 @@ def main():
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, verbose=False, processes=None):
+        calibration=None, distance=None, verbose=False, debug=False,processes=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -89,8 +90,11 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     fh.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     if verbose:
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(logging.INFO)
         # tracemalloc.start()
+    elif debug:
+        ch.setLevel(logging.DEBUG)
+
     else:
         ch.setLevel(logging.WARNING)
     if processes!=None:
@@ -180,7 +184,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, version=None, verbose=False, processes=None):
+        calibration=None, distance=None, version=None, verbose=False, debug=False,processes=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -227,11 +231,11 @@ def all(ctx):
 def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, wedge):
     "Create PTSH and raster of spikes in response to solid."
-    safe_run(solid.save_unit_psth,
-        (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
+    # safe_run(solid.save_unit_psth,
+    #     (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
     if wedge:
         safe_run(solid.save_unit_wedges,
-            (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
+            (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig, prepend, append))
     else:
         safe_run(solid.save_unit_spike_trains,
             (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))

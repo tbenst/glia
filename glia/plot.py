@@ -246,7 +246,6 @@ def plot_units(unit_plot_function, c_unit_fig, *units_data, nplots=1, ncols=1,
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
     ncols will determine the number of columns. Otherwise, each unit will get one row."""
     logger.info("plotting units")
-    print("plotting")
     number_of_units = len(units_data[0].keys())
 
     processes = config.processes
@@ -384,29 +383,43 @@ def axis_continuation(function):
     return partial(_axis_continuation_helper,function)
 
 def plot_spike_trains(axis_gen,data,prepend_start_time=0,append_lifespan=0,
-                      continuation=c_plot_solid):
+                      continuation=c_plot_solid, ymap=None):
     ax = next(axis_gen)
-    trial = 0
-    for v in data:
-        # print(type(v))
+    for i,v in enumerate(data):
         stimulus, spike_train = (v["stimulus"], v["spikes"])
+            
+        # use ymap to keep charts aligned if a comparable stimulus was not run
+        # i.e., if each row is a different bar width but one chart is sparsely sampled
+        if ymap:
+            trial = ymap(stimulus)
+        else:
+            trial = i
+
         lifespan = stimulus['lifespan'] / 120
-        if lifespan > 60:
-            print("skipping stimulus longer than 60 seconds")
-            continue
+        logger.debug("plot_spike_trains ({}) iteration: {}, lifespan: {}".format(
+            stimulus["stimulusType"],trial,lifespan))
+        if lifespan > 120:
+            logger.debug("skipping stimulus longer than 120 seconds")
+        
         if spike_train.size>0:
             draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
         
         stimulus_end = prepend_start_time + lifespan
         duration = stimulus_end + append_lifespan
         if stimulus_end!=duration:
+            # this is for solid
             ax.fill([0,prepend_start_time,prepend_start_time,0],
                     [trial,trial,trial+1,trial+1],
                     facecolor="gray", edgecolor="none", alpha=0.1)
             ax.fill([stimulus_end,duration,duration,stimulus_end],
                     [trial,trial,trial+1,trial+1],
                     facecolor="gray", edgecolor="none", alpha=0.1)
-        trial += 1
+        else:
+            # draw all gray for all others
+            ax.fill([0,lifespan,lifespan,0],
+                    [trial,trial,trial+1,trial+1],
+                    facecolor="gray", edgecolor="none", alpha=0.1)
+
 
     continuation(ax)
 

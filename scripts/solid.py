@@ -22,31 +22,42 @@ def plot_psth(ax_gen,data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
 
 
 def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
-    ax = next(axis_gen)
-    trial = 0
-    for v in data:
-        # print(type(v))
-        stimulus, spike_train = (v["stimulus"], v["spikes"])
-        lifespan = stimulus['lifespan'] / 120
-        if lifespan > 20:
-            print("skipping stimulus longer than 20 seconds")
-            continue
-        if spike_train.size>0:
-            glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
-        
-        stimulus_end = prepend_start_time + lifespan
-        duration = stimulus_end + append_lifespan
-        ax.fill([0,prepend_start_time,prepend_start_time,0],
-                [trial,trial,trial+1,trial+1],
-                facecolor="gray", edgecolor="none", alpha=0.1)
-        ax.fill([stimulus_end,duration,duration,stimulus_end],
-                [trial,trial,trial+1,trial+1],
-                facecolor="gray", edgecolor="none", alpha=0.1)
-        trial += 1
-        
-    ax.set_title("Unit spike train per SOLID")
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("trials")
+    colors = set()
+    for e in data:
+        color = e["stimulus"]["backgroundColor"]
+        colors.add(color)
+
+    sorted_colors = sorted(list(colors),reverse=True)
+
+    for color in sorted_colors:
+        ax = next(axis_gen)
+        filtered_data = list(filter(lambda x: x["stimulus"]["backgroundColor"]==color,
+            data))
+        trial = 0
+
+        for v in filtered_data:
+            # print(type(v))
+            stimulus, spike_train = (v["stimulus"], v["spikes"])
+            lifespan = stimulus['lifespan'] / 120
+            if lifespan > 20:
+                print("skipping stimulus longer than 20 seconds")
+                continue
+            if spike_train.size>0:
+                glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
+            
+            stimulus_end = prepend_start_time + lifespan
+            duration = stimulus_end + append_lifespan
+            ax.fill([0,prepend_start_time,prepend_start_time,0],
+                    [trial,trial,trial+1,trial+1],
+                    facecolor="gray", edgecolor="none", alpha=0.1)
+            ax.fill([stimulus_end,duration,duration,stimulus_end],
+                    [trial,trial,trial+1,trial+1],
+                    facecolor="gray", edgecolor="none", alpha=0.1)
+            trial += 1
+            
+        ax.set_title("Unit spike train per SOLID ({})".format(color))
+        ax.set_xlabel("time (s)")
+        ax.set_ylabel("trials")
 
 
 def save_unit_psth(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
@@ -103,7 +114,12 @@ def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prep
         partial(sorted,key=lambda x: x["stimulus"]["lifespan"])
     )
     response = glia.apply_pipeline(get_solid,units)
+
+    colors = set()
+    for solid in glia.get_unit(response)[1]:
+        colors.add(solid["stimulus"]["backgroundColor"])
+    ncolors = len(colors)
+
+
     plot_function = partial(plot_spike_trains,prepend_start_time=prepend,append_lifespan=append)
-    result = glia.plot_units(plot_function,response,ncols=1,ax_xsize=10, ax_ysize=5)
-    c_unit_fig(result)
-    glia.close_figs([fig for the_id,fig in result])
+    glia.plot_units(plot_function,c_unit_fig,response,nplots=ncolors,ncols=5,ax_xsize=10, ax_ysize=5)
