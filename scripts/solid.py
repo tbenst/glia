@@ -49,7 +49,7 @@ def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
     ax.set_ylabel("trials")
 
 
-def save_unit_psth(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
+def save_unit_psth(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit PSTH")
 
     get_psth = glia.compose(
@@ -61,11 +61,11 @@ def save_unit_psth(units, stimulus_list, c_add_unit_figures, c_add_retina_figure
     psth = glia.apply_pipeline(get_psth,units)
     plot_function = partial(plot_psth,prepend_start_time=prepend,append_lifespan=append)
     result = glia.plot_units(partial(plot_function,bin_width=0.01),psth,ax_xsize=10, ax_ysize=5)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
 
-def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
+def save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit spike trains")
     
     get_solid = glia.compose(
@@ -75,13 +75,13 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
     response = glia.apply_pipeline(get_solid,units)
     plot_function = partial(plot_spike_trains,prepend_start_time=prepend,append_lifespan=append)
     result = glia.plot_units(plot_function,response,ncols=1,ax_xsize=10, ax_ysize=5)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
 def filter_time(l):
     return list(filter(lambda x: x["stimulus"]["lifespan"]==60, l))
 
-def save_integrity_chart(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating integrity chart")
     
     get_solid = glia.compose(
@@ -91,12 +91,10 @@ def save_integrity_chart(units, stimulus_list, c_add_unit_figures, c_add_retina_
     )
     response = glia.apply_pipeline(get_solid,units)
     plot_function = partial(plot_spike_trains,prepend_start_time=1,append_lifespan=2)
-    result = glia.plot_units(plot_function,response,ncols=1,ax_xsize=10, ax_ysize=5,
+    glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
-    c_add_unit_figures(result)
-    glia.close_figs([fig for the_id,fig in result])
 
-def save_unit_wedges(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append):
+def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit wedges")
     
     get_solid = glia.compose(
@@ -107,5 +105,5 @@ def save_unit_wedges(units, stimulus_list, c_add_unit_figures, c_add_retina_figu
     response = glia.apply_pipeline(get_solid,units)
     plot_function = partial(plot_spike_trains,prepend_start_time=prepend,append_lifespan=append)
     result = glia.plot_units(plot_function,response,ncols=1,ax_xsize=10, ax_ysize=5)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])

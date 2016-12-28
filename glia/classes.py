@@ -2,6 +2,7 @@ from uuid import uuid4
 from hashlib import md5
 import base64
 import glia.humanhash as humanhash
+import glia.config as config
 
 class Mouse:
     def __init__(self, mouse_line, dob, gender):
@@ -22,7 +23,8 @@ class Retina:
 
 class Unit:
     
-    _name_lookup = {}
+    # store humanized names as value with unit_id as key
+    name_lookup = {}
 
     def __init__(self, retina_id, channel, unit_num):
         # id will be URL safe MD5 hash of spike_train
@@ -50,16 +52,11 @@ class Unit:
             name = "{}-{}_".format(self.channel, self.unit_num) + \
                 humanhash.humanize(md5_hash.hexdigest())
             self._name = name
-            self._name_lookup[self._id] = name
+            Unit.name_lookup[self._id] = name
         else:
             self._id = "no-spikes"
             self._name = "no-spikes"
-            self._name_lookup[self._id] = self._name
-        
-
-    @classmethod
-    def name_lookup(self):
-        return self._name_lookup
+            Unit.name_lookup[self._id] = self._name
 
 class PlotFunction():
     def __init__(self, plot_function, **kwargs):

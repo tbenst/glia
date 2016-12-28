@@ -5,9 +5,8 @@ import sys
 import os
 from tqdm import tqdm
 from typing import List, Any, Dict
-from .analysis import last_spike_time
-from .pipeline import get_unit
-from .functional import zip_dictionaries
+
+
 from matplotlib.backends.backend_pdf import PdfPages
 from multiprocessing import Pool, Semaphore
 from functools import partial
@@ -15,6 +14,10 @@ import traceback
 # import pytest
 
 import glia.config as config
+from .analysis import last_spike_time
+from .pipeline import get_unit
+from .functional import zip_dictionaries
+from .classes import Unit
 from glia.config import logger
 
 Seconds = float
@@ -83,6 +86,11 @@ def close_figs(figures):
 def save_figs(figures, filenames):
     for fig,name in zip(figures,filenames):
         fig.savefig(name)
+
+def save_fig(filename, unit_id, fig):
+    logger.debug("Saving {} for {}".format(filename,unit_id))
+    name = Unit.name_lookup[unit_id]
+    fig.savefig(os.path.join(config.plot_directory,name,filename+".jpg"))
 
 def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
                   time: (Seconds, Seconds)=(0, 100/1000), average=True,
@@ -229,16 +237,17 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
     if legend is True:
         ax.legend()
 
-def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, ax_xsize=2, ax_ysize=2,
-               figure_title=None, subplot_kw=None):
+def plot_units(unit_plot_function, c_unit_fig, *units_data, nplots=1, ncols=1,
+               nrows=None, ax_xsize=2, ax_ysize=2, figure_title=None, subplot_kw=None):
     """Create a giant figure with one or more plots per unit.
     
+    c_unit_fig determines what happens to fig when produced
+
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
     ncols will determine the number of columns. Otherwise, each unit will get one row."""
     logger.info("plotting units")
     print("plotting")
     number_of_units = len(units_data[0].keys())
-
 
     processes = config.processes
 
@@ -246,30 +255,36 @@ def plot_units(unit_plot_function, *units_data, nplots=1, ncols=1, nrows=None, a
 
     def data_generator():
         for unit_id, data in all_data:
-            yield (unit_id, data, unit_plot_function, nplots, ncols, nrows,
-                ax_xsize, ax_ysize, figure_title, subplot_kw)
+            yield (unit_id, data)
                 # ax_xsize, ax_ysize, figure_title, subplot_kw, semaphore)
 
     pool = Pool(processes)
     logger.info("passing tasks to pool")
-    result = list(pool.imap_unordered(_plot_worker, tqdm(data_generator(), total=number_of_units)))
+    plot_worker = partial(_plot_worker, unit_plot_function, c_unit_fig, nplots,
+                ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw)
+    list(pool.imap_unordered(plot_worker, tqdm(data_generator(), total=number_of_units)))
     pool.close()
     pool.join()
 
-    return list(result)
 
-def _plot_worker(args):
-    logger.info("plot worker")
-    (unit_id, data, plot_function, nplots, ncols, nrows, ax_xsize,
-        ax_ysize, figure_title, subplot_kw) = args
+def _plot_worker(plot_function, c_unit_fig, nplots, ncols, nrows, ax_xsize,
+        ax_ysize, figure_title, subplot_kw, args):
+    "Use with functools.partial() so function only takes args."
+
+    logger.debug("plot worker")
+    
+    unit_id, data = args
         # ax_ysize, figure_title, subplot_kw, semaphore) = args
     if len(data)==1:
         data = data[0]
     fig = plot(plot_function, data, nplots, ncols=ncols, nrows=nrows,
         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
         figure_title=figure_title, subplot_kw=subplot_kw)
-    # semaphore.release()
-    return (unit_id, fig)
+
+    logger.debug("Plot worker successful for {}".format(unit_id))
+    c_unit_fig(unit_id,fig)
+    plt.close(fig)
+
 
 def plot_each_by_unit(unit_plot_function, units, ax_xsize=2, ax_ysize=2,
                subplot_kw=None):

@@ -32,7 +32,7 @@ def analysis_function(f):
     def new_func(ctx, *args, **kwargs):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"], 
-            ctx.obj["c_add_unit_figures"], ctx.obj["c_add_retina_figure"],
+            ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
             *args[3:], **kwargs)
     return update_wrapper(new_func, f)
 
@@ -58,10 +58,10 @@ def main():
 @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
-@click.option("--processors", "-p", help="Number of processors")
+@click.option("--processes", "-p", type=int, help="Number of processors")
 @click.option("--calibration", "-c", default=(0.55,0.24,0.88), help="Sets the analog value for each stimulus index.")
 @click.option("--distance", "-d", default=1100, help="Sets the distance from calibration for detecting stimulus index.")
-@click.option("--output", "-o", type=click.Choice(["pdf"]), default="pdf")
+@click.option("--output", "-o", type=click.Choice(["png","pdf"]), default="png")
 @click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
 @click.option("--fix-missing",  is_flag=True, help="Attempt to fill in missing start times, use with --ignore-extra.")
 @click.option("--threshold", "-r", type=float, default=9, help="Set the threshold in standard deviations for the legacy")
@@ -75,7 +75,7 @@ def main():
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, verbose=False, processors=None):
+        calibration=None, distance=None, verbose=False, processes=None):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -93,8 +93,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         # tracemalloc.start()
     else:
         ch.setLevel(logging.WARNING)
-    if processors!=None:
-        config.processors = processors
+    if processes!=None:
+        config.processes = processes
     formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s', '%H:%M:%S')
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
@@ -151,29 +151,36 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
     # prepare_output
     plot_directory = os.path.join(data_directory, name+"-plots")
-    try:
-        os.makedirs(plot_directory)
-        os.chmod(plot_directory, 0o777)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+    config.plot_directory = plot_directory
+
+    os.makedirs(plot_directory, exist_ok=True)
+    os.chmod(plot_directory, 0o777)
+
     if output == "pdf":
+        logger.debug("Outputting pdf")
         ctx.obj["retina_pdf"] = PdfPages(glia.plot_pdf_path(plot_directory, "retina"))
         ctx.obj["unit_pdfs"] = glia.open_pdfs(plot_directory, list(ctx.obj["units"].keys()), Unit.name_lookup())
         # c connotes 'continuation'
-        ctx.obj["c_add_unit_figures"] = partial(glia.add_to_unit_pdfs,
+        ctx.obj["c_unit_fig"] = partial(glia.add_to_unit_pdfs,
             unit_pdfs=ctx.obj["unit_pdfs"])
-        ctx.obj["c_add_retina_figure"] = lambda x: ctx.obj["retina_pdf"].savefig(x)
+        ctx.obj["c_retina_fig"] = lambda x: ctx.obj["retina_pdf"].savefig(x)
         
     elif output == "png":
-        raise ValueError("not implemented")
+        logger.debug("Outputting png")
+        ctx.obj["c_unit_fig"] = glia.save_fig
+        ctx.obj["c_retina_fig"] = lambda x: ctx.obj["retina_pdf"].savefig(x)
+        os.makedirs(os.path.join(plot_directory,"Retina"), exist_ok=True)
+
+        for unit_id in ctx.obj["units"].keys():
+            name = Unit.name_lookup[unit_id]
+            os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
 
 
 @analyze.resultcallback()
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, version=None, verbose=False, processors=None):
+        calibration=None, distance=None, version=None, verbose=False, processes=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -191,11 +198,11 @@ def create_cover_page(ax_gen, data):
     
 @analyze.command()
 @analysis_function
-def cover(units, stimulus_list, c_add_unit_figures, c_add_retina_figureand):
+def cover(units, stimulus_list, c_unit_fig, c_retina_fig):
     "Add cover page."
     data = {k:v.name for k,v in units.items()}
     result = glia.plot_units(create_cover_page,data,ax_xsize=10, ax_ysize=5)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
     
 
@@ -217,34 +224,35 @@ def all(ctx):
 @click.option("--wedge/--no-wedge", default=False,
     help="Sort by flash duration")
 @analysis_function
-def solid_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, wedge):
     "Create PTSH and raster of spikes in response to solid."
     safe_run(solid.save_unit_psth,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
+        (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
     if wedge:
         safe_run(solid.save_unit_wedges,
-            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
+            (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
     else:
         safe_run(solid.save_unit_spike_trains,
-            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, prepend, append))
+            (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
 
 @analyze.command("bar")
 @click.option("--by", "-b", type=click.Choice(["angle", "width"]), default="angle")
 @analysis_function
-def bar_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by):
+def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
     # if all_methods or "direction" in methods:
     if by=="angle":
         safe_run(bar.save_unit_response_by_angle,
-            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+            (units, stimulus_list, c_unit_fig, c_retina_fig))
     safe_run(bar.save_unit_spike_trains,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, by))
+        (units, stimulus_list, c_unit_fig, c_retina_fig, by))
 
 @analyze.command("integrity")
 @analysis_function
-def integrity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig):
     safe_run(solid.save_integrity_chart,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure))
+        (units, stimulus_list, partial(c_unit_fig,"integrity"),
+            c_retina_fig))
 
 @analyze.command("grating")
 @click.option("-w", "--width", type=int,
@@ -252,9 +260,9 @@ def integrity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure)
 @click.option("-h", "--height", type=int,
     help="Manually provide screen height for old versions of Eyecandy")
 @analysis_function
-def grating_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, width, height):
+def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
     safe_run(grating.save_unit_spike_trains,
-        (units, stimulus_list, c_add_unit_figures, c_add_retina_figure, width, height))
+        (units, stimulus_list, c_unit_fig, c_retina_fig, width, height))
 
 @analyze.command("acuity")
 @click.option("--prepend", "-p", type=float, default=1,
@@ -263,17 +271,17 @@ def grating_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure, w
     help="plot (seconds) after SOLID end time")
 @click.option("--version", "-v", type=float, default=2)
 @analysis_function
-def acuity_cmd(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, version):
     if version==1:
         safe_run(acuity.save_acuity_chart,
-            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+            (units, stimulus_list, partial(c_unit_fig,"acuity"), c_retina_fig,
                 prepend, append))
     else:
         # snapshot = tracemalloc.take_snapshot()
         # display_top(snapshot)
         safe_run(acuity.save_acuity_chart_v2,
-            (units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
+            (units, stimulus_list, c_unit_fig, c_retina_fig,
                 prepend, append))
 
 

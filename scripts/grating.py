@@ -153,7 +153,7 @@ def plot_population_dsi_osi(ax,data):
     ax[1].set_xlabel("OSI")
 
 
-def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def save_unit_response_by_angle(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Calculating DSI & OSI")
     bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
 
@@ -171,7 +171,7 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
         bar_firing_rate,bar_dsi,bar_osi,
         nplots=nplots, subplot_kw={"projection": "polar"},
         ax_xsize=4, ax_ysize=5, ncols=3)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
 
@@ -179,7 +179,7 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
     result = glia.plot_units(plot_unit_dsi_osi_table,
         bar_firing_rate,bar_dsi,bar_osi,
         ax_xsize=6, ax_ysize=4)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
 
@@ -192,7 +192,7 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
 
 
 
-def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures,
+def save_unit_spike_trains(units, stimulus_list, c_unit_fig,
         c_add_retina_figure, width=None, height=None):
     print("Creating grating unit spike trains")
     
@@ -207,5 +207,5 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures,
     result = glia.plot_units(plot_spike_trains,response, nplots=nplots,
         ncols=3,ax_xsize=10, ax_ysize=5,
         figure_title="Unit spike train by GRATING waveperiod")
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])

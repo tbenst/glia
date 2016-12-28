@@ -136,7 +136,7 @@ def plot_motion_sensitivity(axis_gen,data,nwidths,speeds,prepend, append):
             glia.plot_spike_trains(axis_gen,sorted_solids,prepend,append,continuation=xlim)
  
 
-def save_acuity_chart(units, stimulus_list, c_add_unit_figures,
+def save_acuity_chart(units, stimulus_list, c_unit_fig,
                       c_add_retina_figure, prepend, append):
     "Compare SOLID light wedge to BAR response in corresponding ascending width."
 
@@ -175,7 +175,7 @@ def save_acuity_chart(units, stimulus_list, c_add_unit_figures,
     plot_function = partial(plot_solid_versus_bar,prepend=prepend,append=append)
     result = glia.plot_units(plot_function,solids,bars_by_speed,
                              nplots=nspeeds*2,ncols=2,ax_xsize=10, ax_ysize=5)
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
     
     # now plot the spatial/motion test
@@ -185,11 +185,11 @@ def save_acuity_chart(units, stimulus_list, c_add_unit_figures,
                 nplots=sm_nspeeds+1,ncols=4,
                 ax_xsize=10, ax_ysize=5,
                 figure_title="Spatial/Motion test - each chart has the same light duration")
-    c_add_unit_figures(result)
+    c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
 
-def save_acuity_chart_v2(units, stimulus_list, c_add_unit_figures,
+def save_acuity_chart_v2(units, stimulus_list, c_unit_fig,
                       c_add_retina_figure, prepend, append):
     "Compare SOLID light wedge to BAR response in corresponding ascending width."
 
@@ -237,11 +237,10 @@ def save_acuity_chart_v2(units, stimulus_list, c_add_unit_figures,
     for speed in sorted(speeds):
         plot_function = partial(plot_solid_versus_bar_for_speed,
                             prepend=prepend,append=append,speed=speed)
-        result = glia.plot_units(plot_function,solids,bars_by_speed,
+        filename = "acuity-{}".format(speed)
+        result = glia.plot_units(plot_function,partial(c_unit_fig,filename),solids,bars_by_speed,
                                  nplots=nspeeds*2*ncolors,ncols=ncolors,ax_xsize=10, ax_ysize=5,
                                  figure_title="Top: Solid, Bottom: Bars with speed {}".format(speed))
-        c_add_unit_figures(result)
-        glia.close_figs([fig for the_id,fig in result])
     
     # # now plot the spatial/motion test
     # plot_function = partial(plot_motion_sensitivity,prepend=prepend,append=append,
@@ -250,6 +249,6 @@ def save_acuity_chart_v2(units, stimulus_list, c_add_unit_figures,
     #             nplots=sm_nspeeds+1,ncols=4,
     #             ax_xsize=10, ax_ysize=5,
     #             figure_title="Spatial/Motion test - each chart has the same light duration")
-    # c_add_unit_figures(result)
+    # c_unit_fig(result)
     # glia.close_figs([fig for the_id,fig in result])
 
