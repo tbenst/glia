@@ -39,8 +39,8 @@ def _group_by_helper(a,n,key,value):
         new_accumulator[k] = [v]
     return new_accumulator
 
-def group_by(x: List[Any],key: Callable,
-             value: Callable=lambda x: x) -> Dict[Any,List[Any]]:
+def group_by(x: List[Any], key: Callable,
+        value: Callable=lambda x: x) -> Dict[Any,List[Any]]:
     ""
     function = partial(_group_by_helper,key=key,value=value)
     return reduce(function,x,{})

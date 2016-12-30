@@ -17,7 +17,7 @@ import glia.config as config
 from .analysis import last_spike_time
 from .pipeline import get_unit
 from .functional import zip_dictionaries
-from .classes import Unit
+from .types import Unit
 from glia.config import logger
 
 Seconds = float
@@ -25,11 +25,15 @@ ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
 
-def axis_generator(ax):
+def axis_generator(ax,transpose=False):
     if isinstance(ax,matplotlib.axes.Axes):
         yield(ax)
     else:
-        for handle in ax.reshape(-1):
+        if transpose:
+            axes = np.transpose(ax)
+        else:
+            axes = ax
+        for handle in axes.reshape(-1):
             yield(handle)
 
 def multiple_figures(nfigs, nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=None):
@@ -47,12 +51,12 @@ def multiple_figures(nfigs, nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4,
 
     return (figures, axis_generators)
 
-def subplots(nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, subplot_kw=None):
+def subplots(nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, transpose=False,subplot_kw=None):
     if not nrows:
         nrows = int(np.ceil(nplots/ncols))
 
     fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
-    axis = axis_generator(ax)
+    axis = axis_generator(ax,transpose=transpose)
 
     return fig, axis
 
@@ -238,10 +242,12 @@ def plot_direction_selectively(ax, unit_id, bar_firing_rate, bar_dsi, legend=Fal
         ax.legend()
 
 def plot_units(unit_plot_function, c_unit_fig, *units_data, nplots=1, ncols=1,
-               nrows=None, ax_xsize=2, ax_ysize=2, figure_title=None, subplot_kw=None):
+               nrows=None, ax_xsize=2, ax_ysize=2, figure_title=None, transpose=False,
+               subplot_kw=None):
     """Create a giant figure with one or more plots per unit.
     
     c_unit_fig determines what happens to fig when produced
+    transpose==True will yield axes by column 
 
     Must supply an even number of arguments that alternate function, units. If one pair is provided,
     ncols will determine the number of columns. Otherwise, each unit will get one row."""
@@ -260,14 +266,14 @@ def plot_units(unit_plot_function, c_unit_fig, *units_data, nplots=1, ncols=1,
     pool = Pool(processes)
     logger.info("passing tasks to pool")
     plot_worker = partial(_plot_worker, unit_plot_function, c_unit_fig, nplots,
-                ncols, nrows, ax_xsize, ax_ysize, figure_title, subplot_kw)
+                ncols, nrows, ax_xsize, ax_ysize, figure_title, transpose, subplot_kw)
     list(pool.imap_unordered(plot_worker, tqdm(data_generator(), total=number_of_units)))
     pool.close()
     pool.join()
 
 
 def _plot_worker(plot_function, c_unit_fig, nplots, ncols, nrows, ax_xsize,
-        ax_ysize, figure_title, subplot_kw, args):
+        ax_ysize, figure_title, transpose, subplot_kw, args):
     "Use with functools.partial() so function only takes args."
 
     logger.debug("plot worker")
@@ -278,7 +284,7 @@ def _plot_worker(plot_function, c_unit_fig, nplots, ncols, nrows, ax_xsize,
         data = data[0]
     fig = plot(plot_function, data, nplots, ncols=ncols, nrows=nrows,
         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
-        figure_title=figure_title, subplot_kw=subplot_kw)
+        figure_title=figure_title, transpose=transpose, subplot_kw=subplot_kw)
 
     logger.debug("Plot worker successful for {}".format(unit_id))
     c_unit_fig(unit_id,fig)
@@ -336,8 +342,9 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
 
 
 def plot(plot_function, data, nplots=1, ncols=1, nrows=None, ax_xsize=4,
-            ax_ysize=4, figure_title=None, subplot_kw=None):
-    fig, axes = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize, subplot_kw=subplot_kw)
+            ax_ysize=4, figure_title=None, transpose=False, subplot_kw=None):
+    fig, axes = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize,
+                        transpose=transpose, subplot_kw=subplot_kw)
     try:
         plot_function(axes, data)
     except Exception as e:

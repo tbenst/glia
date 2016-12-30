@@ -8,7 +8,7 @@ from warnings import warn
 import h5py
 import os
 import csv
-from .classes import Unit
+from .types import Unit
 
 file = str
 Dir = str

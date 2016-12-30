@@ -2,7 +2,24 @@ from uuid import uuid4
 from hashlib import md5
 import base64
 import glia.humanhash as humanhash
+import numpy as np
 import glia.config as config
+from collections import namedtuple as nt
+
+SpikeTrain = np.ndarray
+StartTime = int
+ExperimentIFR = nt("ExperimentIFR", ["ifr", "start_time", "stimulus"])
+
+Experiment = nt("Experiment", ["spike_train", "start_time", "stimulus"])
+
+class Analytic(object):
+    """docstring for Analytic"""
+    def __init__(self, experiment: Experiment):
+        super(Analytic, self).__init__()
+        self.start_time = experiment.start_time
+        self.stimulus = experiment.stimulus
+
+        
 
 class Mouse:
     def __init__(self, mouse_line, dob, gender):

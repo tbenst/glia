@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import signal
 
-def IFR(spike_train, end_time, bandwidth, bin_width=0.001, sigma=6):
+def IFR(spike_train, end_time, bandwidth=0.15, bin_width=0.001, sigma=6):
     transformed_sigma = bandwidth/bin_width
     bins = np.arange(0,end_time+bin_width, bin_width)
     spike_train_to_indices = np.vectorize(lambda x: np.digitize(x, bins))

@@ -23,7 +23,7 @@ from tests.conftest import display_top, tracemalloc
 
 
 from glob import glob
-from glia.classes import Unit
+from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
 
 
@@ -241,15 +241,20 @@ def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
             (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
 
 @analyze.command("bar")
-@click.option("--by", "-b", type=click.Choice(["angle", "width"]), default="angle")
+@click.option("--by", "-b", type=click.Choice(["angle", "width","acuity"]), default="angle")
 @analysis_function
 def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
     # if all_methods or "direction" in methods:
     if by=="angle":
         safe_run(bar.save_unit_response_by_angle,
             (units, stimulus_list, c_unit_fig, c_retina_fig))
-    safe_run(bar.save_unit_spike_trains,
-        (units, stimulus_list, c_unit_fig, c_retina_fig, by))
+    elif by=="acuity":
+        safe_run(bar.save_acuity_direction,
+            (units, stimulus_list, c_unit_fig,
+                c_retina_fig))
+
+    # safe_run(bar.save_unit_spike_trains,
+    #     (units, stimulus_list, c_unit_fig, c_retina_fig, by))
 
 @analyze.command("integrity")
 @analysis_function

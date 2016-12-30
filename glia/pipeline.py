@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from typing import List, Any, Union
 from .functional import f_filter, f_map, f_reduce
 from scipy import signal
-from glia.classes import Unit
+from glia.types import Unit
 from tqdm import tqdm
 
 
@@ -258,7 +258,8 @@ def f_instantaneous_firing_rate(bandwidth, bin_width=0.001, sigma=6):
         return new_experiments
     return anonymous
 
-def IFR(spike_train, end_time, bandwidth, bin_width=0.001, sigma=6):
+# warning: function duplicates
+def IFR(spike_train, end_time, bandwidth=0.15, bin_width=0.001, sigma=6):
     transformed_sigma = bandwidth/bin_width
     bins = np.arange(0,end_time+bin_width, bin_width)
     spike_train_to_indices = np.vectorize(lambda x: np.digitize(x, bins))

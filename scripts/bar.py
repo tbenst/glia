@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from functools import update_wrapper, partial
+from collections import namedtuple as nt
+import logging
+logger = logging.getLogger('glia')
+
 
 def f_get_key(i):
     return lambda item: item[i]
@@ -112,7 +116,7 @@ def get_fr_dsi_osi(units, stimulus_list):
 
 def plot_unit_response_by_angle(axis_gen, data):
     """Plot the average for each speed and width."""
-    # we will accumulate by angle in this dictionary and then divide
+    # we will accumulate by angle in this dictionary and then dividethis is
     bar_firing_rate, bar_dsi, bar_osi = data
     analytics = glia.by_speed_width_then_angle(bar_firing_rate)
     speed_widths = analytics.keys()
@@ -138,7 +142,56 @@ def plot_unit_response_by_angle(axis_gen, data):
         ax.plot(line_angle,line_radius, linewidth=width_style[width], color=speed_style[speed])
         ax.set_title("speed: {}, width: {}".format(*speed_width), y=1.1)
         ax.set_xlabel("avg # of spikes", labelpad=12)
-        
+
+DirectionResponse = nt("DirectionResponse", ["angle", "response"])
+
+def map_ifr(s):
+    ifr = max(glia.IFR(s["spikes"],s["stimulus"]["lifespan"]/120))
+    # logger.info(ifr)
+    return DirectionResponse(response=ifr, angle=s["stimulus"]['angle'])
+
+def map_count(s):
+    count = len(s["spikes"])
+    return DirectionResponse(response=count, angle=s["stimulus"]['angle'])
+
+def plot_unit_response_for_speed(axis_gen, data, speed):
+    """Polar plot for each width ."""
+    # we will accumulate by angle in this dictionary and then divide
+    # WIP
+
+    ax = next(axis_gen)
+
+    # group by width
+    by_width = glia.group_by(data[speed], key=lambda x: x["stimulus"]["width"])
+    nwidths = len(by_width.keys())
+    c_style=iter(plt.cm.rainbow(np.linspace(0,1,nwidths)))
+    w_style = iter(np.linspace(1,7,nwidths))
+    for width in iter(sorted(by_width.keys())):
+        experiments = by_width[width]
+        if not len(experiments)>7:
+            continue
+
+        # map to peak IFR or count
+        direction_response = sorted(map(map_count,experiments),
+            key=lambda x: x.angle)
+
+        line_angle = []
+        line_radius = []
+        for x in direction_response:
+            line_angle.append(x.angle)
+            line_radius.append(x.response)
+        line_angle.append(line_angle[0])
+        line_radius.append(line_radius[0])
+        ax.plot(line_angle,line_radius, linewidth=next(w_style),
+            color=next(c_style), label=str(width))
+
+    ax.set_title("speed: {}".format(speed), y=1.1)
+    ax.set_xlabel("IFR", labelpad=12)
+    
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
 
 def plot_unit_dsi_osi_table(axis_gen,data):
@@ -211,6 +264,9 @@ def plot_population_dsi_osi(ax,data):
     ax[1].set_xlabel("OSI")
 
 
+def plot_direction_and_train(ax,data):
+    pass
+
 def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
     print("Calculating DSI & OSI")
     bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
@@ -280,6 +336,35 @@ def get_nplots(stimulus_list, parameter):
             speed_widths.add((speed,width))
         nplots = len(speed_widths)
     return nplots
+
+
+def save_acuity_direction(units, stimulus_list, c_unit_fig,
+                      c_add_retina_figure):
+    "Make one direction plot per speed"
+    get_direction = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        glia.f_has_stimulus_type(["BAR"]),
+        partial(filter, lambda x: x["stimulus"]["barColor"]=="white"),
+        partial(sorted, key=lambda e: e["stimulus"]["angle"]),
+        partial(glia.group_by,key=lambda x: x["stimulus"]["speed"],
+            value=lambda x: x)
+    )
+
+    response = glia.apply_pipeline(get_direction,units)
+
+    speeds = list(glia.get_unit(response)[1].keys())
+    nspeeds = len(speeds)
+
+    for speed in sorted(speeds):
+        print("Plotting DS for speed {}".format(speed))
+        plot_function = partial(plot_unit_response_for_speed,
+                            speed=speed)
+        filename = "direction-{}".format(speed)
+        glia.plot_units(plot_function,partial(c_unit_fig,filename),response,
+                                 subplot_kw={"projection": "polar"},
+                                 ax_xsize=7, ax_ysize=7,
+                                 figure_title="Units spike train for speed {}".format(speed),
+                                 transpose=True)
 
 
 def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retina_figure,
