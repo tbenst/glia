@@ -67,7 +67,9 @@ def plot_solid_versus_bar_for_speed(axis_gen,data, prepend, append, speed):
         lifespans.add(light_duration)
         colors.add(color)
 
-    assert len(lifespans)==len(widths)
+    logger.info("lifespans {}, widths {}".format(len(lifespans),len(widths)))
+    # WARNING
+    # assert len(lifespans)==len(widths)
 
     # keep charts aligned by row
     bar_ymap = {w: i for i,w in enumerate(sorted(list(widths)))}
