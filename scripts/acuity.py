@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from functools import update_wrapper, partial
-from tests.conftest import display_top, tracemalloc
+# from tests.conftest import display_top, tracemalloc
 import logging
 logger = logging.getLogger('glia')
 
