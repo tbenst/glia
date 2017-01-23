@@ -19,7 +19,7 @@ import traceback
 import glia.config as config
 from glia.config import logger, logging
 from functools import update_wrapper, partial
-from tests.conftest import display_top, tracemalloc
+# from tests.conftest import display_top, tracemalloc
 
 
 from glob import glob
