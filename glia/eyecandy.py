@@ -76,9 +76,16 @@ def get_program_from_experiment(experiment):
     try:
         # in python and comparing two identical floats is equal
         if experiment["version"]>=0.4:
-            return (experiment["programType"],experiment["program"],
-                experiment["windowWidth"],experiment["windowHeight"],
-                experiment["seed"])
+            # ugly hack for backwards compatibility
+            try:
+                # old version 0.4
+                return (experiment["programType"],experiment["program"],
+                    experiment["windowWidth"],experiment["windowHeight"],
+                    experiment["seed"])
+            except:
+                return (experiment["program"],experiment["epl"],
+                    experiment["windowWidth"],experiment["windowHeight"],
+                    experiment["seed"])
     except:
         # we assume a certain window height and width for older versions
         return ("YAML",yaml.dump(experiment['stimulus']['program']),
