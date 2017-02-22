@@ -23,13 +23,38 @@ Seconds = float
 ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
-
+# legacy
 def create_eyecandy_gen(program_type, program, window_width, window_height, seed,
         eyecandy_url):
     # Create program from eyecandy YAML. 
     r = requests.post(eyecandy_url + '/analysis/start-program',
                       data={'program': program,
                            "programType": program_type,
+                           'windowHeight': window_height,
+                           'windowWidth': window_width,
+                           "seed": seed})
+    sid = r.text
+    def eyecandy_gen():
+        done = False
+        while (True):
+            # Get the next stimulus using program sid
+            json = requests.get(eyecandy_url + '/analysis/program/{}'.format(sid)).json()
+            done = json["done"]
+            if done:
+                break
+            else:
+                value = json["value"]
+                value["stimulusIndex"] = json["stimulusIndex"]
+                yield value
+
+    return eyecandy_gen()
+
+def create_epl_gen(program, epl, window_width, window_height, seed,
+        eyecandy_url):
+    # Create program from eyecandy YAML. 
+    r = requests.post(eyecandy_url + '/analysis/start-program',
+                      data={'program': program,
+                           "epl": epl,
                            'windowHeight': window_height,
                            'windowWidth': window_width,
                            "seed": seed})
@@ -71,21 +96,20 @@ def get_experiment_protocol(lab_notebook_yaml, name):
                     if protocol["name"]==name:
                         return protocol
 
+def get_epl_from_experiment(experiment):
+    return (experiment["program"],experiment["epl"],
+                    experiment["windowWidth"],experiment["windowHeight"],
+                    experiment["seed"])
+
 def get_program_from_experiment(experiment):
     """Get stimulus text from protocol suitable for eye-candy."""
     try:
         # in python and comparing two identical floats is equal
         if experiment["version"]>=0.4:
-            # ugly hack for backwards compatibility
-            try:
-                # old version 0.4
-                return (experiment["programType"],experiment["program"],
-                    experiment["windowWidth"],experiment["windowHeight"],
-                    experiment["seed"])
-            except:
-                return (experiment["program"],experiment["epl"],
-                    experiment["windowWidth"],experiment["windowHeight"],
-                    experiment["seed"])
+            # "old" version 0.4, forms with epl are also labeled 0.4 :(
+            return (experiment["programType"],experiment["program"],
+                experiment["windowWidth"],experiment["windowHeight"],
+                experiment["seed"])                
     except:
         # we assume a certain window height and width for older versions
         return ("YAML",yaml.dump(experiment['stimulus']['program']),
@@ -480,13 +504,22 @@ def create_stimulus_list_v0_4(analog_file, stimulus_file, lab_notebook_fp,
     sampling = sampling_rate(analog_file)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
-    program_type, program,window_width,window_height,seed = get_program_from_experiment(
-        experiment_protocol)
-
     stimulus_values = get_stimulus_values_from_analog(analog,calibration)
     filtered = assign_stimulus_index_to_analog(analog,stimulus_values,distance)
-    stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
-            window_height, seed, eyecandy_url)
+
+    if "epl" in experiment_protocol:
+        program, epl,window_width,window_height,seed = get_epl_from_experiment(
+            experiment_protocol)
+        stimulus_gen = create_epl_gen(program, epl, window_width,
+                window_height, seed, eyecandy_url)
+        
+    else:
+        program_type, program,window_width,window_height,seed = get_program_from_experiment(
+            experiment_protocol)
+
+        stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
+                window_height, seed, eyecandy_url)
+
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.5)
     stimulus_list = estimate_missing_start_times(start_times)
 
