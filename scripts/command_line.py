@@ -286,10 +286,14 @@ def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         safe_run(acuity.save_acuity_chart,
             (units, stimulus_list, partial(c_unit_fig,"acuity"), c_retina_fig,
                 prepend, append))
-    else:
+    elif version==2:
         # snapshot = tracemalloc.take_snapshot()
         # display_top(snapshot)
         safe_run(acuity.save_acuity_chart_v2,
+            (units, stimulus_list, c_unit_fig, c_retina_fig,
+                prepend, append))
+    elif version==3:
+        safe_run(acuity.save_acuity_chart_v3,
             (units, stimulus_list, c_unit_fig, c_retina_fig,
                 prepend, append))
 
