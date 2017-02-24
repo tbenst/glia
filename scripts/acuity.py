@@ -121,6 +121,7 @@ def plot_solid_versus_bar_for_speed(axis_gen,data, prepend, append, speed):
 def plot_acuity_v3(axis_gen,data, prepend, append, speed):
     logger.debug("plot solid versus bar for speed")    
     
+    ax = next(axis_gen)
     solids,bars_by_speed = data
     bars = bars_by_speed[speed]
     max_lifespan = max(bars,
@@ -144,56 +145,38 @@ def plot_acuity_v3(axis_gen,data, prepend, append, speed):
 
     # keep charts aligned by row
     angle_width = []
-    for a in angles:
-        for w in widths:
+    for w in sorted(widths):
+        for a in sorted(angles):
             angle_width.append((a,w))
 
-    # STOPPED HERE (feb 23)!
-    bar_ymap = {w: i for i,w in enumerate(sorted(list(widths)))}
-    solid_ymap = {l: i for i,l in enumerate(sorted(list(lifespans)))}
+    bar_ymap = {aw: i for i,aw in enumerate(angle_width)}
     
     # used to map stimulus to proper row
-    c_bar_ymap = lambda s: bar_ymap[s["width"]]
-    c_solid_ymap = lambda s: solid_ymap[s["lifespan"]]
+    c_bar_ymap = lambda s: bar_ymap[(s["angle"],s["width"])]
 
-    sorted_colors = sorted(list(colors),reverse=True)
+    nangles = len(angles)
+    nwidths = len(widths)
+    ny = nangles*nwidths
 
-    ntrials = len(lifespans)
     xlim = glia.axis_continuation(lambda axis: axis.set_xlim(0,max_lifespan))
-    ylim = glia.axis_continuation(lambda axis: axis.set_ylim(0,ntrials))
-    color_text = lambda x: glia.axis_continuation(partial(c_plot_bar,
-            title="Color: {}".format(x)))
-    solid_continuation = lambda x: glia.compose(ylim,xlim,color_text(x))
-    
+    ylim = glia.axis_continuation(lambda axis: axis.set_ylim(0,ny))
+
     bar_text = glia.axis_continuation(partial(c_plot_bar,
-            title="Bar"))
+            title="{} angles x {} widths at {} px/s".format(
+                nangles,nwidths,speed)))
     bar_continuation = glia.compose(ylim,xlim,bar_text)
 
+    for e in bars:
+        spikes = e["spikes"]
+        lifespan = e["stimulus"]["lifespan"]/120
+        angle = e["stimulus"]["angle"]
+        width = e["stimulus"]["width"]
+        y = bar_ymap[(angle, width)]
+        glia.draw_spikes(ax,spikes,y+0.2,y+0.8)
+        ax.fill([0,lifespan,lifespan,0],
+                [y,y,y+1,y+1],
+                facecolor="gray", edgecolor="none", alpha=0.1)
 
-    # we plot the solid first so they are all on the same row
-    for color in sorted_colors:
-        logger.debug('plotting SOLID for {}'.format(color))
-        light_wedge = glia.compose(
-            partial(filter,lambda x: x["stimulus"]["lifespan"] in lifespans),
-            partial(filter,lambda x: x["stimulus"]["backgroundColor"]==color),
-            partial(sorted,key=lambda x: x["stimulus"]["lifespan"])
-        )
-        
-        sorted_solids = light_wedge(solids)
-        logger.debug('Solid lifespans are: ' + ",".join([str(s["stimulus"]["lifespan"]) for s in sorted_solids]))
-        glia.plot_spike_trains(axis_gen,sorted_solids,prepend,append,
-            continuation=solid_continuation(color), ymap=c_solid_ymap)
-
-    for color in sorted_colors:
-        filtered_bars = glia.compose(
-            partial(filter,lambda x: x["stimulus"]["barColor"]==color),
-            partial(sorted,key=lambda x: x["stimulus"]["width"])
-            )
-        sorted_bars = filtered_bars(bars)
-        logger.debug('plotting BAR for {}'.format(color))
-        logger.debug('Bar widths are: ' + ",".join([str(s["stimulus"]["width"]) for s in sorted_bars]))
-        glia.plot_spike_trains(axis_gen,sorted_bars,
-            continuation=bar_continuation, ymap=c_bar_ymap)
 
 def plot_motion_sensitivity(axis_gen,data,nwidths,speeds,prepend, append):
     solids,bars_by_speed = data    
@@ -366,7 +349,6 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
     "Compare SOLID light wedge to BAR response in corresponding ascending width."
 
     print("Creating acuity chart v3.")
-    print(stimulus_list)
     get_solids = glia.compose(
         glia.f_create_experiments(stimulus_list,prepend_start_time=prepend,
                                   append_lifespan=append),
@@ -387,9 +369,9 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
 
     for speed in sorted(speeds):
         print("Plotting acuity for speed {}".format(speed))
-        plot_function = partial(plot_solid_versus_bar_for_speed,
+        plot_function = partial(plot_acuity_v3,
                             prepend=prepend,append=append,speed=speed)
         filename = "acuity-{}".format(speed)
         result = glia.plot_units(plot_function,partial(c_unit_fig,filename),solids,bars_by_speed,
-                                 nplots=2*ncolors,ncols=ncolors,ax_xsize=10, ax_ysize=5,
+                                 nplots=1,ncols=1,ax_xsize=5, ax_ysize=15,
                                  figure_title="Top: Solid, Bottom: Bars with speed {}".format(speed))
