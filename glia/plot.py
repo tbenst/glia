@@ -346,7 +346,7 @@ def plot(plot_function, data, nplots=1, ncols=1, nrows=None, ax_xsize=4,
     fig, axes = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize,
                         transpose=transpose, subplot_kw=subplot_kw)
     try:
-        plot_function(axes, data)
+        plot_function(fig, axes, data)
     except Exception as e:
         print("Plot function ({}) failed: ".format(plot_function),e)
         traceback.print_tb(e.__traceback__)
@@ -389,7 +389,7 @@ def axis_continuation(function):
 
     return partial(_axis_continuation_helper,function)
 
-def plot_spike_trains(axis_gen,data,prepend_start_time=0,append_lifespan=0,
+def plot_spike_trains(fig, axis_gen, data,prepend_start_time=0,append_lifespan=0,
                       continuation=c_plot_solid, ymap=None):
     ax = next(axis_gen)
     for i,v in enumerate(data):

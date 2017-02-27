@@ -14,7 +14,7 @@ def c_plot_bar(ax, title):
     ax.set_xlabel("time (s)")
     ax.set_ylabel("trials by descending bar width")
 
-def plot_solid_versus_bar(axis_gen,data, prepend, append):
+def plot_solid_versus_bar(fig, axis_gen, data, prepend, append):
     solids,bars_by_speed = data
     for speed in sorted(list(bars_by_speed.keys())):
         bars = bars_by_speed[speed]
@@ -45,7 +45,7 @@ def plot_solid_versus_bar(axis_gen,data, prepend, append):
             continuation=glia.compose(xlim,bar_text))
 
 # for v2
-def plot_solid_versus_bar_for_speed(axis_gen,data, prepend, append, speed):
+def plot_solid_versus_bar_for_speed(fig, axis_gen, data, prepend, append, speed):
     # also assumes 5 contrasts
     logger.debug("plot solid versus bar for speed")
     
@@ -118,7 +118,7 @@ def plot_solid_versus_bar_for_speed(axis_gen,data, prepend, append, speed):
         glia.plot_spike_trains(axis_gen,sorted_bars,
             continuation=bar_continuation, ymap=c_bar_ymap)
 
-def plot_acuity_v3(axis_gen,data, prepend, append, speed):
+def plot_acuity_v3(fig, axis_gen, data, prepend, append, speed):
     logger.debug("plot solid versus bar for speed")    
     
     ax = next(axis_gen)
@@ -177,8 +177,44 @@ def plot_acuity_v3(axis_gen,data, prepend, append, speed):
                 [y,y,y+1,y+1],
                 facecolor="gray", edgecolor="none", alpha=0.1)
 
+def plot_dissimilarity(fig, axis_gen, data, prepend, append, speed):
+    logger.debug("plot dissimilarity")    
+    
+    ax = next(axis_gen)
+    solids,bars_by_speed = data
+    bars = bars_by_speed[speed]
+    max_lifespan = 0
+    min_lifespan = np.inf
+    widths = set()
+    angles = set()
+    for e in bars:
+        lifespan = e["stimulus"]["lifespan"]/120
+        widths.add(e["stimulus"]["width"])
+        angles.add(e["stimulus"]["angle"])
+        if lifespan > max_lifespan:
+            max_lifespan = lifespan
+        elif lifespan < min_lifespan:
+            min_lifespan = lifespan
+    logger.warning("truncating bars to {} seconds (max is {})".format(
+        min_lifespan, max_lifespan))
+    normalized_bars = list(map(partial(glia.truncate_experiment,min_lifespan),
+        bars))
 
-def plot_motion_sensitivity(axis_gen,data,nwidths,speeds,prepend, append):
+    # normalized by dividing by seconds
+    dissimilarity = glia.victor_purpura(normalized_bars)/min_lifespan
+    cax = ax.imshow(dissimilarity)
+
+    nangles = len(angles)
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(start, end, nangles))
+    ax.xaxis.set_ticklabels(sorted(list(widths)))
+    ax.set_xlabel("{} angles per bar width (pixels)".format(nangles))
+    ax.yaxis.set_ticks(np.arange(start, end, nangles))
+    ax.yaxis.set_ticklabels(sorted(list(widths)))
+    ax.set_ylabel("{} angles per bar width (pixels)".format(nangles))
+    fig.colorbar(cax)
+
+def plot_motion_sensitivity(fig, axis_gen, data,nwidths,speeds,prepend, append):
     solids,bars_by_speed = data    
     # We assume each band of widths is length 8 & first band is 2-16
     # each subsequent band is twice the width
@@ -361,6 +397,7 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
         glia.f_create_experiments(stimulus_list),
         glia.f_has_stimulus_type(["BAR"]),
         partial(sorted,key=lambda x: x["stimulus"]["angle"]),
+        partial(sorted,key=lambda x: x["stimulus"]["width"]),
         partial(glia.group_by,key=lambda x: x["stimulus"]["speed"])
     )
     bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units)
@@ -375,3 +412,10 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
         result = glia.plot_units(plot_function,partial(c_unit_fig,filename),solids,bars_by_speed,
                                  nplots=1,ncols=1,ax_xsize=5, ax_ysize=15,
                                  figure_title="Top: Solid, Bottom: Bars with speed {}".format(speed))
+        
+        plot_function = partial(plot_dissimilarity,
+                            prepend=prepend,append=append,speed=speed)
+        filename = "dissimilarity-{}".format(speed)
+        result = glia.plot_units(plot_function,partial(c_unit_fig,filename),solids,bars_by_speed,
+                                 nplots=1,ncols=1,ax_xsize=7, ax_ysize=7,
+                                 figure_title="Dissimilarity matrix for bars with speed {}".format(speed))

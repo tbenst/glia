@@ -4,7 +4,7 @@ import numpy as np
 from functools import partial
 from warnings import warn
 
-def plot_psth(ax_gen,data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
+def plot_psth(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
     for s,spike_train in data.items():
         ax = next(ax_gen)
         stimulus = eval(s)
@@ -21,7 +21,7 @@ def plot_psth(ax_gen,data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
         ax.set_ylabel("spike count")
 
 
-def plot_spike_trains(axis_gen,data,prepend_start_time=1,append_lifespan=1):
+def plot_spike_trains(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1):
     colors = set()
     for e in data:
         color = e["stimulus"]["backgroundColor"]
@@ -121,5 +121,7 @@ def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prep
     ncolors = len(colors)
 
 
-    plot_function = partial(plot_spike_trains,prepend_start_time=prepend,append_lifespan=append)
-    glia.plot_units(plot_function,c_unit_fig,response,nplots=ncolors,ncols=5,ax_xsize=10, ax_ysize=5)
+    plot_function = partial(plot_spike_trains,prepend_start_time=prepend,
+        append_lifespan=append)
+    glia.plot_units(plot_function,c_unit_fig,response,nplots=ncolors,
+        ncols=min(ncolors,5),ax_xsize=10, ax_ysize=5)
