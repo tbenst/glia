@@ -227,15 +227,20 @@ def all(ctx):
     help="plot (seconds) after SOLID end time")
 @click.option("--wedge/--no-wedge", default=False,
     help="Sort by flash duration")
+@click.option("--version", "-v", type=str, default="2")
 @analysis_function
 def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
-        prepend, append, wedge):
+        prepend, append, wedge, version=1):
     "Create PTSH and raster of spikes in response to solid."
     # safe_run(solid.save_unit_psth,
     #     (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
     if wedge:
-        safe_run(solid.save_unit_wedges,
-            (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig, prepend, append))
+        if version=="1":
+            safe_run(solid.save_unit_wedges,
+                (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig, prepend, append))
+        elif version=="2":
+            safe_run(solid.save_unit_wedges_v2,
+                (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig))
     else:
         safe_run(solid.save_unit_spike_trains,
             (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
@@ -257,11 +262,22 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
     #     (units, stimulus_list, c_unit_fig, c_retina_fig, by))
 
 @analyze.command("integrity")
+@click.option("--version", "-v", type=str, default="2")
 @analysis_function
-def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig):
-    safe_run(solid.save_integrity_chart,
-        (units, stimulus_list, partial(c_unit_fig,"integrity"),
-            c_retina_fig))
+def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, version=1):
+    if version=="1":
+        safe_run(solid.save_integrity_chart,
+            (units, stimulus_list, partial(c_unit_fig,"integrity"),
+                c_retina_fig))
+    elif version=="2":
+        safe_run(solid.save_integrity_chart_v2,
+            (units, stimulus_list, partial(c_unit_fig,"integrity"),
+                c_retina_fig))
+    elif version=="fail":
+        safe_run(solid.save_integrity_chart_vFail,
+            (units, stimulus_list, partial(c_unit_fig,"integrity"),
+                c_retina_fig))
+
 
 @analyze.command("grating")
 @click.option("-w", "--width", type=int,
