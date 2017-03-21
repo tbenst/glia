@@ -68,6 +68,7 @@ def main():
 @click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
 @click.option("--window-width", "-w", type=int)
 @click.option("--verbose", "-v", is_flag=True)
+@click.option("--by-channel", "-C", is_flag=True, help="Combine units by channel")
 @click.option("--debug", "-vv", is_flag=True)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
@@ -76,7 +77,8 @@ def main():
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, verbose=False, debug=False,processes=None):
+        calibration=None, distance=None, verbose=False, debug=False,processes=None,
+        by_channel=False):
     """Analyze data recorded with eyecandy.
     """
     ctx.obj = {}
@@ -113,6 +115,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
         raise ValueError('could not read {}. Is it a plexon or spyking circus file?')
+
+    if by_channel:
+        ctx.obj["units"] = glia.combine_units_by_channel(ctx.obj["units"])
 
     if not notebook:
         notebooks = glob(os.path.join(data_directory, '*.yml')) + \
@@ -184,7 +189,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, version=None, verbose=False, debug=False,processes=None):
+        calibration=None, distance=None, version=None, verbose=False, debug=False,processes=None,
+        by_channel=False):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])

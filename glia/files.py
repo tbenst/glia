@@ -57,6 +57,28 @@ def read_plexon_txt_file(filepath, retina_id):
 
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
+def combine_units_by_channel(units):
+    new_units = {}
+    for unit in units.values():
+        channel = unit.channel
+        if channel in new_units:
+            new_units[channel] = merge_units(new_units[channel], unit)
+        else:
+            new_units[channel] = unit
+    return {unit.id: unit for unit in new_units.values()}
+
+def merge_units(a,b):
+    channel = a.channel
+    assert channel == b.channel
+    retina_id = a.retina_id
+    assert retina_id == b.retina_id
+    new = Unit(retina_id, channel, "all")
+    new.spike_train = merge_spike_trains(a.spike_train,b.spike_train)
+    new.initialize_id()
+    return new
+
+def merge_spike_trains(a,b):
+    return np.array(sorted(np.hstack((a,b))))
 
 def get_header(filename: file) -> (str):
     """Read the header from a MCS raw file."""
