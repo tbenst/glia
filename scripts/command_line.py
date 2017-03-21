@@ -300,7 +300,7 @@ def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
     help="plot (seconds) before SOLID start time")
 @click.option("--append", "-a", type=float, default=1,
     help="plot (seconds) after SOLID end time")
-@click.option("--version", "-v", type=float, default=2)
+@click.option("--version", "-v", type=float, default=3)
 @analysis_function
 def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, version):

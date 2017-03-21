@@ -52,7 +52,7 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1
             ax.fill([0,prepend_start_time,prepend_start_time,0],
                     [trial,trial,trial+1,trial+1],
                     facecolor="gray", edgecolor="none", alpha=0.1)
-            bonaparteax.fill([stimulus_end,duration,duration,stimulus_end],
+            ax.fill([stimulus_end,duration,duration,stimulus_end],
                     [trial,trial,trial+1,trial+1],
                     facecolor="gray", edgecolor="none", alpha=0.1)
             trial += 1
