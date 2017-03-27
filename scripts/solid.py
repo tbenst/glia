@@ -239,7 +239,7 @@ def save_unit_wedges_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
 
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
-        glia.f_has_stimulus_type(["SOLID"]),
+        glia.f_has_stimulus_type(["SOLID","WAIT"]),
         partial(glia.group_by,
             key=lambda x: x["stimulus"]["metadata"]["group"]),
         glia.group_dict_to_list,
