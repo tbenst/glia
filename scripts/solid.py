@@ -152,7 +152,6 @@ def plot_spike_train_triplet(fig, axis_gen, data):
     ax.set_xlim((0,longest_group))
     ax.set_ylim((0,trial))
 
-
 def save_unit_psth(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit PSTH")
 
@@ -213,7 +212,6 @@ def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prep
         colors.add(solid["stimulus"]["backgroundColor"])
     ncolors = len(colors)
 
-
     plot_function = partial(plot_spike_trains,prepend_start_time=prepend,
         append_lifespan=append)
     glia.plot_units(plot_function,c_unit_fig,response,nplots=ncolors,
@@ -236,32 +234,35 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
 
-def flatten_groups(dictionary):
-    to_return = []
-    for k,v in dictionary.items():
-        if v==None:
-            logger.warning("got a value of None for group {}".format(
-                k))
-        else:
-            to_return.append(v)
-    return to_return
-
 def save_unit_wedges_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating solid unit wedges")
-    
-    group_length = lambda x: sum(map(get_lifespan, x))
 
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
         glia.f_has_stimulus_type(["SOLID"]),
         partial(glia.group_by,
             key=lambda x: x["stimulus"]["metadata"]["group"]),
-        flatten_groups,
-        # lambda x: print('yo',x[1][1]["stimulus"]["lifespan"]),
-
+        glia.group_dict_to_list,
         partial(sorted,key=lambda x: get_lifespan(x[1]))
     )
     response = glia.apply_pipeline(get_solid,units)
 
     glia.plot_units(plot_spike_train_triplet,c_unit_fig,response,nplots=1,
+        ncols=1,ax_xsize=10, ax_ysize=5)
+
+def save_unit_kinetics(units, stimulus_list, c_unit_fig, c_add_retina_figure):
+    print("Creating solid unit kinetics")
+    
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        partial(glia.group_by,
+            key=lambda x: x["stimulus"]["metadata"]["group"]),
+        glia.group_dict_to_list,
+        partial(sorted,key=lambda x: get_lifespan(x[2]))
+    )
+    response = glia.apply_pipeline(get_solid,units)
+
+    # glia.plot_units(plot_group_spike_train,c_unit_fig,response,nplots=1,
+    #     ncols=1,ax_xsize=10, ax_ysize=5)
+    glia.plot_units(glia.raster_group,c_unit_fig,response,nplots=1,
         ncols=1,ax_xsize=10, ax_ysize=5)

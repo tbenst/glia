@@ -5,6 +5,8 @@ import glia.humanhash as humanhash
 import numpy as np
 import glia.config as config
 from collections import namedtuple as nt
+from warnings import warn
+
 
 SpikeTrain = np.ndarray
 StartTime = int
@@ -75,11 +77,15 @@ class Unit:
             self._name = "no-spikes"
             Unit.name_lookup[self._id] = self._name
 
+# is this even used?
 class PlotFunction():
     def __init__(self, plot_function, **kwargs):
+        warn("deprecated", DeprecationWarning)
         "Sets kwargs as attributes."
         self.plot_function = plot_function
         self.__dict__.update(kwargs)
 
     def __call__(self, ax_gen, data):
         return self.plot_function(ax_gen, data)
+
+get_lifespan = lambda e: e["stimulus"]["lifespan"]

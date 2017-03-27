@@ -185,6 +185,16 @@ def list_average(l):
     return accumulated/len(l)
 
 
+def group_dict_to_list(dictionary):
+    to_return = []
+    for k,v in dictionary.items():
+        if v==None:
+            logger.warning("got a value of None for group {}".format(
+                k))
+        else:
+            to_return.append(v)
+    return to_return
+
 def group_by_contrast(dictionary_by_stimulus):
     contrasts = {}
     

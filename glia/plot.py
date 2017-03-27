@@ -434,3 +434,55 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=0,append_lifespan=0
 # def channels():
 #     import files
 #     return read_mcs_dat('tests/sample_dat/')
+
+
+def group_lifespan(group):
+    return sum(list(map(lambda x: x["stimulus"]["lifespan"]/120, group)))
+
+
+def raster_group(fig, axis_gen, data):
+    "Plot all spike trains for group on same row."
+    ax = next(axis_gen)
+    trial = 0
+    longest_group = max(map(group_lifespan, data))
+
+    for group in data:
+        # x offset for row, ie relative start_time
+        offset = 0
+        end_time = 0
+        for i,v in enumerate(group):
+            stimulus, spike_train = (v["stimulus"], v["spikes"])
+            lifespan = stimulus['lifespan'] / 120
+            end_time += lifespan
+
+
+            if lifespan > 60:
+                logger.warning("skipping stimulus longer than 60 seconds")
+                continue
+            if spike_train.size>0:
+                draw_spikes(ax, spike_train+offset, ymin=trial+0.3,
+                    ymax=trial+1)
+
+            kwargs = {"facecolor": stimulus["backgroundColor"],
+                      "edgecolor": "none",
+                      "alpha": 0.1}
+            if stimulus['stimulusType']=='BAR':
+                kwargs['hatch'] = '/'
+            ax.fill([offset,end_time,end_time,offset],
+                    [trial,trial,trial+1,trial+1],
+                    **kwargs)
+            offset = end_time
+
+        if offset<longest_group:
+            ax.fill([offset,longest_group,longest_group,offset],
+                    [trial,trial,trial+1,trial+1],
+                    facecolor="black",
+                    edgecolor="none", alpha=1)
+
+        trial += 1
+        
+    ax.set_title("Unit spike train per group")
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("trials")
+    ax.set_xlim((0,longest_group))
+    ax.set_ylim((0,trial))

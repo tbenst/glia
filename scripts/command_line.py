@@ -14,6 +14,7 @@ import scripts.solid as solid
 import scripts.bar as bar
 import scripts.acuity as acuity
 import scripts.grating as grating
+import scripts.raster as raster
 import errno
 import traceback
 import glia.config as config
@@ -233,10 +234,12 @@ def all(ctx):
     help="plot (seconds) after SOLID end time")
 @click.option("--wedge/--no-wedge", default=False,
     help="Sort by flash duration")
+@click.option("--kinetics", default=False, is_flag=True,
+    help="Sort by third stimuli duration (WAIT)")
 @click.option("--version", "-v", type=str, default="2")
 @analysis_function
 def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
-        prepend, append, wedge, version=1):
+        prepend, append, wedge, kinetics, version=1):
     "Create PTSH and raster of spikes in response to solid."
     # safe_run(solid.save_unit_psth,
     #     (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
@@ -247,6 +250,10 @@ def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         elif version=="2":
             safe_run(solid.save_unit_wedges_v2,
                 (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig))
+    if kinetics:
+        safe_run(solid.save_unit_kinetics,
+            (units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig))
+
     else:
         safe_run(solid.save_unit_spike_trains,
             (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
@@ -264,8 +271,11 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
             (units, stimulus_list, c_unit_fig,
                 c_retina_fig))
 
-    # safe_run(bar.save_unit_spike_trains,
-    #     (units, stimulus_list, c_unit_fig, c_retina_fig, by))
+@analyze.command("raster")
+@analysis_function
+def raster_cmd(units, stimulus_list, c_unit_fig, c_retina_fig):
+    safe_run(raster.save_raster,
+        (units, stimulus_list, partial(c_unit_fig,"raster"), c_retina_fig))
 
 @analyze.command("integrity")
 @click.option("--version", "-v", type=str, default="2")
