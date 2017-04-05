@@ -4,6 +4,8 @@ import numpy as np
 from functools import partial
 from warnings import warn
 import logging
+from copy import deepcopy
+
 logger = logging.getLogger('glia')
 
 def plot_psth(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1,bin_width=0.1):
@@ -249,6 +251,26 @@ def save_unit_wedges_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
 
     glia.plot_units(plot_spike_train_triplet,c_unit_fig,response,nplots=1,
         ncols=1,ax_xsize=10, ax_ysize=5)
+
+def save_unit_kinetics_v1(units, stimulus_list, c_unit_fig, c_add_retina_figure):
+    print("Creating solid unit kinetics")
+    
+
+    for i in range(5):
+        s = i*150
+        e = (i+1)*150
+        get_solid = glia.compose(
+            glia.f_create_experiments(stimulus_list),
+            lambda x: x[s:e],
+            partial(glia.group_by,
+                key=lambda x: x["stimulus"]["metadata"]["group"]),
+            glia.group_dict_to_list,
+            partial(sorted,key=lambda x: get_lifespan(x[2]))
+        )
+        response = glia.apply_pipeline(get_solid,units)
+        c = partial(c_unit_fig,"kinetics-{}".format(i))
+        glia.plot_units(glia.raster_group,c,response,nplots=1,
+            ncols=1,ax_xsize=10, ax_ysize=5)
 
 def save_unit_kinetics(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating solid unit kinetics")

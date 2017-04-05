@@ -54,9 +54,16 @@ def plot_path(directory,plot_name):
 def main():
     pass
 
+def match_filename(start):
+    files = glob(start + "*.txt")
+    if len(files)==1:
+        return files[0]
+    else:
+        raise(ValueError, "Could not match file, try specifying full filename")
 
 @main.group(chain=True)
-@click.argument('filename', type=click.Path(exists=True))
+@click.argument('filename', type=str)
+# @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://eyecandy:3000")
 @click.option("--processes", "-p", type=int, help="Number of processors")
@@ -81,7 +88,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         calibration=None, distance=None, verbose=False, debug=False,processes=None,
         by_channel=False):
     """Analyze data recorded with eyecandy.
-    """
+    """    
+    if not os.path.isfile(filename):
+        filename = match_filename(filename)
     ctx.obj = {}
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
@@ -251,8 +260,12 @@ def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
             safe_run(solid.save_unit_wedges_v2,
                 (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig))
     if kinetics:
-        safe_run(solid.save_unit_kinetics,
-            (units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig))
+        if version=="1":
+            safe_run(solid.save_unit_kinetics_v1,
+                (units, stimulus_list, c_unit_fig, c_retina_fig))
+        elif version=="2":
+            safe_run(solid.save_unit_kinetics,
+                (units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig))
 
     else:
         safe_run(solid.save_unit_spike_trains,
