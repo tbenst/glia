@@ -31,10 +31,14 @@ SpikeTrains = List[SpikeTrain]
 Analytics = Dict[str,Any]
 
 
-def apply_pipeline(pipeline, units):
+def apply_pipeline(pipeline, units, progress=True):
     print("Applying pipeline")
+    if progress:
+        gen = tqdm(units.items())
+    else:
+        gen = units.items
     return {k: (pipeline(v.spike_train) if (type(v) is Unit) \
-        else pipeline(v)) for k,v in tqdm(units.items())}
+        else pipeline(v)) for k,v in gen}
 
 def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append_lifespan=0,
                          append_start_time=None):

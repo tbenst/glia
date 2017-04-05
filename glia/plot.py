@@ -441,7 +441,9 @@ def group_lifespan(group):
 
 
 def raster_group(fig, axis_gen, data):
-    "Plot all spike trains for group on same row."
+    """Plot all spike trains for group on same row.
+
+    Expects data to be a list of lists """
     ax = next(axis_gen)
     trial = 0
     longest_group = max(map(group_lifespan, data))

@@ -177,6 +177,11 @@ def plot_acuity_v3(fig, axis_gen, data, prepend, append, speed):
                 [y,y,y+1,y+1],
                 facecolor="gray", edgecolor="none", alpha=0.1)
 
+    ax.yaxis.set_ticks(np.arange(0,nwidths*nangles,nangles))
+    ax.yaxis.set_ticklabels(sorted(list(widths)))
+    ax.set_ylabel("Bar Width in pixels (angle changes each row)")
+    ax.set_xlabel("Time in seconds")
+
 def plot_dissimilarity(fig, axis_gen, data, prepend, append, speed):
     logger.debug("plot dissimilarity")    
     
@@ -411,7 +416,7 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
         filename = "acuity-{}".format(speed)
         result = glia.plot_units(plot_function,partial(c_unit_fig,filename),solids,bars_by_speed,
                                  nplots=1,ncols=1,ax_xsize=5, ax_ysize=15,
-                                 figure_title="Top: Solid, Bottom: Bars with speed {}".format(speed))
+                                 figure_title="Bars with speed {}".format(speed))
         
         plot_function = partial(plot_dissimilarity,
                             prepend=prepend,append=append,speed=speed)
