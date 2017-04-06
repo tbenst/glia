@@ -37,6 +37,9 @@ def units_to_SpikeTrain(experiment):
     return glia.f_map(lambda x: SpikeTrains(x*quantities.s,
         t))(experiment["units"])
 
+def array_to_SpikeTrain(array,duration):
+    return SpikeTrain(array*quantities.s,duration)
+
 def vp(a,b,q=1):
     """Victor-Purpura distance between two SpikeTrains."""
     return elephant.spike_train_dissimilarity.victor_purpura_dist([a,b])[0][1]
