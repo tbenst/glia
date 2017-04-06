@@ -43,7 +43,7 @@ def simulated_test(units, stimulus_list):
 	    glia.f_calculate_firing_rate_by_stimulus()
 	)
 
-	firing_rates = glia.apply_pipeline(test_pipeline, units)
+	firing_rates = glia.apply_pipeline(test_pipeline, units, progress=True)
 	for stimulus,rates in next(iter(firing_rates.values())).items():
 		for rate in rates:
 			assert rate==1

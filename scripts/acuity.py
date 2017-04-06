@@ -287,14 +287,14 @@ def save_acuity_chart(units, stimulus_list, c_unit_fig,
                                   append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
     )
-    solids = glia.apply_pipeline(get_solids,units)
+    solids = glia.apply_pipeline(get_solids,units, progress=True)
 
     get_bars_by_speed = glia.compose(
         glia.f_create_experiments(stimulus_list),
         glia.f_has_stimulus_type(["BAR"]),
         partial(glia.group_by,key=lambda x: x["stimulus"]["speed"])
     )
-    bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units)
+    bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units, progress=True)
 
     nspeeds = len(glia.get_unit(bars_by_speed)[1].keys())
     sm_speeds = [60,120,240]
@@ -340,7 +340,7 @@ def save_acuity_chart_v2(units, stimulus_list, c_unit_fig,
                                   append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
     )
-    solids = glia.apply_pipeline(get_solids,units)
+    solids = glia.apply_pipeline(get_solids,units, progress=True)
 
     # offset to avoid diamond pixel artifacts
     get_bars_by_speed = glia.compose(
@@ -349,7 +349,7 @@ def save_acuity_chart_v2(units, stimulus_list, c_unit_fig,
         partial(filter,lambda x: np.isclose(x["stimulus"]["angle"],np.pi/8)),
         partial(glia.group_by,key=lambda x: x["stimulus"]["speed"])
     )
-    bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units)
+    bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units, progress=True)
 
     speeds = list(glia.get_unit(bars_by_speed)[1].keys())
     nspeeds = len(speeds)
@@ -395,7 +395,7 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
                                   append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
     )
-    solids = glia.apply_pipeline(get_solids,units)
+    solids = glia.apply_pipeline(get_solids,units, progress=True)
 
     # offset to avoid diamond pixel artifacts
     get_bars_by_speed = glia.compose(
@@ -405,7 +405,7 @@ def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
         partial(sorted,key=lambda x: x["stimulus"]["width"]),
         partial(glia.group_by,key=lambda x: x["stimulus"]["speed"])
     )
-    bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units)
+    bars_by_speed = glia.apply_pipeline(get_bars_by_speed,units, progress=True)
 
     speeds = list(glia.get_unit(bars_by_speed)[1].keys())
 

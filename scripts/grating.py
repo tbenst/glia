@@ -34,19 +34,19 @@ def get_fr_dsi_osi(units, stimulus_list):
         glia.f_group_by_stimulus(),
         glia.f_calculate_firing_rate_by_stimulus(),
     )
-    bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units)
+    bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units, progress=True)
 
     get_bar_dsi = glia.compose(
         glia.by_speed_width_then_angle,
         glia.calculate_dsi_by_speed_width
     )
-    bar_dsi = glia.apply_pipeline(get_bar_dsi,bar_firing_rate)
+    bar_dsi = glia.apply_pipeline(get_bar_dsi,bar_firing_rate, progress=True)
 
     get_bar_osi = glia.compose(
         glia.by_speed_width_then_angle,
         glia.calculate_osi_by_speed_width
     )
-    bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate)
+    bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate, progress=True)
 
 
     return (bar_firing_rate, bar_dsi, bar_osi)
@@ -201,7 +201,7 @@ def save_unit_spike_trains(units, stimulus_list, c_unit_fig,
         glia.f_has_stimulus_type(["GRATING"]),
         glia.f_split_by_wavelength()
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
 
     nplots = len(glia.get_unit(response)[1])
     result = glia.plot_units(plot_spike_trains,response, nplots=nplots,

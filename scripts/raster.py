@@ -17,6 +17,6 @@ def save_raster(units, stimulus_list, c_unit_fig, c_add_retina_figure,
         glia.group_dict_to_list,
         partial(sorted,key=sort_by)
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
     glia.plot_units(glia.raster_group,c_unit_fig,response,nplots=1,
         ncols=1,ax_xsize=15, ax_ysize=10)

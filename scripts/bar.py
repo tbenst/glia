@@ -96,19 +96,19 @@ def get_fr_dsi_osi(units, stimulus_list):
         glia.f_group_by_stimulus(),
         glia.f_calculate_firing_rate_by_stimulus(),
     )
-    bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units)
+    bar_firing_rate = glia.apply_pipeline(get_bar_firing_rate,units, progress=True)
 
     get_bar_dsi = glia.compose(
         glia.by_speed_width_then_angle,
         glia.calculate_dsi_by_speed_width
     )
-    bar_dsi = glia.apply_pipeline(get_bar_dsi,bar_firing_rate)
+    bar_dsi = glia.apply_pipeline(get_bar_dsi,bar_firing_rate, progress=True)
 
     get_bar_osi = glia.compose(
         glia.by_speed_width_then_angle,
         glia.calculate_osi_by_speed_width
     )
-    bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate)
+    bar_osi = glia.apply_pipeline(get_bar_osi,bar_firing_rate, progress=True)
 
 
     return (bar_firing_rate, bar_dsi, bar_osi)
@@ -350,7 +350,7 @@ def save_acuity_direction(units, stimulus_list, c_unit_fig,
             value=lambda x: x)
     )
 
-    response = glia.apply_pipeline(get_direction,units)
+    response = glia.apply_pipeline(get_direction,units, progress=True)
 
     speeds = list(glia.get_unit(response)[1].keys())
     nspeeds = len(speeds)
@@ -377,7 +377,7 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
             partial(sorted, key=lambda e: e["stimulus"]["angle"]),
         )
         nplots = get_nplots(stimulus_list,by)
-        response = glia.apply_pipeline(get_solid,units)
+        response = glia.apply_pipeline(get_solid,units, progress=True)
         result = glia.plot_units(plot_spike_trains_by_angle,response, nplots=nplots,
             ncols=3,ax_xsize=10, ax_ysize=5,
             figure_title="Unit spike train by BAR angle")
@@ -388,7 +388,7 @@ def save_unit_spike_trains(units, stimulus_list, c_add_unit_figures, c_add_retin
             partial(sorted, key=lambda e: e["stimulus"]["width"]),
         )
         nplots = get_nplots(stimulus_list,by)
-        response = glia.apply_pipeline(get_solid,units)
+        response = glia.apply_pipeline(get_solid,units, progress=True)
         result = glia.plot_units(plot_spike_trains_by_trial,response, nplots=nplots,
             ncols=3,ax_xsize=10, ax_ysize=5,
             figure_title="Unit spike train by BAR angle")

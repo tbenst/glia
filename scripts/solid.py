@@ -163,7 +163,7 @@ def save_unit_psth(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepen
         glia.f_group_by_stimulus(),
         glia.concatenate_by_stimulus
     )
-    psth = glia.apply_pipeline(get_psth,units)
+    psth = glia.apply_pipeline(get_psth,units, progress=True)
     plot_function = partial(plot_psth,prepend_start_time=prepend,append_lifespan=append)
     result = glia.plot_units(partial(plot_function,bin_width=0.01),psth,ax_xsize=10, ax_ysize=5)
     c_unit_fig(result)
@@ -177,7 +177,7 @@ def save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_add_retina_figure
         glia.f_create_experiments(stimulus_list,prepend_start_time=prepend,append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
     plot_function = partial(plot_spike_trains,prepend_start_time=prepend,append_lifespan=append)
     result = glia.plot_units(plot_function,response,ncols=1,ax_xsize=10, ax_ysize=5)
     c_unit_fig(result)
@@ -194,7 +194,7 @@ def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
         glia.f_has_stimulus_type(["SOLID"]),
         filter_time
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
     plot_function = partial(plot_spike_trains,prepend_start_time=1,append_lifespan=2)
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
@@ -207,7 +207,7 @@ def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prep
         glia.f_has_stimulus_type(["SOLID"]),
         partial(sorted,key=lambda x: x["stimulus"]["lifespan"])
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
 
     colors = set()
     for solid in glia.get_unit(response)[1]:
@@ -231,7 +231,7 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
         glia.f_create_experiments(stimulus_list),
         filter_integrity
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
     plot_function = partial(plot_spike_trains_vFail)
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
@@ -247,7 +247,7 @@ def save_unit_wedges_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
         glia.group_dict_to_list,
         partial(sorted,key=lambda x: get_lifespan(x[1]))
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
 
     glia.plot_units(plot_spike_train_triplet,c_unit_fig,response,nplots=1,
         ncols=1,ax_xsize=10, ax_ysize=5)
@@ -267,7 +267,7 @@ def save_unit_kinetics_v1(units, stimulus_list, c_unit_fig, c_add_retina_figure)
             glia.group_dict_to_list,
             partial(sorted,key=lambda x: get_lifespan(x[2]))
         )
-        response = glia.apply_pipeline(get_solid,units)
+        response = glia.apply_pipeline(get_solid,units, progress=True)
         c = partial(c_unit_fig,"kinetics-{}".format(i))
         glia.plot_units(glia.raster_group,c,response,nplots=1,
             ncols=1,ax_xsize=10, ax_ysize=5)
@@ -282,7 +282,7 @@ def save_unit_kinetics(units, stimulus_list, c_unit_fig, c_add_retina_figure):
         glia.group_dict_to_list,
         partial(sorted,key=lambda x: get_lifespan(x[2]))
     )
-    response = glia.apply_pipeline(get_solid,units)
+    response = glia.apply_pipeline(get_solid,units, progress=True)
 
     # glia.plot_units(plot_group_spike_train,c_unit_fig,response,nplots=1,
     #     ncols=1,ax_xsize=10, ax_ysize=5)

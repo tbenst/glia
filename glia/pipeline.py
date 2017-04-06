@@ -31,12 +31,12 @@ SpikeTrains = List[SpikeTrain]
 Analytics = Dict[str,Any]
 
 
-def apply_pipeline(pipeline, units, progress=True):
+def apply_pipeline(pipeline, units, progress=False):
     print("Applying pipeline")
     if progress:
         gen = tqdm(units.items())
     else:
-        gen = units.items
+        gen = units.items()
     return {k: (pipeline(v.spike_train) if (type(v) is Unit) \
         else pipeline(v)) for k,v in gen}
 
