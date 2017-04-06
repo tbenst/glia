@@ -32,6 +32,10 @@ victor_purpura = lambda v: elephant.spike_train_dissimilarity.victor_purpura_dis
 def experiment_to_SpikeTrain(experiment):
     return SpikeTrain(experiment["spikes"]*quantities.s,experiment["stimulus"]["lifespan"]/120)
 
+def units_to_SpikeTrian(experiment):
+    t = experiment["stimulus"]["lifespan"]/120
+    return glia.f_map(lambda x: SpikeTrains(x*quantities.s,
+        t))(experiment["units"])
 
 def vp(a,b,q=1):
     """Victor-Purpura distance between two SpikeTrains."""
