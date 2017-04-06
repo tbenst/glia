@@ -34,7 +34,7 @@ def experiment_to_SpikeTrain(experiment):
 
 def units_to_SpikeTrain(experiment):
     t = experiment["lifespan"]/120
-    return glia.f_map(lambda x: SpikeTrains(x*quantities.s,
+    return glia.f_map(lambda x: SpikeTrain(x*quantities.s,
         t))(experiment["units"])
 
 def array_to_SpikeTrain(array,duration):
