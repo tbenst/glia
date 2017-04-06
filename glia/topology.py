@@ -25,14 +25,6 @@ import elephant
 from neo.core import SpikeTrain
 import quantities
 
-victor_purpura = lambda v: elephant.spike_train_dissimilarity.victor_purpura_dist(
-            list(map(experiment_to_SpikeTrain,v)))
-
-vp = lambda x: victor_purpura(x)[0][1]
-
-def experiment_to_SpikeTrain(experiment):
-    return SpikeTrain(experiment["spikes"]*quantities.s,experiment["stimulus"]["lifespan"]/120)
-
 def distance_by_row(similarity):
     return list(map(lambda x: np.std(x), similarity))
 
