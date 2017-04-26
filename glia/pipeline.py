@@ -293,8 +293,10 @@ def IFR(spike_train, end_time, bandwidth=0.15, bin_width=0.001, sigma=6):
         ifr = signal.convolve(spike_bins, window,mode="same")
     return ifr
 
-def get_unit(units):
-    return next(iter(units.items()))
+def get_unit(units, n=0):
+    for i,v in enumerate(iter(units.items())):
+        if i==n:
+            return v
 
 
 def by_speed_width_then_angle(unit):

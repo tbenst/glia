@@ -199,6 +199,24 @@ def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
 
+def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
+    print("Creating integrity chart")
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        filter_integrity,
+        partial(glia.group_by,
+            key=lambda x: x["stimulus"]["metadata"]["group"]),
+        glia.group_dict_to_list,
+        partial(sorted,key=lambda x: x[0]["stimulus"]["stimulusIndex"])
+        )
+
+    response = glia.apply_pipeline(get_solid,units, progress=True)
+    plot_function = partial(glia.raster_group)
+    # c = partial(c_unit_fig,"kinetics-{}".format(i))
+
+    glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
+                             figure_title="Integrity Test (5 Minute Spacing)")
+
 def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit wedges")
     

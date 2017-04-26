@@ -207,7 +207,7 @@ def plot_dissimilarity(fig, axis_gen, data, prepend, append, speed):
 
     # normalized by dividing by seconds
     dissimilarity = glia.victor_purpura(normalized_bars)/min_lifespan
-    cax = ax.imshow(dissimilarity)
+    cax = ax.imshow(dissimilarity, cmap='viridis')
 
     nangles = len(angles)
     start, end = ax.get_xlim()
@@ -386,7 +386,7 @@ def save_acuity_chart_v2(units, stimulus_list, c_unit_fig,
 
 
 def save_acuity_chart_v3(units, stimulus_list, c_unit_fig,
-                      c_add_retina_figure, prepend, append):
+                         c_add_retina_figure, prepend, append):
     "Compare SOLID light wedge to BAR response in corresponding ascending width."
 
     print("Creating acuity chart v3.")
