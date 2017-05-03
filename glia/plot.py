@@ -87,14 +87,18 @@ def close_figs(figures):
     for fig in figures:
         plt.close(fig)
 
-def save_figs(figures, filenames):
+def save_unit_figs(figures, filenames):
     for fig,name in zip(figures,filenames):
         fig.savefig(name)
 
-def save_fig(filename, unit_id, fig):
+def save_unit_fig(filename, unit_id, fig):
     logger.debug("Saving {} for {}".format(filename,unit_id))
     name = Unit.name_lookup[unit_id]
     fig.savefig(os.path.join(config.plot_directory,name,filename+".jpg"))
+
+def save_retina_fig(filename, fig):
+    logger.debug("Saving {} for retina".format(filename))
+    fig.savefig(os.path.join(config.plot_directory,"00-all",filename+".jpg"))
 
 def isi_histogram(unit_spike_trains: UnitSpikeTrains, bin_width: Seconds=1/1000,
                   time: (Seconds, Seconds)=(0, 100/1000), average=True,

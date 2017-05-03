@@ -5,6 +5,7 @@ from functools import partial
 from warnings import warn
 import logging
 from copy import deepcopy
+from sklearn import svm, metrics
 
 logger = logging.getLogger('glia')
 
@@ -199,6 +200,83 @@ def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
 
+
+def integrity_spike_counts(cohort):
+    "Takes a list of integrity groups (of 3 experiments), and return List[Int]"
+    dark_experiments = []
+    on_experiments = []
+    off_experiments = []
+
+    for integrity_group in cohort:
+        dark_experiment = integrity_group[0]
+        on_experiment = integrity_group[1]
+        off_experiment = integrity_group[2]
+        dark_lifespan = dark_experiment["stimulus"]['lifespan']
+        on_lifespan = on_experiment["stimulus"]["lifespan"]
+        off_lifespan = off_experiment["stimulus"]["lifespan"]
+
+        if dark_lifespan >=120 and on_lifespan==60 and off_lifespan >=60:
+            d = dark_experiment["spikes"]
+            dark_experiments.append(d[(d>0.5) & (d<=1)].size)
+            f = off_experiment['spikes']
+            off_experiments.append(f[f<=0.5].size)
+            on_experiments.append(on_experiment['spikes'].size)
+        elif dark_lifespan == on_lifespan and on_lifespan==off_lifespan:
+            on_experiments.append(on_experiment['spikes'].size)
+            off_experiments.append(off_experiment['spikes'].size)
+            dark_experiments.append(dark_experiment['spikes'].size)
+        else:
+            logger.error("unexpected integrity group lifespans")
+            print(on_experiment["stimulus"]['lifespan'],
+                 off_experiment["stimulus"]['lifespan'])
+            raise ValueError
+    return (dark_experiments, on_experiments, off_experiments)
+
+def ideal_classification_accuracy(cohort):
+    """Intended for Integrity, sorted by cohort. Return classification accuracy
+
+    for dark vs on and dark vs off"""
+    dark_experiments, on_experiments, off_experiments = integrity_spike_counts(cohort)
+
+    on_X = np.array(dark_experiments + on_experiments).reshape((-1,1))
+#     print(on_X.shape)
+    on_Y = np.hstack([np.full(len(dark_experiments), 0,dtype='int8'),
+                  np.full(len(on_experiments),1,dtype='int8')])
+    on = svm.SVC(kernel='linear')
+    on.fit(on_X, on_Y)
+    on_predicted = on.predict(on_X)
+
+    off_X = np.array(dark_experiments + off_experiments).reshape((-1,1))
+    off_Y = np.hstack([np.full(len(dark_experiments), 0,dtype='int8'),
+                  np.full(len(off_experiments),1,dtype='int8')])
+    off = svm.SVC(kernel='linear')
+    off.fit(off_X, off_Y)
+    off_predicted = on.predict(off_X)
+    return {"on": float(metrics.accuracy_score(on_Y, on_predicted)),
+                         "off": float(metrics.accuracy_score(off_Y, off_predicted))}
+#         quality[unit] = {"on": metrics.accuracy_score(on_Y, on_predicted),
+#                          "off": metrics.accuracy_score(off_Y, off_predicted)}
+#     return quality
+
+def plot_units_accuracy(units_accuracy):
+    on_dist = [v['on'] for v in units_accuracy.values()]
+    off_dist = [v['off'] for v in units_accuracy.values()]
+    bins = np.linspace(0.5,1,11)
+    fig, ax = plt.subplots(2)
+    ax[0].hist(on_dist, bins=bins)
+    ax[0].set_title("Classification accuracy by ON response")
+    ax[0].set_xlim(.5,1)
+    ax[0].set_ylabel("Accuracy")
+    ax[0].set_ylabel("Number of units")
+    ax[1].hist(off_dist, bins=bins)
+    ax[1].set_title("Classification accuracy by OFF response")
+    ax[1].set_xlim(.5,1)
+    ax[1].set_ylabel("Number of units")
+    ax[1].set_xlabel("Accuracy")
+    fig.tight_layout()
+
+    return fig
+
 def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating integrity chart")
     get_solid = glia.compose(
@@ -216,6 +294,9 @@ def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figur
 
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
+
+    units_accuracy = glia.pmap(ideal_classification_accuracy, response)
+    c_add_retina_figure("Integrity Accuracy",plot_units_accuracy(units_accuracy))
 
 def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit wedges")
@@ -241,18 +322,47 @@ def filter_integrity(l):
     return list(filter(lambda x: "label" in x["stimulus"]["metadata"] and \
         x["stimulus"]["metadata"]["label"]=="integrity", l))
 
+def integrity_fix_hack(listlistE):
+    "Hack for mistake where all integrity in same group."
+    old = listlistE[0]
+    new = []
+    for i in range(0,len(old),3):
+        new.append(old[i:i+3])
+    return new
 
 def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating integrity chart")
-    
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
-        filter_integrity
-    )
+        filter_integrity,
+        partial(glia.group_by,
+            key=lambda x: x["stimulus"]["metadata"]["group"]),
+        glia.group_dict_to_list,
+        integrity_fix_hack,
+        partial(sorted,key=lambda x: x[0]["stimulus"]["stimulusIndex"])
+        )
+
     response = glia.apply_pipeline(get_solid,units, progress=True)
-    plot_function = partial(plot_spike_trains_vFail)
+    plot_function = partial(glia.raster_group)
+    # c = partial(c_unit_fig,"kinetics-{}".format(i))
+
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
+
+    units_accuracy = glia.pmap(ideal_classification_accuracy, response)
+    c_add_retina_figure("Integrity Accuracy",plot_units_accuracy(units_accuracy))
+
+# def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_figure):
+#     print("Creating integrity chart")
+    
+#     get_solid = glia.compose(
+#         glia.f_create_experiments(stimulus_list),
+#         filter_integrity
+#     )
+#     response = glia.apply_pipeline(get_solid,units, progress=True)
+#     plot_function = partial(plot_spike_trains_vFail)
+#     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
+#                              figure_title="Integrity Test (5 Minute Spacing)")
 
 def save_unit_wedges_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating solid unit wedges")

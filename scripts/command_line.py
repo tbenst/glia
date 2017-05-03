@@ -15,6 +15,7 @@ import scripts.bar as bar
 import scripts.acuity as acuity
 import scripts.grating as grating
 import scripts.raster as raster
+import scripts.letter as letter
 import errno
 import traceback
 import glia.config as config
@@ -28,13 +29,22 @@ from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
 
 
-def analysis_function(f):
+def plot_function(f):
     @click.pass_context
     def new_func(ctx, *args, **kwargs):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"], 
             ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
             *args[3:], **kwargs)
+    return update_wrapper(new_func, f)
+
+def analysis_function(f):
+    @click.pass_context
+    def new_func(ctx, *args, **kwargs):
+        context_object = ctx.obj
+        return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
+            ctx.obj['name'],
+            *args[2:], **kwargs)
     return update_wrapper(new_func, f)
 
 
@@ -91,11 +101,11 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     """    
     if not os.path.isfile(filename):
         filename = match_filename(filename)
-    ctx.obj = {}
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
     stimulus_file = os.path.join(data_directory, name + ".stimulus")
+    ctx.obj = {"name": name}
 
     # logging configuration
     fh = logging.FileHandler(os.path.join(data_directory,name + '.log'))
@@ -186,9 +196,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         
     elif output == "png":
         logger.debug("Outputting png")
-        ctx.obj["c_unit_fig"] = glia.save_fig
-        ctx.obj["c_retina_fig"] = lambda x: ctx.obj["retina_pdf"].savefig(x)
-        os.makedirs(os.path.join(plot_directory,"Retina"), exist_ok=True)
+        ctx.obj["c_unit_fig"] = glia.save_unit_fig
+        ctx.obj["c_retina_fig"] = glia.save_retina_fig
+        os.makedirs(os.path.join(plot_directory,"00-all"), exist_ok=True)
 
         for unit_id in ctx.obj["units"].keys():
             name = Unit.name_lookup[unit_id]
@@ -217,7 +227,7 @@ def create_cover_page(ax_gen, data):
     ax.set_axis_off()
     
 @analyze.command()
-@analysis_function
+@plot_function
 def cover(units, stimulus_list, c_unit_fig, c_retina_fig):
     "Add cover page."
     data = {k:v.name for k,v in units.items()}
@@ -246,7 +256,7 @@ def all(ctx):
 @click.option("--kinetics", default=False, is_flag=True,
     help="Sort by third stimuli duration (WAIT)")
 @click.option("--version", "-v", type=str, default="2")
-@analysis_function
+@plot_function
 def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, wedge, kinetics, version=1):
     "Create PTSH and raster of spikes in response to solid."
@@ -273,7 +283,7 @@ def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
 
 @analyze.command("bar")
 @click.option("--by", "-b", type=click.Choice(["angle", "width","acuity"]), default="angle")
-@analysis_function
+@plot_function
 def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
     # if all_methods or "direction" in methods:
     if by=="angle":
@@ -284,15 +294,21 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
             (units, stimulus_list, c_unit_fig,
                 c_retina_fig))
 
-@analyze.command("raster")
+@analyze.command("letter")
 @analysis_function
+def letter_cmd(units, stimulus_list, name):
+    safe_run(letter.save_npz,
+        (units, stimulus_list, name))
+
+@analyze.command("raster")
+@plot_function
 def raster_cmd(units, stimulus_list, c_unit_fig, c_retina_fig):
     safe_run(raster.save_raster,
         (units, stimulus_list, partial(c_unit_fig,"raster"), c_retina_fig))
 
 @analyze.command("integrity")
 @click.option("--version", "-v", type=str, default="2")
-@analysis_function
+@plot_function
 def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, version=1):
     if version=="1":
         safe_run(solid.save_integrity_chart,
@@ -313,7 +329,7 @@ def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, version=1):
     help="Manually provide screen width for old versions of Eyecandy")
 @click.option("-h", "--height", type=int,
     help="Manually provide screen height for old versions of Eyecandy")
-@analysis_function
+@plot_function
 def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
     safe_run(grating.save_unit_spike_trains,
         (units, stimulus_list, c_unit_fig, c_retina_fig, width, height))
@@ -324,7 +340,7 @@ def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
 @click.option("--append", "-a", type=float, default=1,
     help="plot (seconds) after SOLID end time")
 @click.option("--version", "-v", type=float, default=3)
-@analysis_function
+@plot_function
 def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, version):
     if version==1:
