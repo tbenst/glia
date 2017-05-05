@@ -299,6 +299,11 @@ def get_unit(units, n=0):
             return v
 
 
+def filter_integrity(l):
+    return list(filter(lambda x: "label" in x["stimulus"]["metadata"] and \
+        x["stimulus"]["metadata"]["label"]=="integrity", l))
+
+
 def by_speed_width_then_angle(unit):
     # we will accumulate by angle in this dictionary and then divide
     by_speed_width_then_angle = {}
@@ -423,6 +428,13 @@ def f_calculate_peak_ifr_by_stimulus(bandwidth=0.15, bin_width=0.001, sigma=6):
 
 def concatenate_by_stimulus(unit):
     return {stimulus: np.sort(np.hstack(values)) for stimulus, values in unit.items()}
+
+
+def group_contains(stimulus_type, group):
+    for experiment in group:
+        if experiment["stimulus"]["stimulusType"]==stimulus_type:
+            return True
+    return False
 
 ### WARNING: this function sucks. Could cause unexpected mutation
 # due to python shallow copies

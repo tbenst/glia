@@ -261,18 +261,42 @@ def ideal_classification_accuracy(cohort):
 def plot_units_accuracy(units_accuracy):
     on_dist = [v['on'] for v in units_accuracy.values()]
     off_dist = [v['off'] for v in units_accuracy.values()]
-    bins = np.linspace(0.5,1,11)
-    fig, ax = plt.subplots(2)
-    ax[0].hist(on_dist, bins=bins)
-    ax[0].set_title("Classification accuracy by ON response")
-    ax[0].set_xlim(.5,1)
-    ax[0].set_ylabel("Accuracy")
-    ax[0].set_ylabel("Number of units")
-    ax[1].hist(off_dist, bins=bins)
-    ax[1].set_title("Classification accuracy by OFF response")
-    ax[1].set_xlim(.5,1)
-    ax[1].set_ylabel("Number of units")
-    ax[1].set_xlabel("Accuracy")
+    on_off_h_index = list(map(lambda x: min(x[0],x[1]), zip(on_dist,off_dist)))
+    on_minus_off = list(map(lambda x: x[0]-x[1], zip(on_dist,off_dist)))
+    bins = np.hstack([[0], np.linspace(0.5,1,11)])
+    fig, ax = plt.subplots(2,2)
+    ax[0,0].hist(on_dist, bins=bins)
+    ax[0,0].set_title("ON response")
+    ax[0,0].set_xlim(.4,1)
+
+    # ticks = [str(v) for v in ax[0,0].get_xticklabels()]
+    # ticks[0] = '0.0'
+    # # print(ticks[1])
+    # ax[0,0].set_xticklabels(ticks)
+
+    ax[1,0].set_ylabel("Number of units")
+    ax[0,1].hist(off_dist, bins=bins)
+    ax[0,1].set_title("OFF response")
+    ax[0,1].set_xlim(.4,1)
+    # ax[0,1].set_xticklabels(ticks)
+
+    ax[1,0].hist(on_off_h_index, bins=bins)
+    ax[1,0].set_title("h-index ON/OFF response")
+    ax[1,0].set_xlim(.4,1)
+    ax[1,0].set_ylabel("Number of units")
+    ax[1,0].set_xlabel("Accuracy")
+    # ax[1,1].set_xticklabels(ticks)
+
+    ax[1,1].hist(on_minus_off,
+        bins=np.hstack([[-1],np.linspace(-0.5,0.5,11),[1]]))
+    ax[1,1].set_title("ON accuracy - OFF accuracy")
+    ax[1,1].set_xlim(-.7,.7)
+    ax[1,1].set_xlabel("Accuracy")
+    ticks = ax[1,1].get_xticklabels()
+    ticks[0] = "-1.0"
+    ticks[len(ticks)-1] = "1.0"
+    # ax[1,1].set_xticklabels(ticks)
+
     fig.tight_layout()
 
     return fig
@@ -281,7 +305,7 @@ def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figur
     print("Creating integrity chart")
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
-        filter_integrity,
+        glia.filter_integrity,
         partial(glia.group_by,
             key=lambda x: x["stimulus"]["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -318,10 +342,6 @@ def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prep
     glia.plot_units(plot_function,c_unit_fig,response,nplots=ncolors,
         ncols=min(ncolors,5),ax_xsize=10, ax_ysize=5)
 
-def filter_integrity(l):
-    return list(filter(lambda x: "label" in x["stimulus"]["metadata"] and \
-        x["stimulus"]["metadata"]["label"]=="integrity", l))
-
 def integrity_fix_hack(listlistE):
     "Hack for mistake where all integrity in same group."
     old = listlistE[0]
@@ -334,7 +354,7 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
     print("Creating integrity chart")
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
-        filter_integrity,
+        glia.filter_integrity,
         partial(glia.group_by,
             key=lambda x: x["stimulus"]["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -357,7 +377,7 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
     
 #     get_solid = glia.compose(
 #         glia.f_create_experiments(stimulus_list),
-#         filter_integrity
+#         glia.filter_integrity
 #     )
 #     response = glia.apply_pipeline(get_solid,units, progress=True)
 #     plot_function = partial(plot_spike_trains_vFail)

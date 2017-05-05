@@ -15,7 +15,7 @@ import scripts.bar as bar
 import scripts.acuity as acuity
 import scripts.grating as grating
 import scripts.raster as raster
-import scripts.letter as letter
+import scripts.convert as convert
 import errno
 import traceback
 import glia.config as config
@@ -294,11 +294,21 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
             (units, stimulus_list, c_unit_fig,
                 c_retina_fig))
 
-@analyze.command("letter")
+@analyze.command("convert")
+@click.option("--letter", default=False, is_flag=True,
+    help="Output npz for letter classification")
+@click.option("--integrity", default=False, is_flag=True,
+    help="Output npz for integrity classification")
+# @click.option("--letter", default=False, is_flag=True,
+#     help="Output npz for letter classification")
 @analysis_function
-def letter_cmd(units, stimulus_list, name):
-    safe_run(letter.save_npz,
-        (units, stimulus_list, name))
+def convert_cmd(units, stimulus_list, name, letter, integrity):
+    if letter:
+        safe_run(convert.save_letter_npz,
+            (units, stimulus_list, name))
+    elif integrity:
+        safe_run(convert.save_integrity_npz,
+            (units, stimulus_list, name))
 
 @analyze.command("raster")
 @plot_function
