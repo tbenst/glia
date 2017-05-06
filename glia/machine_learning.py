@@ -38,7 +38,7 @@ def f_split_list(tvt):
                 split.test.append(v)
             else:
                 raise(ValueError, 'bad training, validation & test split.')
-        assert len(my_list.keys()) == tvt.training+tvt.validation+tvt.test
+        assert len(my_list) == tvt.training+tvt.validation+tvt.test
         return split
             
     return anonymous

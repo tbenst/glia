@@ -13,6 +13,7 @@ letter_map = {'K': 4, 'C': 1, 'V': 9, 'N': 5, 'R': 7, 'H': 3, 'O': 6, 'Z': 10, '
 
 
 group_contains_letter = partial(glia.group_contains, "LETTER")
+group_contains_checkerboard = partial(glia.group_contains, "CHECKERBOARD")
 # SizeDuration = namedtuple('SizeDuration', ['size', 'duration'])
 f_flatten = glia.f_reduce(lambda a,n: a+n,[])
 
@@ -37,8 +38,17 @@ def letter_class(stimulus):
     else:
         return letter_map["BLANK"]
 
+def checker_class(stimulus):
+    checker = stimulus["metadata"]["class"]
+    if checker=='A':
+        return 0
+    elif checker=='B':
+        return 1
+    else:
+        raise ValueError
+
 def save_letter_npz(units, stimulus_list, name):
-    print("Saving NPZ file.")
+    print("Saving letters NPZ file.")
 
     # TODO 
     training_validation_test = glia.TVT(120,40,40)
@@ -79,7 +89,116 @@ def save_letter_npz(units, stimulus_list, name):
 
     test_letters = glia.apply_pipeline(
         glia.compose(
+            lambda x: x.test,
+            glia.group_dict_to_list,
+            f_flatten
+        ),
+        tvt_letters)
+
+    training_data, training_target = glia.units_to_ndarrays(training_letters, letter_class)
+    validation_data, validation_target = glia.units_to_ndarrays(validation_letters, letter_class)
+    test_data, test_target = glia.units_to_ndarrays(test_letters, letter_class)
+
+    np.savez(name, training_data=training_data, training_target=training_target,
+         validation_data=validation_data, validation_target=validation_target,
+          test_data=test_data, test_target=test_target)
+
+def save_checkerboard_npz(units, stimulus_list, name):
+    print("Saving checkerboard NPZ file.")
+
+    # TODO make generic by filter stimulus_list
+    # & make split by cohort (currently by list due to
+    # eyecandy mistake)
+
+    training_validation_test = glia.TVT(40,40,0)
+
+
+    get_checkers = glia.compose(
+        glia.f_create_experiments(stimulus_list,append_lifespan=0.5),
+        partial(glia.group_by,
+                key=lambda x: x["stimulus"]["metadata"]["group"]),
+        glia.group_dict_to_list,
+        glia.f_filter(group_contains_checkerboard),
+        glia.f_map(lambda x: adjust_lifespan(x[1])),
+        partial(glia.group_by,
+                key=lambda x: x["stimulus"]["size"]),
+    )
+    checkers = glia.pure_retina_spikes(glia.apply_pipeline(get_checkers,units))
+
+    sizes = sorted(list(checkers.keys()))
+    nsizes = len(sizes)
+    ncheckers = len(checkers.values())
+    nunits = len(unit.keys())
+
+    training_data = np.full((nsizes,ncheckers,nunits),0,dtype='int8')
+    training_target = np.full((nsizes,ncheckers),0,dtype='int8')
+    validation_data = np.full((nsizes,ncheckers,nunits),0,dtype='int8')
+    validation_target = np.full((nsizes,ncheckers),0,dtype='int8')
+    test_data = np.full((nsizes,ncheckers,nunits),0,dtype='int8')
+    test_target = np.full((nsizes,ncheckers),0,dtype='int8')
+
+    size_map = {s: i for i,s in enumerate(sizes)}
+    split = glia.f_split_list(training_validation_test)
+    for size,experiments in checkers.items():
+        tvt = split(experiments)
+        td, tt = glia.units_to_ndarrays(tvt.training)
+        training_data[size] = td
+        training_target[size] = tt
+
+        td, tt = glia.units_to_ndarrays(tvt.validation)
+        validation_data[size] = td
+        validation_target[size] = tt
+
+        td, tt = glia.units_to_ndarrays(tvt.test)
+        test_data[size] = td
+        test_target[size] = tt
+
+    # TODO UNTESTED!!!!!!!!!!!!!!!!
+    np.savez(name, training_data=training_data, training_target=training_target,
+         validation_data=validation_data, validation_target=validation_target,
+          test_data=test_data, test_target=test_target)
+
+
+def save_integrity_npz(units, stimulus_list, name):
+    print("Saving integrity NPZ file.")
+
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        glia.filter_integrity,
+        partial(glia.group_by,
+            key=lambda x: x["stimulus"]["metadata"]["group"]),
+        glia.group_dict_to_list,
+        partial(sorted,key=lambda x: x[0]["stimulus"]["stimulusIndex"])
+        )
+
+    response = glia.apply_pipeline(get_solid,units, progress=True)
+
+    integrity_stimuli = list(filter(lambda x: "label" in x["metadata"] and \
+        x["metadata"]["label"]=="integrity", l))
+    # TODO not finished
+    training_validation_test = glia.TVT(120,40,40)
+
+    tvt_letters = glia.apply_pipeline(glia.f_split_dict(training_validation_test),
+                                      letters)
+    training_letters = glia.apply_pipeline(
+        glia.compose(
+            lambda x: x.training,
+            glia.group_dict_to_list,
+            f_flatten
+        ),
+        tvt_letters, progress=True)
+
+    validation_letters = glia.apply_pipeline(
+        glia.compose(
             lambda x: x.validation,
+            glia.group_dict_to_list,
+            f_flatten
+        ),
+        tvt_letters)
+
+    test_letters = glia.apply_pipeline(
+        glia.compose(
+            lambda x: x.test,
             glia.group_dict_to_list,
             f_flatten
         ),

@@ -75,7 +75,7 @@ def match_filename(start):
 @click.argument('filename', type=str)
 # @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
-@click.option("--eyecandy", "-e", default="http://eyecandy:3000")
+@click.option("--eyecandy", "-e", default="http://localhost:3000")
 @click.option("--processes", "-p", type=int, help="Number of processors")
 @click.option("--calibration", "-c", default=(0.55,0.24,0.88), help="Sets the analog value for each stimulus index.")
 @click.option("--distance", "-d", default=1100, help="Sets the distance from calibration for detecting stimulus index.")
@@ -299,16 +299,23 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
     help="Output npz for letter classification")
 @click.option("--integrity", default=False, is_flag=True,
     help="Output npz for integrity classification")
+@click.option("--checkerboard", default=False, is_flag=True,
+    help="Output npz for checkerboard classification")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
 @analysis_function
-def convert_cmd(units, stimulus_list, name, letter, integrity):
+def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard):
     if letter:
         safe_run(convert.save_letter_npz,
             (units, stimulus_list, name))
     elif integrity:
         safe_run(convert.save_integrity_npz,
             (units, stimulus_list, name))
+    elif checkerboard:
+        safe_run(convert.save_checkerboard_npz,
+            (units, stimulus_list, name))
+
+
 
 @analyze.command("raster")
 @plot_function
