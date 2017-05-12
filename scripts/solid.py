@@ -232,31 +232,64 @@ def integrity_spike_counts(cohort):
             raise ValueError
     return (dark_experiments, on_experiments, off_experiments)
 
-def ideal_classification_accuracy(cohort):
+
+def unit_classification_accuracy(tvt):
     """Intended for Integrity, sorted by cohort. Return classification accuracy
 
     for dark vs on and dark vs off"""
-    dark_experiments, on_experiments, off_experiments = integrity_spike_counts(cohort)
+    dark_training, on_training, off_training = integrity_spike_counts(tvt.training)
+    dark_test, on_test, off_test = integrity_spike_counts(tvt.validation)
+    
+    X_on_train = np.array(dark_training + on_training).reshape((-1,1))
+    Y_on_train = np.hstack([np.full(len(dark_training), 0,dtype='int8'),
+                  np.full(len(on_training),1,dtype='int8')])
 
-    on_X = np.array(dark_experiments + on_experiments).reshape((-1,1))
-#     print(on_X.shape)
-    on_Y = np.hstack([np.full(len(dark_experiments), 0,dtype='int8'),
-                  np.full(len(on_experiments),1,dtype='int8')])
+    X_on_test = np.array(dark_test + on_test).reshape((-1,1))
+    Y_on_test = np.hstack([np.full(len(dark_test), 0,dtype='int8'),
+                  np.full(len(on_test),1,dtype='int8')])
     on = svm.SVC(kernel='linear')
-    on.fit(on_X, on_Y)
-    on_predicted = on.predict(on_X)
+    on.fit(X_on_train, Y_on_train)
+    on_predicted = on.predict(X_on_test)
 
-    off_X = np.array(dark_experiments + off_experiments).reshape((-1,1))
-    off_Y = np.hstack([np.full(len(dark_experiments), 0,dtype='int8'),
-                  np.full(len(off_experiments),1,dtype='int8')])
+
+    X_off_train = np.array(dark_training + off_training).reshape((-1,1))
+    Y_off_train = np.hstack([np.full(len(dark_training), 0,dtype='int8'),
+                  np.full(len(off_training),1,dtype='int8')])
+    X_off_test = np.array(dark_test + off_test).reshape((-1,1))
+    Y_off_test = np.hstack([np.full(len(dark_test), 0,dtype='int8'),
+                  np.full(len(off_test),1,dtype='int8')])
+    
     off = svm.SVC(kernel='linear')
-    off.fit(off_X, off_Y)
-    off_predicted = on.predict(off_X)
-    return {"on": float(metrics.accuracy_score(on_Y, on_predicted)),
-                         "off": float(metrics.accuracy_score(off_Y, off_predicted))}
-#         quality[unit] = {"on": metrics.accuracy_score(on_Y, on_predicted),
-#                          "off": metrics.accuracy_score(off_Y, off_predicted)}
-#     return quality
+    off.fit(X_off_train, Y_off_train)
+    off_predicted = on.predict(X_off_test)
+
+
+    return {"on": float(metrics.accuracy_score(Y_on_test, on_predicted)),
+                         "off": float(metrics.accuracy_score(Y_off_test, off_predicted))}
+
+def filter_units_by_accuracy(units, stimulus_list, threshold=0.8):
+    ntrial = len(list(filter(
+        lambda x: 'metadata' in x['stimulus'] and "label" in x['stimulus']['metadata'] and \
+            x['stimulus']['metadata']['label']=='integrity',
+        stimulus_list)))/3
+    ntrain = int(np.ceil(ntrial/2))
+    ntest = int(np.floor(ntrial/2))
+    tvt = glia.TVT(ntrain,ntest,0)
+
+    get_solid = glia.compose(
+        glia.f_create_experiments(stimulus_list),
+        glia.filter_integrity,
+        partial(glia.group_by,
+            key=lambda x: x["stimulus"]["metadata"]["group"]),
+        glia.group_dict_to_list,
+        glia.f_split_list(tvt)
+    )
+
+    classification_data = glia.apply_pipeline(get_solid,units, progress=True)
+    units_accuracy = glia.pmap(unit_classification_accuracy,classification_data)
+    filter_threshold = glia.f_filter(lambda k,x: x['on']>threshold or x['off']>threshold)
+    return set(filter_threshold(units_accuracy).keys())
+
 
 def plot_units_accuracy(units_accuracy):
     on_dist = [v['on'] for v in units_accuracy.values()]
@@ -309,17 +342,28 @@ def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figur
         partial(glia.group_by,
             key=lambda x: x["stimulus"]["metadata"]["group"]),
         glia.group_dict_to_list,
-        partial(sorted,key=lambda x: x[0]["stimulus"]["stimulusIndex"])
         )
-
     response = glia.apply_pipeline(get_solid,units, progress=True)
+    
+    chronological = glia.apply_pipeline(
+        partial(sorted,key=lambda x: x[0]["stimulus"]["stimulusIndex"]),
+        response)
+
     plot_function = partial(glia.raster_group)
     # c = partial(c_unit_fig,"kinetics-{}".format(i))
 
-    glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
+    glia.plot_units(plot_function,c_unit_fig,chronological,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
 
-    units_accuracy = glia.pmap(ideal_classification_accuracy, response)
+    ntrial = len(glia.get_unit(response)[1])
+    ntrain = int(np.ceil(ntrial/2))
+    ntest = int(np.floor(ntrial/2))
+    tvt = glia.TVT(ntrain,ntest,0)
+    classification_data = glia.apply_pipeline(
+        glia.f_split_list(tvt),
+        response)
+
+    units_accuracy = glia.pmap(unit_classification_accuracy,classification_data)
     c_add_retina_figure("Integrity Accuracy",plot_units_accuracy(units_accuracy))
 
 def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
@@ -369,7 +413,7 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
     glia.plot_units(plot_function,c_unit_fig,response,ncols=1,ax_xsize=10, ax_ysize=5,
                              figure_title="Integrity Test (5 Minute Spacing)")
 
-    units_accuracy = glia.pmap(ideal_classification_accuracy, response)
+    units_accuracy = glia.pmap(ideal_unit_classification_accuracy, response)
     c_add_retina_figure("Integrity Accuracy",plot_units_accuracy(units_accuracy))
 
 # def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_figure):

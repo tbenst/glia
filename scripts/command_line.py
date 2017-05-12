@@ -27,6 +27,7 @@ from functools import update_wrapper, partial
 from glob import glob
 from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
+from random import randint
 
 
 def plot_function(f):
@@ -73,6 +74,57 @@ def match_filename(start):
 
 @main.group(chain=True)
 @click.argument('filename', type=str)
+@click.option('method', "-m",
+    type=click.Choice(["random","hz"]), default="random",
+    help="Type of test data.")
+@click.option('number', "-n",
+    type=int, default=5,
+    help="Number of channels.")
+@click.pass_context
+def test(ctx, filename, method, number):
+    if not os.path.isfile(filename):
+        filename = match_filename(filename)
+    data_directory, data_name = os.path.split(filename)
+    name, extension = os.path.splitext(data_name)
+    stimulus_file = os.path.join(data_directory, name + ".stimulus")
+
+    ctx.obj = {'name': 'test'}
+    stimulus_list = glia.load_stimulus(stimulus_file)
+    ctx.obj["stimulus_list"] = stimulus_list
+    total_time = sum(map(lambda x: x['stimulus']['lifespan']/120, stimulus_list))
+    units = {}
+    retina_id = 'test'
+    for i in range(number ):
+        for j in range(randint(1,7)):
+            if method=='random':
+                u = glia.random_unit(total_time, retina_id, i+1, j+1)
+            elif method=="hz":
+                hz = randint(1,90)
+                u = glia.hz_unit(total_time, hz, retina_id, i+1, j+1)
+
+            units[u.id] = u
+    ctx.obj["units"] = units
+
+    # prepare_output
+    plot_directory = os.path.join(data_directory, name+"-plots")
+    config.plot_directory = plot_directory
+
+    os.makedirs(plot_directory, exist_ok=True)
+    os.chmod(plot_directory, 0o777)
+
+    logger.debug("Outputting png")
+    ctx.obj["c_unit_fig"] = glia.save_unit_fig
+    ctx.obj["c_retina_fig"] = glia.save_retina_fig
+    os.makedirs(os.path.join(plot_directory,"00-all"), exist_ok=True)
+
+    for unit_id in ctx.obj["units"].keys():
+        name = Unit.name_lookup[unit_id]
+        os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
+
+
+
+@main.group(chain=True)
+@click.argument('filename', type=str)
 # @click.argument('filename', type=click.Path(exists=True))
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://localhost:3000")
@@ -85,6 +137,8 @@ def match_filename(start):
 @click.option("--threshold", "-r", type=float, default=9, help="Set the threshold in standard deviations for the legacy")
 @click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
 @click.option("--window-width", "-w", type=int)
+@click.option("--integrity-filter", "-w", type=float,
+    help="Only include units where classification percentage exceeds the specified amount.")
 @click.option("--verbose", "-v", is_flag=True)
 @click.option("--by-channel", "-C", is_flag=True, help="Combine units by channel")
 @click.option("--debug", "-vv", is_flag=True)
@@ -96,9 +150,10 @@ def match_filename(start):
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
         calibration=None, distance=None, verbose=False, debug=False,processes=None,
-        by_channel=False):
+        by_channel=False, integrity_filter=0.0):
     """Analyze data recorded with eyecandy.
     """    
+    #### FILEPATHS
     if not os.path.isfile(filename):
         filename = match_filename(filename)
     data_directory, data_name = os.path.split(filename)
@@ -107,7 +162,15 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     stimulus_file = os.path.join(data_directory, name + ".stimulus")
     ctx.obj = {"name": name}
 
-    # logging configuration
+    if not notebook:
+        notebooks = glob(os.path.join(data_directory, '*.yml')) + \
+            glob(os.path.join(data_directory, '*.yaml'))
+        if len(notebooks)==0:
+            raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
+                "or specify file path with -n.")
+        notebook=notebooks[0]
+
+    #### LOGGING CONFIGURATION
     fh = logging.FileHandler(os.path.join(data_directory,name + '.log'))
     fh.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
@@ -128,29 +191,12 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     logger.addHandler(ch)
     logger.info("Verbose logging on")
 
-    spyking_regex = re.compile('.*\.result.hdf5$')
-    if extension == ".txt":
-        ctx.obj["units"] = glia.read_plexon_txt_file(filename,filename)
-    elif re.match(spyking_regex, filename):
-        ctx.obj["units"] = glia.read_spyking_results(filename)
-    else:
-        raise ValueError('could not read {}. Is it a plexon or spyking circus file?')
-
-    if by_channel:
-        ctx.obj["units"] = glia.combine_units_by_channel(ctx.obj["units"])
-
-    if not notebook:
-        notebooks = glob(os.path.join(data_directory, '*.yml')) + \
-            glob(os.path.join(data_directory, '*.yaml'))
-        if len(notebooks)==0:
-            raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
-                "or specify file path with -n.")
-        notebook=notebooks[0]
-
     lab_notebook = glia.open_lab_notebook(notebook)
     experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
     flicker_version = experiment_protocol["flickerVersion"]
 
+
+    #### LOAD STIMULUS
     try:
         ctx.obj["stimulus_list"] = glia.load_stimulus(stimulus_file)
     except OSError:
@@ -177,6 +223,26 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             raise ValueError('not implemented')
         else:
             raise ValueError("invalid trigger: {}".format(trigger))
+
+    #### LOAD SPIKES
+    spyking_regex = re.compile('.*\.result.hdf5$')
+    if extension == ".txt":
+        ctx.obj["units"] = glia.read_plexon_txt_file(filename,filename)
+    elif re.match(spyking_regex, filename):
+        ctx.obj["units"] = glia.read_spyking_results(filename)
+    else:
+        raise ValueError('could not read {}. Is it a plexon or spyking circus file?')
+
+    #### DATA MUNGING OPTIONS
+    if integrity_filter>0.0:
+        good_units = solid.filter_units_by_accuracy(
+            ctx.obj["units"], ctx.obj['stimulus_list'], integrity_filter)
+        filter_good_units = glia.f_filter(lambda u,v: u in good_units)
+        ctx.obj["units"] = filter_good_units(ctx.obj["units"])
+
+    if by_channel:
+        ctx.obj["units"] = glia.combine_units_by_channel(ctx.obj["units"])
+
 
     # prepare_output
     plot_directory = os.path.join(data_directory, name+"-plots")
@@ -210,7 +276,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
         calibration=None, distance=None, version=None, verbose=False, debug=False,processes=None,
-        by_channel=False):
+        by_channel=False, integrity_filter=0.0):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -315,6 +381,7 @@ def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard):
         safe_run(convert.save_checkerboard_npz,
             (units, stimulus_list, name))
 
+test.add_command(convert_cmd)
 
 
 @analyze.command("raster")
@@ -339,6 +406,8 @@ def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, version=1):
         safe_run(solid.save_integrity_chart_vFail,
             (units, stimulus_list, partial(c_unit_fig,"integrity"),
                 c_retina_fig))
+
+test.add_command(integrity_cmd)
 
 
 @analyze.command("grating")

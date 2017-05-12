@@ -47,6 +47,20 @@ def checker_class(stimulus):
     else:
         raise ValueError
 
+def balance_blanks(cohort):
+    """Remove 90% of blanks."""
+    new = []
+    includes_blank = False
+    for e in cohort:
+        if 'letter' in e["stimulus"]:
+            new.append(e)
+        else:
+            if not includes_blank:
+                new.append(e)
+                includes_blank = True
+    return new
+
+
 def save_letter_npz(units, stimulus_list, name):
     print("Saving letters NPZ file.")
 
@@ -64,7 +78,8 @@ def save_letter_npz(units, stimulus_list, name):
         glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
         partial(glia.group_by,
                 key=lambda x: x[1]["stimulus"]["metadata"]["cohort"]),
-        glia.f_map(f_flatten)
+        glia.f_map(f_flatten),
+        glia.f_map(balance_blanks)
     )
     letters = glia.apply_pipeline(get_letters,units)
 
