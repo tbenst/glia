@@ -9,6 +9,7 @@ matplotlib.rcParams['figure.max_open_warning'] = 250
 import glia
 import click
 import os
+import sys
 import re
 import scripts.solid as solid
 import scripts.bar as bar
@@ -49,14 +50,14 @@ def analysis_function(f):
     return update_wrapper(new_func, f)
 
 
-
+ 
 def safe_run(function, args):
     try:
         function(*args)
     except Exception as exception:
-        traceback.print_tb(exception.__traceback__)
-        logger.error(exception)
-        logger.error("Error running {}. Skipping".format(function, ))
+        # traceback.print_tb(exception.__traceback__)
+        # traceback.print_exception(exception)
+        logger.exception("Error running {}. Skipping".format(str(function)))
 
 def plot_path(directory,plot_name):
     return os.path.join(directory,plot_name+".png")
@@ -137,7 +138,7 @@ def test(ctx, filename, method, number):
 @click.option("--threshold", "-r", type=float, default=9, help="Set the threshold in standard deviations for the legacy")
 @click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
 @click.option("--window-width", "-w", type=int)
-@click.option("--integrity-filter", "-w", type=float,
+@click.option("--integrity-filter", "-w", type=float, default=0.0,
     help="Only include units where classification percentage exceeds the specified amount.")
 @click.option("--verbose", "-v", is_flag=True)
 @click.option("--by-channel", "-C", is_flag=True, help="Combine units by channel")
@@ -367,10 +368,13 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
     help="Output npz for integrity classification")
 @click.option("--checkerboard", default=False, is_flag=True,
     help="Output npz for checkerboard classification")
+@click.option("--eyechart", default=False, is_flag=True,
+    help="Output npz for eyechart classification")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
 @analysis_function
-def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard):
+def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard,
+    eyechart):
     if letter:
         safe_run(convert.save_letter_npz,
             (units, stimulus_list, name))
@@ -379,6 +383,9 @@ def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard):
             (units, stimulus_list, name))
     elif checkerboard:
         safe_run(convert.save_checkerboard_npz,
+            (units, stimulus_list, name))
+    elif eyechart:
+        safe_run(convert.save_eyechart_npz,
             (units, stimulus_list, name))
 
 test.add_command(convert_cmd)

@@ -19,7 +19,10 @@ f_flatten = glia.f_reduce(lambda a,n: a+n,[])
 
 def adjust_lifespan(experiment,adjustment=0.5):
     e = deepcopy(experiment)
-    e["stimulus"]["lifespan"] = experiment["stimulus"]["lifespan"]+adjustment*120
+    if 'stimulus' in experiment:
+        e["stimulus"]["lifespan"] = experiment["stimulus"]["lifespan"]+adjustment*120
+    else:
+        e["lifespan"] = experiment["lifespan"]+adjustment*120
     return e
 
 def truncate(experiment,adjustment=0.5):
@@ -61,12 +64,72 @@ def balance_blanks(cohort):
     return new
 
 
+def save_eyechart_npz(units, stimulus_list, name):
+    print("Saving eyechart NPZ file.")
+
+    # TODO add blanks
+    get_letters = glia.compose(
+        partial(glia.create_experiments,
+            stimulus_list=stimulus_list,append_lifespan=0.5),
+        partial(glia.group_by,
+                key=lambda x: x["metadata"]["group"]),
+        glia.group_dict_to_list,
+        glia.f_filter(group_contains_letter),
+        glia.f_map(lambda x: adjust_lifespan(x[1])),
+        partial(glia.group_by,
+                key=lambda x: x["size"]),
+        glia.f_map(partial(glia.group_by,
+                key=lambda x: x[1]["stimulus"]["metadata"]["cohort"])),
+        glia.f_map(glia.f_map(f_flatten)),
+    )
+    letters = get_letters(units)
+    # TODO account for cohorts
+    sizes = sorted(list(letters.keys()))
+    nsizes = len(sizes)
+    ncohorts = len(list(letters.values())[0])
+    ex_letters = glia.get_a_value(list(letters.values())[0])
+    nletters = len(ex_letters)
+    print("nletters",nletters)
+    duration = ex_letters[0]["lifespan"]
+    d = int(np.ceil(duration/120*1000)) # 1ms bins
+    nunits = len(units.keys())
+    tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    training_data = np.full((nsizes,tvt.training,d,nunits),0,dtype='int8')
+    training_target = np.full((nsizes,tvt.training),0,dtype='int8')
+    validation_data = np.full((nsizes,tvt.validation,d,nunits),0,dtype='int8')
+    validation_target = np.full((nsizes,tvt.validation),0,dtype='int8')
+    test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
+    test_target = np.full((nsizes,tvt.test),0,dtype='int8')
+
+    size_map = {s: i for i,s in enumerate(sizes)}
+    for size, experiments in letters.items():
+        split = glia.f_split_dict(tvt)
+        flatten_cohort = glia.compose(
+            glia.group_dict_to_list,
+            f_flatten
+        )
+        X = glia.tvt_map(split(experiments), flatten_cohort)
+
+        td, tt = glia.experiments_to_ndarrays(X.training, letter_class)
+        size_index = size_map[size]
+        training_data[size_index] = td
+        training_target[size_index] = tt
+
+        td, tt = glia.experiments_to_ndarrays(X.validation, letter_class)
+        validation_data[size_index] = td
+        validation_target[size_index] = tt
+
+        td, tt = glia.experiments_to_ndarrays(X.test, letter_class)
+        test_data[size_index] = td
+        test_target[size_index] = tt
+
+    np.savez(name, training_data=training_data, training_target=training_target,
+         validation_data=validation_data, validation_target=validation_target)
+          # test_data=test_data, test_target=test_target)
+
+
 def save_letter_npz(units, stimulus_list, name):
     print("Saving letters NPZ file.")
-
-    # TODO 
-    training_validation_test = glia.TVT(120,40,40)
-
 
     get_letters = glia.compose(
         glia.f_create_experiments(stimulus_list,append_lifespan=0.5),
@@ -83,6 +146,8 @@ def save_letter_npz(units, stimulus_list, name):
     )
     letters = glia.apply_pipeline(get_letters,units)
 
+    n = len(list(glia.get_unit(letters)[1].keys()))
+    training_validation_test = glia.tvt_by_percentage(n,60,20,20)
 
     tvt_letters = glia.apply_pipeline(glia.f_split_dict(training_validation_test),
                                       letters)
@@ -118,6 +183,7 @@ def save_letter_npz(units, stimulus_list, name):
          validation_data=validation_data, validation_target=validation_target,
           test_data=test_data, test_target=test_target)
 
+
 def save_checkerboard_npz(units, stimulus_list, name):
     print("Saving checkerboard NPZ file.")
 
@@ -125,53 +191,63 @@ def save_checkerboard_npz(units, stimulus_list, name):
     # & make split by cohort (currently by list due to
     # eyecandy mistake)
 
-    training_validation_test = glia.TVT(40,40,0)
-
-
     get_checkers = glia.compose(
-        glia.f_create_experiments(stimulus_list,append_lifespan=0.5),
+        partial(glia.create_experiments,
+            stimulus_list=stimulus_list,append_lifespan=0.5),
         partial(glia.group_by,
-                key=lambda x: x["stimulus"]["metadata"]["group"]),
+                key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
         glia.f_filter(group_contains_checkerboard),
         glia.f_map(lambda x: adjust_lifespan(x[1])),
         partial(glia.group_by,
-                key=lambda x: x["stimulus"]["size"]),
+                key=lambda x: x["size"]),
     )
-    checkers = glia.pure_retina_spikes(glia.apply_pipeline(get_checkers,units))
+    checkers = get_checkers(units)
 
     sizes = sorted(list(checkers.keys()))
     nsizes = len(sizes)
-    ncheckers = len(checkers.values())
-    nunits = len(unit.keys())
-
-    training_data = np.full((nsizes,ncheckers,nunits),0,dtype='int8')
-    training_target = np.full((nsizes,ncheckers),0,dtype='int8')
-    validation_data = np.full((nsizes,ncheckers,nunits),0,dtype='int8')
-    validation_target = np.full((nsizes,ncheckers),0,dtype='int8')
-    test_data = np.full((nsizes,ncheckers,nunits),0,dtype='int8')
-    test_target = np.full((nsizes,ncheckers),0,dtype='int8')
+    ncheckers = len(list(checkers.values())[0])
+    # print(list(checkers.values()))
+    duration = list(checkers.values())[0][0]["lifespan"]
+    d = int(np.ceil(duration/120*1000)) # 1ms bins
+    nunits = len(units.keys())
+    tvt = glia.tvt_by_percentage(ncheckers,60,40,0)
+    training_data = np.full((nsizes,tvt.training,d,nunits),0,dtype='int8')
+    training_target = np.full((nsizes,tvt.training),0,dtype='int8')
+    validation_data = np.full((nsizes,tvt.validation,d,nunits),0,dtype='int8')
+    validation_target = np.full((nsizes,tvt.validation),0,dtype='int8')
+    # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
+    # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
     size_map = {s: i for i,s in enumerate(sizes)}
-    split = glia.f_split_list(training_validation_test)
-    for size,experiments in checkers.items():
-        tvt = split(experiments)
-        td, tt = glia.units_to_ndarrays(tvt.training)
-        training_data[size] = td
-        training_target[size] = tt
+    for size, experiments in checkers.items():
+        split = glia.f_split_list(tvt)
+        n = len(experiments)
+        half = int(n/2)
+        sorted_exp = sorted(experiments, key=checker_class)
+        class_a = sorted_exp[0:half]
+        class_b = sorted_exp[half:n]
+        # careful to split evenly across classes
+        balanced_experiments = [None]*n
+        balanced_experiments[::2] = class_a
+        balanced_experiments[1::2] = class_b
+        X = split(balanced_experiments)
+        td, tt = glia.experiments_to_ndarrays(X.training, checker_class)
+        size_index = size_map[size]
+        training_data[size_index] = td
+        training_target[size_index] = tt
 
-        td, tt = glia.units_to_ndarrays(tvt.validation)
-        validation_data[size] = td
-        validation_target[size] = tt
+        td, tt = glia.experiments_to_ndarrays(X.validation, checker_class)
+        validation_data[size_index] = td
+        validation_target[size_index] = tt
 
-        td, tt = glia.units_to_ndarrays(tvt.test)
-        test_data[size] = td
-        test_target[size] = tt
+        # td, tt = glia.experiments_to_ndarrays(X.test, checker_class)
+        # test_data[size_index] = td
+        # test_target[size_index] = tt
 
-    # TODO UNTESTED!!!!!!!!!!!!!!!!
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target,
-          test_data=test_data, test_target=test_target)
+         validation_data=validation_data, validation_target=validation_target)
+          # test_data=test_data, test_target=test_target)
 
 
 def save_integrity_npz(units, stimulus_list, name):

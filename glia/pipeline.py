@@ -5,7 +5,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Any, Union
-from .functional import f_filter, f_map, f_reduce
+from .functional import f_filter, f_map, f_reduce, f_map
 from scipy import signal
 from glia.types import Unit
 from tqdm import tqdm
@@ -68,6 +68,39 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
         return experiments
 
     return create_experiments
+
+def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
+                        prepend_start_time=0, append_lifespan=0,
+                        append_start_time=None):
+    """
+    Split spike train into individual experiments according to stimulus list.
+
+    If append_start_time is given, ignore lifespan and return experiments of duration
+    append_start_time + prepend_start_time.
+    """
+    new_units = {unit_id: [] for unit_id in units.keys()}
+    experiments = []
+    for s in stimulus_list:
+        start_time, stimulus = (s['start_time'], s['stimulus'])
+        new = stimulus
+        new['start_time'] = start_time
+        experiments.append(new)
+
+
+    for i, stimulus in enumerate(stimulus_list):
+        start_time = stimulus["start_time"] - prepend_start_time
+        if append_start_time is not None:
+            end_time = start_time + append_start_time
+        else:
+            end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifespan + prepend_start_time
+
+        get_spike_train = lambda u: u.spike_train[(u.spike_train > start_time) & \
+                                              (u.spike_train < end_time)] \
+                                        - start_time
+
+        experiments[i]['units'] = f_map(get_spike_train)(units)
+    return experiments
+
 
 def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]], List[Experiment]]:
     if type(stimulus_type) is str:
@@ -432,8 +465,12 @@ def concatenate_by_stimulus(unit):
 
 def group_contains(stimulus_type, group):
     for experiment in group:
-        if experiment["stimulus"]["stimulusType"]==stimulus_type:
-            return True
+        if 'stimulus' in experiment:
+            if experiment["stimulus"]["stimulusType"]==stimulus_type:
+                return True
+        else:
+            if experiment["stimulusType"]==stimulus_type:
+                return True
     return False
 
 ### WARNING: this function sucks. Could cause unexpected mutation
