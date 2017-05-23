@@ -45,47 +45,12 @@ class Unit:
     # store humanized names as value with unit_id as key
     name_lookup = {}
 
-    def __init__(self, retina_id, channel, unit_num):
+    def __init__(self, retina_id, channel, unit_num, spike_train=None):
         # id will be URL safe MD5 hash of spike_train
-        self._id = None
-        self._name = None
+        self.id = retina_id + '-' + channel
         self.retina_id = retina_id
         self.channel = channel
         self.unit_num = unit_num
-        self.spike_train = None
-    
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def name(self):
-        return self._name
-
-    def initialize_id(self):
-        "Initialize id and name after adding Spike train."
-        if self.spike_train.size != 0:
-            md5_hash = md5(self.spike_train.tostring())
-            self._id = str(base64.urlsafe_b64encode(md5_hash.digest()),"utf8")
-            name = "{}-{}_".format(self.channel, self.unit_num) + \
-                humanhash.humanize(md5_hash.hexdigest())
-            self._name = name
-            Unit.name_lookup[self._id] = name
-        else:
-            self._id = "no-spikes"
-            self._name = "no-spikes"
-            Unit.name_lookup[self._id] = self._name
-
-# is this even used?
-class PlotFunction():
-    def __init__(self, plot_function, **kwargs):
-        warn("deprecated", DeprecationWarning)
-        "Sets kwargs as attributes."
-        self.plot_function = plot_function
-        self.__dict__.update(kwargs)
-
-    def __call__(self, ax_gen, data):
-        return self.plot_function(ax_gen, data)
+        self.spike_train = spike_train
 
 get_lifespan = lambda e: e["stimulus"]["lifespan"]
