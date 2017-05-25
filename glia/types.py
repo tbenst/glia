@@ -45,9 +45,9 @@ class Unit:
     # store humanized names as value with unit_id as key
     name_lookup = {}
 
-    def __init__(self, retina_id, channel, unit_num, spike_train=None):
+    def __init__(self, retina_id, channel, unit_num, spike_train=[]):
         # id will be URL safe MD5 hash of spike_train
-        self.id = retina_id + '-' + channel
+        self.id = retina_id + '_' + str(channel) + "_"+str(unit_num)
         self.retina_id = retina_id
         self.channel = channel
         self.unit_num = unit_num

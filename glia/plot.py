@@ -93,7 +93,7 @@ def save_unit_figs(figures, filenames):
 
 def save_unit_fig(filename, unit_id, fig):
     logger.debug("Saving {} for {}".format(filename,unit_id))
-    name = Unit.name_lookup[unit_id]
+    name = unit_id
     fig.savefig(os.path.join(config.plot_directory,name,filename+".png"))
 
 def save_retina_fig(filename, fig):

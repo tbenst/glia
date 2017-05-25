@@ -33,19 +33,21 @@ def read_raw_voltage(raw_filename):
                      dtype='int16')
 
 
-def read_plexon_txt_file(filepath, retina_id):
+def read_plexon_txt_file(filepath, retina_id, channel_map=None):
     """Assume export format of Channel,Unit,timestamp exported per waveform."""
     unit_dictionary = {}
     with open(filepath) as file:
         for row in csv.reader(file, delimiter=','):
-            channel = row[0]
+            channel = int(row[0])
             unit_num = int(row[1])
+            if channel_map:
+                channel = channel_map[channel]
+
             spike_time = float(row[2])
 
             if (channel, unit_num) not in unit_dictionary:
                 # initialize key for both dictionaries
                 unit = Unit(retina_id, channel, unit_num)
-                unit.spike_train = []
                 unit_dictionary[(channel, unit_num)] = unit
 
             unit_dictionary[(channel, unit_num)].spike_train.append(spike_time)
@@ -53,7 +55,6 @@ def read_plexon_txt_file(filepath, retina_id):
 
     for u in unit_dictionary.values():
         u.spike_train = np.array(u.spike_train)
-        u.initialize_id()
 
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 

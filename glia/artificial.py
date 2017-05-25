@@ -17,9 +17,7 @@ def random_unit(total_time, retina_id, channel, unit_num):
         spike_train.append(spike)
         spike += np.random.random()
 
-    unit = Unit(retina_id, channel, unit_num)
-    unit.spike_train = np.array(spike_train)
-    unit.initialize_id()
+    unit = Unit(retina_id, channel, unit_num, np.array(spike_train))
     return unit
 
 def hz_unit(total_time, hz, retina_id, channel, unit_num):
@@ -30,7 +28,5 @@ def hz_unit(total_time, hz, retina_id, channel, unit_num):
         spike_train.append(spike)
         spike += timestep
 
-    unit = Unit(retina_id, channel, unit_num)
-    unit.spike_train = np.array(spike_train)
-    unit.initialize_id()
+    unit = Unit(retina_id, channel, unit_num, np.array(spike_train))
     return unit

@@ -20,7 +20,7 @@ import scripts.convert as convert
 import errno
 import traceback
 import glia.config as config
-from glia.config import logger, logging
+from glia.config import logger, logging, channel_map
 from functools import update_wrapper, partial
 # from tests.conftest import display_top, tracemalloc
 
@@ -119,7 +119,7 @@ def test(ctx, filename, method, number):
     os.makedirs(os.path.join(plot_directory,"00-all"), exist_ok=True)
 
     for unit_id in ctx.obj["units"].keys():
-        name = Unit.name_lookup[unit_id]
+        name = unit_id
         os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
 
 
@@ -227,8 +227,14 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
     #### LOAD SPIKES
     spyking_regex = re.compile('.*\.result.hdf5$')
+    eye = experiment_protocol['eye']
+    experiment_n = experiment_protocol['experimentNumber']
+
+    date = experiment_protocol['date'].date().strftime("%y%m%d")
+
+    retina_id = date+'_R'+eye+'_E'+experiment_n
     if extension == ".txt":
-        ctx.obj["units"] = glia.read_plexon_txt_file(filename,filename)
+        ctx.obj["units"] = glia.read_plexon_txt_file(filename,retina_id, channel_map)
     elif re.match(spyking_regex, filename):
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
@@ -268,7 +274,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         os.makedirs(os.path.join(plot_directory,"00-all"), exist_ok=True)
 
         for unit_id in ctx.obj["units"].keys():
-            name = Unit.name_lookup[unit_id]
+            name = unit_id
             os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
 
 
