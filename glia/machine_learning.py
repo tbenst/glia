@@ -1,6 +1,7 @@
 from collections import namedtuple
 from .pipeline import get_unit
 import numpy as np
+from scipy.sparse import csr_matrix
 
 TVT = namedtuple("TVT", ['training', "validation", "test"])
 
@@ -91,21 +92,27 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     """
 
     get_class is a function"""
-    key_map = {k: i for i,k in enumerate(sorted(list(experiments[0]['units'].keys())))}
+    key_map = {}
+    for k in experiments[0]['units'].keys():
+        u = Unit.lookup(k)
+        (row,column) = u.channel
+        unit_num = u.unit_num
+        key_map[k]: (row,column,unit_num)
     duration = experiments[0]['lifespan']
     for l in experiments:
         assert duration==l['lifespan']
     d = int(np.ceil(duration/120*1000)) # 1ms bins
     nE = len(experiments)
-    data = np.full((nE,d,len(key_map.keys())), 0, dtype=np.int8)
+    # TODO hardcoded 64 channel x 10 unit
+    data = csr_matrix((nE,d,8,8,10), dtype=np.int8)
     classes = np.full(nE, np.nan, dtype=np.int8)
 
     for i,e in enumerate(experiments):
         for unit_id, spikes in e['units'].items():
-            u = key_map[unit_id]
+            (row, column, unit_num) = key_map[unit_id]
             for spike in spikes:
                 s = int(np.floor(spike*1000))
-                data[i,s,u] = 1
+                data[i,s,row,column,unit_num] = 1
         classes[i] = get_class(e)
             
 

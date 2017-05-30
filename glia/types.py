@@ -43,7 +43,7 @@ class Retina:
 class Unit:
     
     # store humanized names as value with unit_id as key
-    name_lookup = {}
+    lookup = {}
 
     def __init__(self, retina_id, channel, unit_num, spike_train=[]):
         # id will be URL safe MD5 hash of spike_train
@@ -52,5 +52,6 @@ class Unit:
         self.channel = channel
         self.unit_num = unit_num
         self.spike_train = spike_train
+        unit_lookup[self.id] = self
 
 get_lifespan = lambda e: e["stimulus"]["lifespan"]

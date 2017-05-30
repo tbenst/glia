@@ -248,31 +248,31 @@ def dump_stimulus(stimulus_list, file_path):
 def load_stimulus(file_path):
     return pickle.load(open(file_path, "rb"))
 
-    
-def create_experiments(unit: np.ndarray, stimulus_list,
-                       #is this supposed to return a list of dictionaries?
-                       duration: Seconds=100/1000) -> List[List[float]]:
-    """Split firing train into experiments based on start times (e.g. on time).
-    stimulus_list: List[(float, dict)]"""
-    num_experiments = len(stimulus_list)
-    #s[1] takes the next(eyecandy_gen) from the tuples in stimulus_list
-    experiments = [{"stimulus": s[1], "spikes": []} for s in stimulus_list]
-    i = 0
-    #generates a list of spiketimes that are normalized by the stimulus start_time
-    for spike in unit:
-        #accounts for if duration is such that the spike time belongs to the next stimulus start_time
-        #checks if at last experiment
-        if i +1 < num_experiments and spike >= stimulus_list[i+1][0]:
-            i += 1
-            #
-            if spike < stimulus_list[i][0] + duration:
-                experiments[i]["spikes"].append(spike - stimulus_list[i][0])
-        #checks if spiketime is between the start time and the duration we're counting for
-        elif (spike >= stimulus_list[i][0]) and (spike < stimulus_list[i][0] + duration):
-            # subtract start_time to normalize
-            experiments[i]["spikes"].append(spike - stimulus_list[i][0])
-    #a list of dictionaries for a given   
-    return experiments
+# mark for deletion TODO
+# def create_experiments(unit: np.ndarray, stimulus_list,
+#                        #is this supposed to return a list of dictionaries?
+#                        duration: Seconds=100/1000) -> List[List[float]]:
+#     """Split firing train into experiments based on start times (e.g. on time).
+#     stimulus_list: List[(float, dict)]"""
+#     num_experiments = len(stimulus_list)
+#     #s[1] takes the next(eyecandy_gen) from the tuples in stimulus_list
+#     experiments = [{"stimulus": s[1], "spikes": []} for s in stimulus_list]
+#     i = 0
+#     #generates a list of spiketimes that are normalized by the stimulus start_time
+#     for spike in unit:
+#         #accounts for if duration is such that the spike time belongs to the next stimulus start_time
+#         #checks if at last experiment
+#         if i +1 < num_experiments and spike >= stimulus_list[i+1][0]:
+#             i += 1
+#             #
+#             if spike < stimulus_list[i][0] + duration:
+#                 experiments[i]["spikes"].append(spike - stimulus_list[i][0])
+#         #checks if spiketime is between the start time and the duration we're counting for
+#         elif (spike >= stimulus_list[i][0]) and (spike < stimulus_list[i][0] + duration):
+#             # subtract start_time to normalize
+#             experiments[i]["spikes"].append(spike - stimulus_list[i][0])
+#     #a list of dictionaries for a given   
+#     return experiments
 
 #Analytics is a dictionary of dictionaries. The keys are the stimulus types. 
 # The values are dictionaries containing the information in stimulus (spike counts, angle, lifespan)

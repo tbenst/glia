@@ -127,6 +127,98 @@ def save_eyechart_npz(units, stimulus_list, name):
          validation_data=validation_data, validation_target=validation_target)
           # test_data=test_data, test_target=test_target)
 
+def save_letter_npz_v2(units, stimulus_list, name):
+    print("Saving letter NPZ file.")
+
+    # TODO TEST!!!
+    get_letters = glia.compose(
+        partial(glia.create_experiments,
+            stimulus_list=stimulus_list,append_lifespan=0.5),
+        partial(glia.group_by,
+                key=lambda x: x["metadata"]["group"]),
+        glia.group_dict_to_list,
+        glia.f_filter(group_contains_letter),
+        glia.f_map(lambda x: x[0:2]),
+        glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
+        partial(glia.group_by,
+                key=lambda x: x[1]["stimulus"]["metadata"]["cohort"]),
+        glia.f_map(f_flatten),
+        glia.f_map(balance_blanks)
+    )
+    letters = get_letters(units)
+    # TODO account for cohorts
+    ncohorts = len(letters.keys())
+    training_validation_test = glia.tvt_by_percentage(ncohorts,60,20,20)
+    tvt_letters = glia.f_split_dict(training_validation_test)(letters)
+    
+    training_letters = glia.compose(
+            lambda x: x.training,
+            glia.group_dict_to_list,
+            f_flatten
+        )(tvt_letters)
+
+    validation_letters = glia.compose(
+            lambda x: x.validation,
+            glia.group_dict_to_list,
+            f_flatten
+        )(tvt_letters)
+
+    test_letters = glia.compose(
+            lambda x: x.test,
+            glia.group_dict_to_list,
+            f_flatten
+        )(tvt_letters)
+
+    training_data, training_target = glia.experiments_to_ndarrays(training_letters, letter_class)
+    validation_data, validation_target = glia.experiments_to_ndarrays(validation_letters, letter_class)
+    test_data, test_target = glia.experiments_to_ndarrays(test_letters, letter_class)
+
+    np.savez(name, training_data=training_data, training_target=training_target,
+         validation_data=validation_data, validation_target=validation_target,
+          test_data=test_data, test_target=test_target)
+
+
+    # old
+
+    # nletters = len(ex_letters)
+    # print("nletters",nletters)
+    # duration = ex_letters[0]["lifespan"]
+    # d = int(np.ceil(duration/120*1000)) # 1ms bins
+    # nunits = len(units.keys())
+    # tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    # training_data = np.full((nsizes,tvt.training,d,nunits),0,dtype='int8')
+    # training_target = np.full((nsizes,tvt.training),0,dtype='int8')
+    # validation_data = np.full((nsizes,tvt.validation,d,nunits),0,dtype='int8')
+    # validation_target = np.full((nsizes,tvt.validation),0,dtype='int8')
+    # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
+    # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
+
+    # size_map = {s: i for i,s in enumerate(sizes)}
+    # for size, experiments in letters.items():
+    #     split = glia.f_split_dict(tvt)
+    #     flatten_cohort = glia.compose(
+    #         glia.group_dict_to_list,
+    #         f_flatten
+    #     )
+    #     X = glia.tvt_map(split(experiments), flatten_cohort)
+
+    #     td, tt = glia.experiments_to_ndarrays(X.training, letter_class)
+    #     size_index = size_map[size]
+    #     training_data[size_index] = td
+    #     training_target[size_index] = tt
+
+    #     td, tt = glia.experiments_to_ndarrays(X.validation, letter_class)
+    #     validation_data[size_index] = td
+    #     validation_target[size_index] = tt
+
+    #     td, tt = glia.experiments_to_ndarrays(X.test, letter_class)
+    #     test_data[size_index] = td
+    #     test_target[size_index] = tt
+
+    # np.savez(name, training_data=training_data, training_target=training_target,
+    #      validation_data=validation_data, validation_target=validation_target)
+    #       # test_data=test_data, test_target=test_target)
+
 
 def save_letter_npz(units, stimulus_list, name):
     print("Saving letters NPZ file.")
