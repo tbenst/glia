@@ -52,6 +52,6 @@ class Unit:
         self.channel = channel
         self.unit_num = unit_num
         self.spike_train = spike_train
-        unit_lookup[self.id] = self
+        Unit.lookup[self.id] = self
 
 get_lifespan = lambda e: e["stimulus"]["lifespan"]

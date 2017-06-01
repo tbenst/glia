@@ -4,9 +4,9 @@ import numpy as np
 from functools import partial
 from warnings import warn
 from collections import namedtuple
-import logging
 from copy import deepcopy
 
+import logging
 logger = logging.getLogger('glia')
 
 letter_map = {'K': 4, 'C': 1, 'V': 9, 'N': 5, 'R': 7, 'H': 3, 'O': 6, 'Z': 10, 'D': 2, 'S': 8, 'BLANK': 0}
@@ -27,9 +27,13 @@ def adjust_lifespan(experiment,adjustment=0.5):
 
 def truncate(experiment,adjustment=0.5):
     e = deepcopy(experiment)
-    lifespan = e["stimulus"]["lifespan"] #-adjustment*120
-#     e["stimulus"]["lifespan"] = lifespan
-    e["spikes"] = e["spikes"][np.where(e["spikes"]<lifespan/120)] 
+    if 'stimulus' in experiment:
+        lifespan = e["stimulus"]["lifespan"] #-adjustment*120
+    #     e["stimulus"]["lifespan"] = lifespan
+        e["spikes"] = e["spikes"][np.where(e["spikes"]<lifespan/120)] 
+    else:
+        lifespan = e['lifespan']
+        e['units'] = glia.f_map(lambda x: x[np.where(x<lifespan/120)])(e['units'])
     return e
 
 # training_validation_test = TVT(6,3,3)
@@ -51,11 +55,16 @@ def checker_class(stimulus):
         raise ValueError
 
 def balance_blanks(cohort):
-    """Remove 90% of blanks."""
+    """Remove 90% of blanks (all but first)."""
     new = []
     includes_blank = False
     for e in cohort:
-        if 'letter' in e["stimulus"]:
+        if "stimulus" in e:
+            letter = lambda x: 'letter' in e["stimulus"]
+        else:
+            letter = lambda x: 'letter' in e
+
+        if letter(e):
             new.append(e)
         else:
             if not includes_blank:
@@ -133,7 +142,7 @@ def save_letter_npz_v2(units, stimulus_list, name):
     # TODO TEST!!!
     get_letters = glia.compose(
         partial(glia.create_experiments,
-            stimulus_list=stimulus_list,append_lifespan=0.5),
+            stimulus_list=stimulus_list,append_lifespan=0.5,progress=True),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -141,7 +150,7 @@ def save_letter_npz_v2(units, stimulus_list, name):
         glia.f_map(lambda x: x[0:2]),
         glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
         partial(glia.group_by,
-                key=lambda x: x[1]["stimulus"]["metadata"]["cohort"]),
+                key=lambda x: x[1]["metadata"]["cohort"]),
         glia.f_map(f_flatten),
         glia.f_map(balance_blanks)
     )
@@ -151,6 +160,7 @@ def save_letter_npz_v2(units, stimulus_list, name):
     training_validation_test = glia.tvt_by_percentage(ncohorts,60,20,20)
     tvt_letters = glia.f_split_dict(training_validation_test)(letters)
     
+    print('finished get_letters')
     training_letters = glia.compose(
             lambda x: x.training,
             glia.group_dict_to_list,
@@ -169,9 +179,12 @@ def save_letter_npz_v2(units, stimulus_list, name):
             f_flatten
         )(tvt_letters)
 
-    training_data, training_target = glia.experiments_to_ndarrays(training_letters, letter_class)
-    validation_data, validation_target = glia.experiments_to_ndarrays(validation_letters, letter_class)
-    test_data, test_target = glia.experiments_to_ndarrays(test_letters, letter_class)
+    training_data, training_target = glia.experiments_to_ndarrays(
+        training_letters, letter_class, progress=True)
+    validation_data, validation_target = glia.experiments_to_ndarrays(
+        validation_letters, letter_class, progress=True)
+    test_data, test_target = glia.experiments_to_ndarrays(
+        test_letters, letter_class, progress=True)
 
     np.savez(name, training_data=training_data, training_target=training_target,
          validation_data=validation_data, validation_target=validation_target,

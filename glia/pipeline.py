@@ -9,6 +9,9 @@ from .functional import f_filter, f_map, f_reduce, f_map
 from scipy import signal
 from glia.types import Unit
 from tqdm import tqdm
+import logging
+logger = logging.getLogger('glia')
+
 
 
 file = str
@@ -69,17 +72,29 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
 
     return create_experiments
 
+def get_range_from_sorted(array, start, end):
+    start_index = np.searchsorted(array, start)
+    end_index = np.searchsorted(array, end)
+    return array[start_index:end_index]
+
 def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
                         prepend_start_time=0, append_lifespan=0,
-                        append_start_time=None):
+                        append_start_time=None, progress=False):
     """
     Split spike train into individual experiments according to stimulus list.
 
     If append_start_time is given, ignore lifespan and return experiments of duration
     append_start_time + prepend_start_time.
     """
+    # Creating experiments
     new_units = {unit_id: [] for unit_id in units.keys()}
     experiments = []
+    if progress:
+        print("Creating experiments")
+        gen = tqdm(enumerate(stimulus_list), total=len(stimulus_list))
+    else:
+        gen = enumerate(stimulus_list)
+
     for s in stimulus_list:
         start_time, stimulus = (s['start_time'], s['stimulus'])
         new = stimulus
@@ -87,16 +102,18 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
         experiments.append(new)
 
 
-    for i, stimulus in enumerate(stimulus_list):
+    for i, stimulus in gen:
         start_time = stimulus["start_time"] - prepend_start_time
         if append_start_time is not None:
             end_time = start_time + append_start_time
         else:
             end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifespan + prepend_start_time
 
-        get_spike_train = lambda u: u.spike_train[(u.spike_train > start_time) & \
-                                              (u.spike_train < end_time)] \
-                                        - start_time
+        get_spike_train = lambda u: get_range_from_sorted(u.spike_train,
+            start_time, end_time) - start_time
+        # get_spike_train = lambda u: u.spike_train[(u.spike_train > start_time) & \
+        #                                       (u.spike_train < end_time)] \
+        #                                 - start_time
 
         experiments[i]['units'] = f_map(get_spike_train)(units)
     return experiments

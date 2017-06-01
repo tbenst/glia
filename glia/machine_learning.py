@@ -1,7 +1,12 @@
 from collections import namedtuple
 from .pipeline import get_unit
+from .types import Unit
 import numpy as np
 from scipy.sparse import csr_matrix
+from tqdm import tqdm
+import logging
+logger = logging.getLogger('glia')
+
 
 TVT = namedtuple("TVT", ['training', "validation", "test"])
 
@@ -88,26 +93,33 @@ def units_to_ndarrays(units, get_class, get_list=lambda x: x):
     return (data, classes)
                 
 
-def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class']):
+def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'],
+    progress=False):
     """
-
+    
     get_class is a function"""
+    nE = len(experiments)
+    if progress:
+        print("converting to ndarray")
+        gen = tqdm(enumerate(experiments), total=nE)
+    else:
+        gen = enumerate(experiments)
+
     key_map = {}
     for k in experiments[0]['units'].keys():
-        u = Unit.lookup(k)
+        u = Unit.lookup[k]
         (row,column) = u.channel
         unit_num = u.unit_num
-        key_map[k]: (row,column,unit_num)
+        key_map[k] = (row,column,unit_num)
     duration = experiments[0]['lifespan']
     for l in experiments:
         assert duration==l['lifespan']
     d = int(np.ceil(duration/120*1000)) # 1ms bins
-    nE = len(experiments)
     # TODO hardcoded 64 channel x 10 unit
-    data = csr_matrix((nE,d,8,8,10), dtype=np.int8)
+    data = np.full((nE,d,8,8,10), 0, dtype=np.int8)
     classes = np.full(nE, np.nan, dtype=np.int8)
 
-    for i,e in enumerate(experiments):
+    for i,e in gen:
         for unit_id, spikes in e['units'].items():
             (row, column, unit_num) = key_map[unit_id]
             for spike in spikes:

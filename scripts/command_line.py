@@ -79,7 +79,7 @@ def match_filename(start):
     type=click.Choice(["random","hz"]), default="random",
     help="Type of test data.")
 @click.option('number', "-n",
-    type=int, default=5,
+    type=int, default=2,
     help="Number of channels.")
 @click.pass_context
 def test(ctx, filename, method, number):
@@ -95,15 +95,18 @@ def test(ctx, filename, method, number):
     total_time = sum(map(lambda x: x['stimulus']['lifespan']/120, stimulus_list))
     units = {}
     retina_id = 'test'
-    for i in range(number ):
-        for j in range(randint(1,7)):
-            if method=='random':
-                u = glia.random_unit(total_time, retina_id, i+1, j+1)
-            elif method=="hz":
-                hz = randint(1,90)
-                u = glia.hz_unit(total_time, hz, retina_id, i+1, j+1)
+    for channel_x in range(number):
+        for channel_y in range(number):
+            for unit_j in range(randint(1,7)):
+                if method=='random':
+                    u = glia.random_unit(total_time, retina_id,
+                        (channel_x+1, channel_y+1), unit_j+1)
+                elif method=="hz":
+                    hz = randint(1,90)
+                    u = glia.hz_unit(total_time, hz, retina_id,
+                        (channel_x+1, channel_y+1), unit_j+1)
 
-            units[u.id] = u
+                units[u.id] = u
     ctx.obj["units"] = units
 
     # prepare_output
@@ -382,7 +385,7 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
 def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard,
     eyechart):
     if letter:
-        safe_run(convert.save_letter_npz,
+        safe_run(convert.save_letter_npz_v2,
             (units, stimulus_list, name))
     elif integrity:
         safe_run(convert.save_integrity_npz,
