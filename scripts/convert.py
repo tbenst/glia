@@ -142,31 +142,35 @@ def save_letter_npz_v2(units, stimulus_list, name):
     # TODO TEST!!!
     get_letters = glia.compose(
         partial(glia.create_experiments,
+            # stimulus_list=stimulus_list,progress=True),
             stimulus_list=stimulus_list,append_lifespan=0.5,progress=True),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
         glia.f_filter(group_contains_letter),
         glia.f_map(lambda x: x[0:2]),
+        # glia.f_map(lambda x: x[1]),
         glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
         partial(glia.group_by,
                 key=lambda x: x[1]["metadata"]["cohort"]),
+                # key=lambda x: x["metadata"]["cohort"]),
         glia.f_map(f_flatten),
         glia.f_map(balance_blanks)
     )
     letters = get_letters(units)
+
+
     # TODO account for cohorts
     ncohorts = len(letters.keys())
     training_validation_test = glia.tvt_by_percentage(ncohorts,60,20,20)
     tvt_letters = glia.f_split_dict(training_validation_test)(letters)
     
-    print('finished get_letters')
     training_letters = glia.compose(
             lambda x: x.training,
             glia.group_dict_to_list,
             f_flatten
         )(tvt_letters)
-
+    # print("#34",training_letters[34])
     validation_letters = glia.compose(
             lambda x: x.validation,
             glia.group_dict_to_list,

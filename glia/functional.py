@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from typing import List, Any, Union
 from multiprocessing import Pool
 from .config import processes
+from tqdm import tqdm
 
 file = str
 Dir = str
@@ -50,8 +51,7 @@ def pmap(function, data, progress=False):
             gen = tqdm(iter(data), total=length)
         else:
             gen = iter(data)
-        result = list(pool.imap(function,
-                                          gen))
+        result = list(pool.imap(function, gen))
         pool.close()
         pool.join()
     elif type(data)==dict:
@@ -116,6 +116,8 @@ def f_reduce(function, initial_value=None) -> Callable[[List[Experiment],Any], A
         else:
             return reduce(function, e)
     return anonymous
+
+flatten = f_reduce(lambda a,n: a+n,[])
 
 def zip_dictionaries(*dictionaries, transform_yield=lambda v: v):
     "Iterate dictionaries and yield a tuple of their values, retaining order."

@@ -1,9 +1,11 @@
 from collections import namedtuple
 from .pipeline import get_unit
 from .types import Unit
+from .functional import f_map, pmap, flatten
 import numpy as np
 from scipy.sparse import csr_matrix
 from tqdm import tqdm
+from functools import partial
 import logging
 logger = logging.getLogger('glia')
 
@@ -23,7 +25,9 @@ def f_split_dict(tvt):
     def anonymous(dictionary):
         i = 0
         split = TVT({},{},{})
-        for k,v in dictionary.items():
+        # for k,v in dictionary.items():
+        for k in sorted(list(dictionary.keys())):
+            v = dictionary[k]
             if i < tvt.training:
                 split.training[k] = v
             elif i < tvt.validation + tvt.training:
@@ -92,6 +96,21 @@ def units_to_ndarrays(units, get_class, get_list=lambda x: x):
 
     return (data, classes)
                 
+def spike_train_to_sparse(experiment, key_map, shape):
+    array = np.full(shape, 0, dtype=np.int8)
+    for unit_id, spikes in experiment['units'].items():
+        # TODO check row/column
+        (row, column, unit_num) = key_map[unit_id]
+        # if len(spikes)==0:
+        #     print("empty spike train..?", experiment)
+        for spike in spikes:
+            s = int(np.floor(spike*1000))
+            # if s>1000:
+            #     print('>1000',spikes, e)
+            #     raise ValueError()
+            array[s,row,column,unit_num] = 1
+    return array
+
 
 def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'],
     progress=False):
@@ -99,11 +118,7 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     
     get_class is a function"""
     nE = len(experiments)
-    if progress:
-        print("converting to ndarray")
-        gen = tqdm(enumerate(experiments), total=nE)
-    else:
-        gen = enumerate(experiments)
+    print("converting to ndarray")
 
     key_map = {}
     for k in experiments[0]['units'].keys():
@@ -116,16 +131,36 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
         assert duration==l['lifespan']
     d = int(np.ceil(duration/120*1000)) # 1ms bins
     # TODO hardcoded 64 channel x 10 unit
-    data = np.full((nE,d,8,8,10), 0, dtype=np.int8)
+    shape = (nE,d,8,8,10)
+    data = np.full(shape, 0, dtype=np.int8)
     classes = np.full(nE, np.nan, dtype=np.int8)
 
-    for i,e in gen:
-        for unit_id, spikes in e['units'].items():
-            (row, column, unit_num) = key_map[unit_id]
-            for spike in spikes:
-                s = int(np.floor(spike*1000))
-                data[i,s,row,column,unit_num] = 1
-        classes[i] = get_class(e)
+    # accumulate indices for value 1
+    # easy to parallelize accumulation & then single-threaded mutation 
+    sparse = []
+
+    classes = np.array(f_map(get_class)(experiments), dtype=np.int8)
+    assert classes.shape==(nE,)
+
+    to_sparse = partial(spike_train_to_sparse, shape=shape[1:], key_map=key_map)
+    # arrays = f_map(to_sparse)(experiments)
+    arrays = pmap(to_sparse, experiments, progress=True)
+    # data[indices] = 1
+    for i,array in enumerate(arrays):
+        data[i] = array
+
+    # for idx in indices:
+        # data[idx] = 1
+    # for i,e in gen:
+    #     for unit_id, spikes in e['units'].items():
+    #         (row, column, unit_num) = key_map[unit_id]
+    #         for spike in spikes:
+    #             s = int(np.floor(spike*1000))
+    #             if s>1000:
+    #                 print('>1000',spikes, e)
+    #                 raise ValueError()
+    #             data[i,s,row,column,unit_num] = 1
+    #     classes[i] = get_class(e)
             
 
     return (data, classes)

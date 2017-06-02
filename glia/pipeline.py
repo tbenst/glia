@@ -72,9 +72,14 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
 
     return create_experiments
 
-def get_range_from_sorted(array, start, end):
+def get_range_from_sorted(array, start, end, units=None):
     start_index = np.searchsorted(array, start)
     end_index = np.searchsorted(array, end)
+    # if end_index - start_index <= 0:
+    #     print('nothing in range', start, end)
+    #     st = get_unit(units)[1].spike_train
+    #     print(max(st))
+    # print(st[np.where(st>start-1)][0:10])
     return array[start_index:end_index]
 
 def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
@@ -87,7 +92,20 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
     append_start_time + prepend_start_time.
     """
     # Creating experiments
+    sorted_spikes = {uid: np.sort(u.spike_train) for uid,u in units.items()}
     new_units = {unit_id: [] for unit_id in units.keys()}
+    # u = get_unit(units)
+    # print('UNIT',u[1].spike_train[0:100])
+    # for ui,u in units.items():
+    #     s = u.spike_train
+    #     x = len(s) - np.sum(np.equal(s, sorted(s)))
+    #     print(ui, x)
+    #     try:
+    #         assert x==0
+    #     except:
+    #         print(np.argwhere(np.diff(s)<0))
+    #         print('FAIL',s[4640:4650])
+    #         raise
     experiments = []
     if progress:
         print("Creating experiments")
@@ -101,7 +119,6 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
         new['start_time'] = start_time
         experiments.append(new)
 
-
     for i, stimulus in gen:
         start_time = stimulus["start_time"] - prepend_start_time
         if append_start_time is not None:
@@ -109,13 +126,13 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
         else:
             end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifespan + prepend_start_time
 
-        get_spike_train = lambda u: get_range_from_sorted(u.spike_train,
-            start_time, end_time) - start_time
+        get_spike_train = lambda s: get_range_from_sorted(s,
+            start_time, end_time, units) - start_time
         # get_spike_train = lambda u: u.spike_train[(u.spike_train > start_time) & \
         #                                       (u.spike_train < end_time)] \
         #                                 - start_time
 
-        experiments[i]['units'] = f_map(get_spike_train)(units)
+        experiments[i]['units'] = f_map(get_spike_train)(sorted_spikes)
     return experiments
 
 

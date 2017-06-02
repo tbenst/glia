@@ -92,19 +92,23 @@ def test(ctx, filename, method, number):
     ctx.obj = {'name': 'test'}
     stimulus_list = glia.load_stimulus(stimulus_file)
     ctx.obj["stimulus_list"] = stimulus_list
-    total_time = sum(map(lambda x: x['stimulus']['lifespan']/120, stimulus_list))
+    # total_time = sum(map(lambda x: x['stimulus']['lifespan']/120, stimulus_list))
+    last_stim = stimulus_list[-1]
+    total_time = last_stim['start_time']+last_stim['stimulus']['lifespan']/120
     units = {}
     retina_id = 'test'
     for channel_x in range(number):
         for channel_y in range(number):
-            for unit_j in range(randint(1,7)):
+            # for unit_j in range(randint(1,5)):
+            for unit_j in range(4):
                 if method=='random':
                     u = glia.random_unit(total_time, retina_id,
-                        (channel_x+1, channel_y+1), unit_j+1)
+                        (channel_x, channel_y), unit_j)
                 elif method=="hz":
-                    hz = randint(1,90)
+                    # hz = randint(1,90)
+                    hz = 60
                     u = glia.hz_unit(total_time, hz, retina_id,
-                        (channel_x+1, channel_y+1), unit_j+1)
+                        (channel_x, channel_y), unit_j)
 
                 units[u.id] = u
     ctx.obj["units"] = units

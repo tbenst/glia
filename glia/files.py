@@ -37,25 +37,41 @@ def read_plexon_txt_file(filepath, retina_id, channel_map=None):
     """Assume export format of Channel,Unit,timestamp exported per waveform."""
     unit_dictionary = {}
     with open(filepath) as file:
+        row_count = 0
         for row in csv.reader(file, delimiter=','):
+            row_count+=1
             channel = int(row[0])
-            unit_num = int(row[1])
+            unit_num = int(row[1]) - 1
             if channel_map:
-                channel = channel_map[channel]
+                c = channel_map[channel]
+            else:
+                c = channel
 
             spike_time = float(row[2])
 
-            if (channel, unit_num) not in unit_dictionary:
+            if (c, unit_num) not in unit_dictionary:
                 # initialize key for both dictionaries
-                unit = Unit(retina_id, channel, unit_num)
-                unit_dictionary[(channel, unit_num)] = unit
+                unit = Unit(retina_id, c, unit_num)
+                unit_dictionary[(c, unit_num)] = unit
 
-            unit_dictionary[(channel, unit_num)].spike_train.append(spike_time)
+            unit_dictionary[(c, unit_num)].spike_train.append(spike_time)
 
 
-    for u in unit_dictionary.values():
-        u.spike_train = np.array(u.spike_train)
+    for uid in unit_dictionary.keys():
+        unit_dictionary[uid] = unit_dictionary[uid]
+        unit_dictionary[uid].spike_train = np.array(unit_dictionary[uid].spike_train)
 
+    total_spike = 0
+    for v in unit_dictionary.values():
+        total_spike+=len(v.spike_train)
+        # total_spike+=v.spike_train.shape[0]
+    try:
+        assert total_spike==row_count
+    except:
+        print(total_spike,row_count)
+        print(unit_dictionary.keys())
+        raise
+    
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
 def combine_units_by_channel(units):
