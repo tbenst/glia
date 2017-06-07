@@ -66,12 +66,27 @@ def plot_path(directory,plot_name):
 def main():
     pass
 
-def match_filename(start):
-    files = glob(start + "*.txt")
+def match_filename(start,ext='txt'):
+    files = glob(start + "*." + ext)
     if len(files)==1:
         return files[0]
     else:
-        raise(ValueError, "Could not match file, try specifying full filename")
+        raise(ValueError("Could not match file, try specifying full filename"))
+
+@main.command()
+@click.argument('filename', type=str)
+def header(filename):
+    """Print the header length from a Multichannel systems binary file.
+
+    Commonly used for import into spike sorting software"""
+
+    if not os.path.isfile(filename):
+        filename = match_filename(filename,'voltages')
+    try:
+        print('header length: ', glia.get_header(filename)[1])
+    except:
+        raise(ValueError, "Could not get header, are you sure it's a MCD binary export?")
+
 
 @main.group(chain=True)
 @click.argument('filename', type=str)
@@ -82,14 +97,14 @@ def match_filename(start):
     type=int, default=2,
     help="Number of channels.")
 @click.pass_context
-def test(ctx, filename, method, number):
+def generate(ctx, filename, method, number):
     if not os.path.isfile(filename):
         filename = match_filename(filename)
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     stimulus_file = os.path.join(data_directory, name + ".stimulus")
 
-    ctx.obj = {'name': 'test'}
+    ctx.obj = {'name': method+"_"+name}
     stimulus_list = glia.load_stimulus(stimulus_file)
     ctx.obj["stimulus_list"] = stimulus_list
     # total_time = sum(map(lambda x: x['stimulus']['lifespan']/120, stimulus_list))
@@ -142,7 +157,7 @@ def test(ctx, filename, method, number):
 @click.option("--output", "-o", type=click.Choice(["png","pdf"]), default="png")
 @click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
 @click.option("--fix-missing",  is_flag=True, help="Attempt to fill in missing start times, use with --ignore-extra.")
-@click.option("--threshold", "-r", type=float, default=9, help="Set the threshold in standard deviations for the legacy")
+@click.option("--threshold", "-r", type=float, default=9, help="Set the threshold for flicker")
 @click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
 @click.option("--window-width", "-w", type=int)
 @click.option("--integrity-filter", "-w", type=float, default=0.0,
@@ -212,7 +227,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         if flicker_version==0.3:
             ctx.obj["stimulus_list"] = glia.create_stimulus_list_v0_4(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
-                calibration, distance)
+                calibration, distance, threshold)
 
         elif trigger == "legacy":
             ctx.obj["stimulus_list"] = glia.legacy_create_stimulus_list_from_flicker(
@@ -387,7 +402,7 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
 #     help="Output npz for letter classification")
 @analysis_function
 def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard,
-    eyechart):
+    eyechart, version=2):
     if letter:
         safe_run(convert.save_letter_npz_v2,
             (units, stimulus_list, name))
@@ -395,13 +410,17 @@ def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard,
         safe_run(convert.save_integrity_npz,
             (units, stimulus_list, name))
     elif checkerboard:
-        safe_run(convert.save_checkerboard_npz,
-            (units, stimulus_list, name))
+        if version==1:
+            safe_run(convert.save_checkerboard_npz,
+                (units, stimulus_list, name))
+        elif version==2:
+            safe_run(convert.save_checkerboard_npz_v2,
+                (units, stimulus_list, name))
     elif eyechart:
         safe_run(convert.save_eyechart_npz,
             (units, stimulus_list, name))
 
-test.add_command(convert_cmd)
+generate.add_command(convert_cmd)
 
 
 @analyze.command("raster")
@@ -427,7 +446,7 @@ def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, version=1):
             (units, stimulus_list, partial(c_unit_fig,"integrity"),
                 c_retina_fig))
 
-test.add_command(integrity_cmd)
+generate.add_command(integrity_cmd)
 
 
 @analyze.command("grating")

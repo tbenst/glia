@@ -496,7 +496,7 @@ def fill_missing_stimulus_times(stimulus_list, reverse=False):
 # flicker 0.4
 def create_stimulus_list_v0_4(analog_file, stimulus_file, lab_notebook_fp,
         data_name, eyecandy_url, ignore_extra=False, calibration=(0.55,0.24,0.88),
-        distance=1100):
+        distance=1100, within_threshold=None):
     """Uses stimulus index modulo 3 Strategy.
 
     calibration determines the mean in linear light space for each stimulus index"""
@@ -523,7 +523,7 @@ def create_stimulus_list_v0_4(analog_file, stimulus_file, lab_notebook_fp,
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.5)
     stimulus_list = estimate_missing_start_times(start_times)
 
-    validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra)
+    validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
     # create the.stimulus file
     dump_stimulus(stimulus_list, stimulus_file)
 
@@ -665,7 +665,8 @@ def next_state(current_state):
     else:
         raise ValueError("Invalid state")
 
-def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True):
+def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True,
+                            within_threshold=None):
     # probably should modify to compare with filtered
     try:
         print(next(stimulus_gen))
@@ -682,7 +683,9 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True):
         stimulus = s["stimulus"]
         lifespan = stimulus["lifespan"]/120
         try:
-            if previous_lifespan>10:
+            if within_threshold is not None:
+                np.abs(start_time - predicted_start_time) < within_threshold
+            elif previous_lifespan>10:
                 # temporary hack while eye-candy is frame based
                 assert np.abs(start_time - predicted_start_time) < previous_lifespan/20
             else:

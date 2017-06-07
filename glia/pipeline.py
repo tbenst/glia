@@ -5,10 +5,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Any, Union
-from .functional import f_filter, f_map, f_reduce, f_map
+from .functional import f_filter, f_map, f_reduce, f_map, scanl
 from scipy import signal
 from glia.types import Unit
 from tqdm import tqdm
+from copy import deepcopy
 import logging
 logger = logging.getLogger('glia')
 
@@ -135,6 +136,25 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
         experiments[i]['units'] = f_map(get_spike_train)(sorted_spikes)
     return experiments
 
+
+def merge_experiments(experiments, stimulus=None):
+    "Merge a list of experiments, using stimulus info from first unless given."
+    if stimulus is None:
+        new = deepcopy(experiments[0])
+    else:
+        new = deepcopy(stimulus)
+        new["units"] = {k: None for k in experiments[0]["units"].keys()}
+
+    time_offsets = np.array(scanl(
+        lambda a,n: a+n['lifespan']/120,0,experiments))
+
+    for u in experiments[0]["units"].keys():
+        unit_spike_trains = [ x['units'][u]+time_offsets[i] for \
+            i,x in enumerate(experiments) ]
+        new["units"][u] = np.hstack(unit_spike_trains)
+
+    new["lifespan"] = time_offsets[-1]*120
+    return new
 
 def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]], List[Experiment]]:
     if type(stimulus_type) is str:

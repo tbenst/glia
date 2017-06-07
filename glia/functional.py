@@ -128,3 +128,16 @@ def zip_dictionaries(*dictionaries, transform_yield=lambda v: v):
         value = tuple((dictionary[key] for dictionary in dictionaries))
         to_yield = (key,value)
         yield transform_yield(to_yield)
+
+def scanl(f, initial_value, mylist):
+    """> scanl(operator.add, 0, range(1, 11))
+    [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55]"""
+    res = [initial_value]
+    acc = initial_value
+    for x in mylist:
+     acc = f(acc, x)
+     res += [acc]
+    return res
+
+def get_value(x,i=0):
+    return list(x.values())[i]

@@ -1,7 +1,8 @@
 from collections import namedtuple
 from .pipeline import get_unit
 from .types import Unit
-from .functional import f_map, pmap, flatten
+from .functional import f_map, pmap, flatten, compose
+from .pipeline import group_dict_to_list
 import numpy as np
 from scipy.sparse import csr_matrix
 from tqdm import tqdm
@@ -41,6 +42,24 @@ def f_split_dict(tvt):
         return split
             
     return anonymous
+
+training_cohorts = compose(
+        lambda x: x.training,
+        group_dict_to_list,
+        flatten
+    )
+
+validation_cohorts = compose(
+        lambda x: x.validation,
+        group_dict_to_list,
+        flatten
+    )
+
+test_cohorts = compose(
+        lambda x: x.test,
+        group_dict_to_list,
+        flatten
+    )
 
 def tvt_map(tvt, f):
     return TVT(f(tvt.training), f(tvt.validation), f(tvt.test))
