@@ -183,7 +183,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
     stimulus_file = os.path.join(data_directory, name + ".stimulus")
-    ctx.obj = {"name": name}
+    ctx.obj = {"name": name, "directory": data_directory}
 
     if not notebook:
         notebooks = glob(os.path.join(data_directory, '*.yml')) + \
@@ -376,6 +376,8 @@ def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         safe_run(solid.save_unit_spike_trains,
             (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
 
+generate.add_command(solid_cmd)
+
 @analyze.command("bar")
 @click.option("--by", "-b", type=click.Choice(["angle", "width","acuity"]), default="angle")
 @plot_function
@@ -386,8 +388,10 @@ def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
             (units, stimulus_list, c_unit_fig, c_retina_fig))
     elif by=="acuity":
         safe_run(bar.save_acuity_direction,
-            (units, stimulus_list, c_unit_fig,
+            (units, stimulus_list, partial(c_unit_fig,"acuity"),
                 c_retina_fig))
+
+generate.add_command(bar_cmd)
 
 @analyze.command("convert")
 @click.option("--letter", default=False, is_flag=True,
@@ -419,6 +423,57 @@ def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard,
     elif eyechart:
         safe_run(convert.save_eyechart_npz,
             (units, stimulus_list, name))
+
+generate.add_command(convert_cmd)
+
+
+@main.command("classify")
+@click.argument('filename', type=str, default=None)
+# @click.option("--letter", default=False, is_flag=True,
+#     help="")
+# @click.option("--integrity", default=False, is_flag=True,
+#     help="")
+@click.option("--checkerboard", default=False, is_flag=True,
+    help="")
+# @click.option("--eyechart", default=False, is_flag=True,
+#     help="")
+# @click.option("--letter", default=False, is_flag=True,
+#     help="Output npz for letter classification")
+@analysis_function
+def classify_cmd(filename,#letter, integrity, eyechart,
+    checkerboard, version=2):
+    "Classify using converted NPZ"
+    if not os.path.isfile(filename):
+        filename = match_filename(filename, 'npz')
+
+    data_directory, data_name = os.path.split(filename)
+    name, extension = os.path.splitext(data_name)
+    stimulus_file = os.path.join(data_directory, name + ".stimulus")
+
+    stimulus_list = glia.load_stimulus(stimulus_file)    
+    data = np.load(filename)
+
+    plots_directory = os.path.join(data_directory, name+"-plots")
+    os.makedirs(plots_directory, exist_ok=True)
+    plot_directory = os.path.join(plot_directory,"00-all")
+    os.makedirs(os.path.join(plot_directory,"00-all"), exist_ok=True)
+
+
+    # if letter:
+    #     safe_run(classify.save_letter_npz_v2,
+    #         (units, stimulus_list, name))
+    # elif integrity:
+    #     safe_run(convert.save_integrity_npz,
+    #         (units, stimulus_list, name))
+    if checkerboard:
+        if version==1:
+            raise(ValueError("not implemented."))
+        elif version==2:
+            safe_run(classify.checkerboard_svc.main,
+                (data, stimulus_list), plot_directory)
+    # elif eyechart:
+    #     safe_run(convert.save_eyechart_npz,
+    #         (units, stimulus_list, name))
 
 generate.add_command(convert_cmd)
 

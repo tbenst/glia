@@ -114,12 +114,15 @@ def get_fr_dsi_osi(units, stimulus_list):
     return (bar_firing_rate, bar_dsi, bar_osi)
 
 
-def plot_unit_response_by_angle(axis_gen, data):
+def plot_unit_response_by_angle(fig,axis_gen, data):
     """Plot the average for each speed and width."""
     # we will accumulate by angle in this dictionary and then dividethis is
     bar_firing_rate, bar_dsi, bar_osi = data
     analytics = glia.by_speed_width_then_angle(bar_firing_rate)
-    speed_widths = analytics.keys()
+    speed_widths = sorted(
+        sorted(list(analytics.keys()),
+            key=lambda x: x[1]),
+        key=lambda x: x[0])
     speeds = sorted(list(set([speed for speed,width in speed_widths])))
     widths = sorted(list(set([width for speed,width in speed_widths])))
     color=iter(plt.cm.rainbow(np.linspace(0,1,len(speeds))))
@@ -127,7 +130,14 @@ def plot_unit_response_by_angle(axis_gen, data):
     speed_style = {speed: next(color) for speed in speeds}
     width_style = {width: next(w) for width in widths}
     
-    for speed_width, angle_dictionary in analytics.items():
+    max_spikes = 0
+
+    for angle_dictionary in analytics.values():
+        for average_number_spikes in angle_dictionary.values():
+            max_spikes = max(max_spikes,average_number_spikes)
+
+    for speed_width in speed_widths:
+        angle_dictionary = analytics[speed_width]
         ax = next(axis_gen)
         speed, width = speed_width
         line_angle = []
@@ -142,6 +152,7 @@ def plot_unit_response_by_angle(axis_gen, data):
         ax.plot(line_angle,line_radius, linewidth=width_style[width], color=speed_style[speed])
         ax.set_title("speed: {}, width: {}".format(*speed_width), y=1.1)
         ax.set_xlabel("avg # of spikes", labelpad=12)
+        ax.set_ylim([0,max_spikes])
 
 DirectionResponse = nt("DirectionResponse", ["angle", "response"])
 
@@ -194,7 +205,7 @@ def plot_unit_response_for_speed(axis_gen, data, speed):
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
 
-def plot_unit_dsi_osi_table(axis_gen,data):
+def plot_unit_dsi_osi_table(fig, axis_gen,data):
     ax = next(axis_gen)
     bar_firing_rate, bar_dsi, bar_osi = data
     analytics = glia.by_speed_width_then_angle(bar_firing_rate)
@@ -226,7 +237,7 @@ def plot_unit_dsi_osi_table(axis_gen,data):
     table.auto_set_font_size(False)
     table.set_fontsize(12)
 
-def plot_population_dsi_osi(ax,data):
+def plot_population_dsi_osi(fig,ax,data):
     bar_dsi, bar_osi = data
 
     population_dsi = pd.DataFrame.from_dict(bar_dsi, orient="index")
@@ -267,7 +278,7 @@ def plot_population_dsi_osi(ax,data):
 def plot_direction_and_train(ax,data):
     pass
 
-def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_retina_figure):
+def save_unit_response_by_angle(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Calculating DSI & OSI")
     bar_firing_rate, bar_dsi, bar_osi = get_fr_dsi_osi(units, stimulus_list)
 
@@ -282,26 +293,28 @@ def save_unit_response_by_angle(units, stimulus_list, c_add_unit_figures, c_add_
         ncols=1
 
     result = glia.plot_units(plot_unit_response_by_angle,
+        partial(c_unit_fig,"angle"),
         bar_firing_rate,bar_dsi,bar_osi,
         nplots=nplots, subplot_kw={"projection": "polar"},
         ax_xsize=4, ax_ysize=5, ncols=3)
-    c_add_unit_figures(result)
-    glia.close_figs([fig for the_id,fig in result])
+    # c_unit_fig(result)
+    # glia.close_figs([fig for the_id,fig in result])
 
 
     print("plotting unit DSI/OSI table")
     result = glia.plot_units(plot_unit_dsi_osi_table,
+        partial(c_unit_fig,"selectivity_table"),
         bar_firing_rate,bar_dsi,bar_osi,
         ax_xsize=6, ax_ysize=4)
-    c_add_unit_figures(result)
-    glia.close_figs([fig for the_id,fig in result])
+    # c_unit_fig(result)
+    # glia.close_figs([fig for the_id,fig in result])
 
 
 
     fig_population,ax = plt.subplots(2,1)
     print("plotting population by DSI & OSI")
-    plot_population_dsi_osi(ax, (bar_dsi, bar_osi))
-    c_add_retina_figure(fig_population)
+    plot_population_dsi_osi(fig_population, ax, (bar_dsi, bar_osi))
+    c_add_retina_figure("DSI_OSI",fig_population)
     plt.close(fig_population)
 
 def get_nplots(stimulus_list, parameter):
