@@ -89,9 +89,8 @@ def merge_units(a,b):
     assert channel == b.channel
     retina_id = a.retina_id
     assert retina_id == b.retina_id
-    new = Unit(retina_id, channel, "all")
-    new.spike_train = merge_spike_trains(a.spike_train,b.spike_train)
-    new.initialize_id()
+    spike_train = merge_spike_trains(a.spike_train,b.spike_train)
+    new = Unit(retina_id, channel, "all", spike_train)
     return new
 
 def merge_spike_trains(a,b):
