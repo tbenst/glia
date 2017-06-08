@@ -305,7 +305,7 @@ def save_unit_response_by_angle(units, stimulus_list, c_unit_fig, c_add_retina_f
     result = glia.plot_units(plot_unit_dsi_osi_table,
         partial(c_unit_fig,"selectivity_table"),
         bar_firing_rate,bar_dsi,bar_osi,
-        ax_xsize=6, ax_ysize=4)
+        ax_xsize=16, ax_ysize=3)
     # c_unit_fig(result)
     # glia.close_figs([fig for the_id,fig in result])
 
