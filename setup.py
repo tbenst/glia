@@ -31,7 +31,7 @@ setup(name='glia',
       ],
       keywords='neuroscience mea microelectrode',
       entry_points={
-          'console_scripts': ['glia=scripts.command_line:main'],
+          'console_scripts': ['glia=glia_scripts.command_line:main'],
       },
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
