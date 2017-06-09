@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='glia',
       version='0.4',
@@ -7,7 +7,7 @@ setup(name='glia',
       author='Tyler Benster',
       author_email='tbenst@gmail.com',
       # license='None',
-      packages=['glia', 'scripts'],
+      packages=find_packages(),
       zip_safe=False,
       classifiers=[
           # How mature is this project? Common values are

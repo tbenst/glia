@@ -11,14 +11,14 @@ import click
 import os
 import sys
 import re
-import scripts.solid as solid
-import scripts.bar as bar
-import scripts.acuity as acuity
-import scripts.grating as grating
-import scripts.raster as raster
-import scripts.convert as convert
+import glia_scripts.solid as solid
+import glia_scripts.bar as bar
+import glia_scripts.acuity as acuity
+import glia_scripts.grating as grating
+import glia_scripts.raster as raster
+import glia_scripts.convert as convert
 import errno
-from .classify import checkerboard_svc
+from glia_scripts.classify import checkerboard_svc
 import traceback
 import glia.config as config
 from glia.config import logger, logging, channel_map
