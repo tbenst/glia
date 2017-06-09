@@ -18,6 +18,7 @@ import scripts.grating as grating
 import scripts.raster as raster
 import scripts.convert as convert
 import errno
+from .classify import checkerboard_svc
 import traceback
 import glia.config as config
 from glia.config import logger, logging, channel_map
@@ -29,6 +30,8 @@ from glob import glob
 from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
 from random import randint
+import numpy as np
+
 
 
 def plot_function(f):
@@ -439,7 +442,6 @@ generate.add_command(convert_cmd)
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-@analysis_function
 def classify_cmd(filename,#letter, integrity, eyechart,
     checkerboard, version=2):
     "Classify using converted NPZ"
@@ -455,8 +457,8 @@ def classify_cmd(filename,#letter, integrity, eyechart,
 
     plots_directory = os.path.join(data_directory, name+"-plots")
     os.makedirs(plots_directory, exist_ok=True)
-    plot_directory = os.path.join(plot_directory,"00-all")
-    os.makedirs(os.path.join(plot_directory,"00-all"), exist_ok=True)
+    plot_directory = os.path.join(plots_directory,"00-all")
+    os.makedirs(plot_directory, exist_ok=True)
 
 
     # if letter:
@@ -469,8 +471,8 @@ def classify_cmd(filename,#letter, integrity, eyechart,
         if version==1:
             raise(ValueError("not implemented."))
         elif version==2:
-            safe_run(classify.checkerboard_svc.main,
-                (data, stimulus_list), plot_directory)
+            safe_run(checkerboard_svc.main,
+                (data, stimulus_list, plot_directory))
     # elif eyechart:
     #     safe_run(convert.save_eyechart_npz,
     #         (units, stimulus_list, name))

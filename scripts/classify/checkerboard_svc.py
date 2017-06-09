@@ -1,10 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import glia
 from sklearn import datasets, svm, metrics, neighbors
 from sklearn.neighbors import KNeighborsClassifier
 import sklearn
-from functools import reduce
+import os
+from functools import reduce, partial
 
 from scipy.stats import binom
 
@@ -14,12 +16,12 @@ def px_to_logmar(px,px_per_deg=7.5):
 
 def get_sizes(stimulus_list):
     f = glia.compose(
-        glia.f_filter(lambda x: x['stimulusType']=='checkerboard')
+        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='CHECKERBOARD'),
         partial(glia.group_by,
-                key=lambda x: x["size"])
+                key=lambda x: x["stimulus"]["size"])
         )
-
     sizes = sorted(list(f(stimulus_list).keys()))
+    assert len(sizes)>0
     return sizes
 
 def svm_helper(training_data, training_target, validation_data, validation_target):
@@ -35,7 +37,6 @@ def svm_helper(training_data, training_target, validation_data, validation_targe
 def main(data, stimulus_list, plot_directory):
 
     sizes = get_sizes(stimulus_list)
-
 
     shape = data["training_data"].shape
     (nsizes, n_training, timesteps, n_x, n_y, n_units) = shape
@@ -108,5 +109,5 @@ def main(data, stimulus_list, plot_directory):
     ax.set_ylim(0.35,1.05)
     ax.set_xlim(1.9,3.65)
     ax.legend(loc=(0.5,0.1))
-    ax.title('Checkerboard classification via Support Vector Clustering')
+    ax.set_title('Checkerboard classification via Support Vector Clustering')
     fig.savefig(os.path.join(plot_directory,"checkerboard_acuity.png"))
