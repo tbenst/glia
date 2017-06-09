@@ -325,7 +325,7 @@ def save_checkerboard_npz_v2(units, stimulus_list, name):
         # td, tt = glia.experiments_to_ndarrays(X.test, checker_class)
         # test_data[size_index] = td
         # test_target[size_index] = tt
-
+    print('saving to ',name)
     np.savez(name, training_data=training_data, training_target=training_target,
          validation_data=validation_data, validation_target=validation_target)
           # test_data=test_data, test_target=test_target)

@@ -48,7 +48,7 @@ def analysis_function(f):
     def new_func(ctx, *args, **kwargs):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
-            ctx.obj['name'],
+            ctx.obj['filename'],
             *args[2:], **kwargs)
     return update_wrapper(new_func, f)
 
@@ -186,7 +186,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
     stimulus_file = os.path.join(data_directory, name + ".stimulus")
-    ctx.obj = {"name": name, "directory": data_directory}
+    ctx.obj = {"filename": os.path.join(data_directory,name)}
 
     if not notebook:
         notebooks = glob(os.path.join(data_directory, '*.yml')) + \
@@ -408,24 +408,24 @@ generate.add_command(bar_cmd)
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
 @analysis_function
-def convert_cmd(units, stimulus_list, name, letter, integrity, checkerboard,
+def convert_cmd(units, stimulus_list, filename, letter, integrity, checkerboard,
     eyechart, version=2):
     if letter:
         safe_run(convert.save_letter_npz_v2,
-            (units, stimulus_list, name))
+            (units, stimulus_list, filename))
     elif integrity:
         safe_run(convert.save_integrity_npz,
-            (units, stimulus_list, name))
+            (units, stimulus_list, filename))
     elif checkerboard:
         if version==1:
             safe_run(convert.save_checkerboard_npz,
-                (units, stimulus_list, name))
+                (units, stimulus_list, filename))
         elif version==2:
             safe_run(convert.save_checkerboard_npz_v2,
-                (units, stimulus_list, name))
+                (units, stimulus_list, filename))
     elif eyechart:
         safe_run(convert.save_eyechart_npz,
-            (units, stimulus_list, name))
+            (units, stimulus_list, filename))
 
 generate.add_command(convert_cmd)
 
