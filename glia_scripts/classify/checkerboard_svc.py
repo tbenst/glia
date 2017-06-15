@@ -35,6 +35,7 @@ def svm_helper(training_data, training_target, validation_data, validation_targe
     return metrics.accuracy_score(expected, predicted)
 
 def main(data, stimulus_list, plot_directory):
+    print("plotting checkerboard classification accuracy.")
 
     sizes = get_sizes(stimulus_list)
 
