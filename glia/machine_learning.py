@@ -97,7 +97,7 @@ def units_to_ndarrays(units, get_class, get_list=lambda x: x):
     duration = unitListE[0]['stimulus']['lifespan']
     for l in unitListE:
         assert duration==l['stimulus']['lifespan']
-    d = int(np.ceil(duration/120*1000)) # 1ms bins
+    d = int(np.ceil(duration*1000)) # 1ms bins
     nE = len(unitListE)
     data = np.full((nE,d,len(key_map.keys())), 0, dtype=np.int8)
     classes = np.full(nE, np.nan, dtype=np.int8)
@@ -148,7 +148,7 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     duration = experiments[0]['lifespan']
     for l in experiments:
         assert duration==l['lifespan']
-    d = int(np.ceil(duration/120*1000)) # 1ms bins
+    d = int(np.ceil(duration*1000)) # 1ms bins
     # TODO hardcoded 64 channel x 10 unit
     shape = (nE,d,8,8,10)
     data = np.full(shape, 0, dtype=np.int8)

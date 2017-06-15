@@ -406,7 +406,7 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=0,append_lifespan=0
         else:
             trial = i
 
-        lifespan = stimulus['lifespan'] / 120
+        lifespan = stimulus['lifespan']
         logger.debug("plot_spike_trains ({}) iteration: {}, lifespan: {}".format(
             stimulus["stimulusType"],trial,lifespan))
         if lifespan > 120:
@@ -441,7 +441,7 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=0,append_lifespan=0
 
 
 def group_lifespan(group):
-    return sum(list(map(lambda x: x["stimulus"]["lifespan"]/120, group)))
+    return sum(list(map(lambda x: x["stimulus"]["lifespan"], group)))
 
 
 def raster_group(fig, axis_gen, data):
@@ -458,7 +458,7 @@ def raster_group(fig, axis_gen, data):
         end_time = 0
         for i,v in enumerate(group):
             stimulus, spike_train = (v["stimulus"], v["spikes"])
-            lifespan = stimulus['lifespan'] / 120
+            lifespan = stimulus['lifespan']
             end_time += lifespan
 
 

@@ -39,7 +39,7 @@ def plot_spike_trains_by_angle(axis_gen,data):
             ax = next(axis_gen)
             if speed_width not in axes:
                 axes[speed_width] = {}
-            axes[speed_width][trial] = (ax,stimulus["lifespan"]/120)
+            axes[speed_width][trial] = (ax,stimulus["lifespan"])
 
         if spike_train.size>0:
             glia.draw_spikes(ax, spike_train, ymin=y+0.3,ymax=y+1)
@@ -82,7 +82,7 @@ def plot_spike_trains_by_trial(axis_gen,data):
         ax.set_title("Speed: {}, Width: {}".format(
             speed_width[0],speed_width[1]))
         ax.set_xlabel("Time (s)")
-        ax.set_xlim([0,stimulus['lifespan']/120])
+        ax.set_xlim([0,stimulus['lifespan']])
         # trial is now the count
         ax.set_ylim([0,trial])
         ax.set_ylabel("Trial #")
@@ -157,7 +157,7 @@ def plot_unit_response_by_angle(fig,axis_gen, data):
 DirectionResponse = nt("DirectionResponse", ["angle", "response"])
 
 def map_ifr(s):
-    ifr = max(glia.IFR(s["spikes"],s["stimulus"]["lifespan"]/120))
+    ifr = max(glia.IFR(s["spikes"],s["stimulus"]["lifespan"]))
     # logger.info(ifr)
     return DirectionResponse(response=ifr, angle=s["stimulus"]['angle'])
 

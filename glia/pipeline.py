@@ -61,7 +61,7 @@ def f_create_experiments(stimulus_list: List[Dict], prepend_start_time=0, append
             if append_start_time is not None:
                 end_time = start_time + append_start_time
             else:
-                end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifespan + prepend_start_time
+                end_time = start_time + stimulus["stimulus"]["lifespan"] + append_lifespan + prepend_start_time
 
             bool_indices = (spike_train > start_time) & (spike_train < end_time)
 
@@ -125,7 +125,7 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
         if append_start_time is not None:
             end_time = start_time + append_start_time
         else:
-            end_time = start_time + stimulus["stimulus"]["lifespan"]/120 + append_lifespan + prepend_start_time
+            end_time = start_time + stimulus["stimulus"]["lifespan"] + append_lifespan + prepend_start_time
 
         get_spike_train = lambda s: get_range_from_sorted(s,
             start_time, end_time, units) - start_time
@@ -146,14 +146,14 @@ def merge_experiments(experiments, stimulus=None):
         new["units"] = {k: None for k in experiments[0]["units"].keys()}
 
     time_offsets = np.array(scanl(
-        lambda a,n: a+n['lifespan']/120,0,experiments))
+        lambda a,n: a+n['lifespan'],0,experiments))
 
     for u in experiments[0]["units"].keys():
         unit_spike_trains = [ x['units'][u]+time_offsets[i] for \
             i,x in enumerate(experiments) ]
         new["units"][u] = np.hstack(unit_spike_trains)
 
-    new["lifespan"] = time_offsets[-1]*120
+    new["lifespan"] = time_offsets[-1]
     return new
 
 def f_has_stimulus_type(stimulus_type: Union[str]) -> Callable[[List[Experiment]], List[Experiment]]:
@@ -207,7 +207,7 @@ def f_calculate_firing_rate_by_stimulus():
         new = {}
         for stimulus_key, spike_trains in analytics.items():
             stimulus = eval(stimulus_key)
-            duration = stimulus["lifespan"]/120
+            duration = stimulus["lifespan"]
             new[stimulus_key] = list(map(lambda x: len(x) / duration,
                                        spike_trains))
         return new
@@ -350,7 +350,7 @@ def f_instantaneous_firing_rate(bandwidth, bin_width=0.001, sigma=6):
         for experiment in experiments:
             stimulus = experiment["stimulus"]
             spike_train = experiment["spikes"]
-            end_time = np.ceil(stimulus["lifespan"]/120)
+            end_time = np.ceil(stimulus["lifespan"])
             
             new_experiment = {}
             new_experiment["spikes"] = IFR(spike_train,end_time,bandwidth,bin_width,sigma)
@@ -507,7 +507,7 @@ def f_calculate_peak_ifr_by_stimulus(bandwidth=0.15, bin_width=0.001, sigma=6):
         new = {}
         for stimulus_key, spike_trains in analytics.items():
             stimulus = eval(stimulus_key)
-            duration = stimulus["lifespan"]/120
+            duration = stimulus["lifespan"]
             new[stimulus_key] = list(map(lambda x: np.max(IFR(x,duration,bandwidth,bin_width,sigma)),
                                        spike_trains))
         return new

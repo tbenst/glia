@@ -30,10 +30,10 @@ victor_purpura = lambda v: elephant.spike_train_dissimilarity.victor_purpura_dis
 
 
 def experiment_to_SpikeTrain(experiment):
-    return SpikeTrain(experiment["spikes"]*quantities.s,experiment["stimulus"]["lifespan"]/120)
+    return SpikeTrain(experiment["spikes"]*quantities.s,experiment["stimulus"]["lifespan"])
 
 def units_to_SpikeTrain(experiment):
-    t = experiment["lifespan"]/120
+    t = experiment["lifespan"]
     return glia.f_map(lambda x: SpikeTrain(x*quantities.s,
         t))(experiment["units"])
 

@@ -22,6 +22,7 @@ from sklearn import manifold
 from sklearn.metrics import euclidean_distances
 import itertools
 import elephant
+from math import isclose
 from neo.core import SpikeTrain
 import quantities
 
@@ -37,7 +38,7 @@ def truncate_experiment(max_time, experiment):
 # i = glia.compose(
 #     glia.f_create_experiments(stimulus_list),
 #     glia.f_has_stimulus_type(["SOLID"]),
-#     partial(filter,lambda x: x["stimulus"]["lifespan"]==60),
+#     partial(filter,lambda x: isclose(x["stimulus"]["lifespan"],0.5)),
 #     lambda x: list(x),
 # )
 

@@ -18,7 +18,7 @@ def f_create_experiments_test(unit, stimulus_list):
 	create = glia.f_create_experiments(stimulus_list)
 	experiments = create(spike_train)
 	for e in experiments:
-		time = e["stimulus"]["lifespan"]/120
+		time = e["stimulus"]["lifespan"]
 		spikes = e["spikes"]
 		number_of_spikes = len(spikes)
 		assert time==number_of_spikes

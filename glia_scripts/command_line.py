@@ -110,9 +110,9 @@ def generate(ctx, filename, method, number):
     ctx.obj = {'name': method+"_"+name}
     stimulus_list = glia.load_stimulus(stimulus_file)
     ctx.obj["stimulus_list"] = stimulus_list
-    # total_time = sum(map(lambda x: x['stimulus']['lifespan']/120, stimulus_list))
+    # total_time = sum(map(lambda x: x['stimulus']['lifespan'], stimulus_list))
     last_stim = stimulus_list[-1]
-    total_time = last_stim['start_time']+last_stim['stimulus']['lifespan']/120
+    total_time = last_stim['start_time']+last_stim['stimulus']['lifespan']
     units = {}
     retina_id = 'test'
     for channel_x in range(number):
@@ -228,23 +228,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     except OSError:
         logger.warning("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
         if flicker_version==0.3:
-            ctx.obj["stimulus_list"] = glia.create_stimulus_list_v0_4(
+            ctx.obj["stimulus_list"] = glia.create_stimulus_list(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
                 calibration, distance, threshold)
-
-        elif trigger == "legacy":
-            ctx.obj["stimulus_list"] = glia.legacy_create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width)
-        elif trigger == "flicker":
-            ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, fix_missing, window_height, window_width)
-        elif trigger == "fix":
-            ctx.obj["stimulus_list"] = glia.alternate_create_stimulus_list_from_flicker(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width,
-                fix_missing=True)
-        elif trigger == "detect-solid":
-            ctx.obj["stimulus_list"] = glia.create_stimulus_list_from_SOLID(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra, threshold, window_height, window_width)
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
@@ -411,18 +397,11 @@ generate.add_command(bar_cmd)
 def convert_cmd(units, stimulus_list, filename, letter, integrity, checkerboard,
     eyechart, version=2):
     if letter:
-        safe_run(convert.save_letter_npz_v2,
-            (units, stimulus_list, filename))
-    elif integrity:
-        safe_run(convert.save_integrity_npz,
+        safe_run(convert.save_letter_npz,
             (units, stimulus_list, filename))
     elif checkerboard:
-        if version==1:
-            safe_run(convert.save_checkerboard_npz,
-                (units, stimulus_list, filename))
-        elif version==2:
-            safe_run(convert.save_checkerboard_npz_v2,
-                (units, stimulus_list, filename))
+        safe_run(convert.save_checkerboard_npz,
+            (units, stimulus_list, filename))
     elif eyechart:
         safe_run(convert.save_eyechart_npz,
             (units, stimulus_list, filename))
@@ -525,20 +504,9 @@ def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
 @plot_function
 def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         prepend, append, version):
-    if version==1:
-        safe_run(acuity.save_acuity_chart,
-            (units, stimulus_list, partial(c_unit_fig,"acuity"), c_retina_fig,
-                prepend, append))
-    elif version==2:
-        # snapshot = tracemalloc.take_snapshot()
-        # display_top(snapshot)
-        safe_run(acuity.save_acuity_chart_v2,
-            (units, stimulus_list, c_unit_fig, c_retina_fig,
-                prepend, append))
-    elif version==3:
-        safe_run(acuity.save_acuity_chart_v3,
-            (units, stimulus_list, c_unit_fig, c_retina_fig,
-                prepend, append))
+    safe_run(acuity.save_acuity_chart,
+        (units, stimulus_list, c_unit_fig, c_retina_fig,
+            prepend, append))
 
 
 

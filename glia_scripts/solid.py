@@ -5,6 +5,7 @@ from functools import partial
 from warnings import warn
 import logging
 from copy import deepcopy
+from math import isclose
 from sklearn import svm, metrics
 
 logger = logging.getLogger('glia')
@@ -13,7 +14,7 @@ def plot_psth(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1,bin_wid
     for s,spike_train in data.items():
         ax = next(ax_gen)
         stimulus = eval(s)
-        lifespan = stimulus["lifespan"]/120
+        lifespan = stimulus["lifespan"]
         # if lifespan > 5:
         #     print("skipping stimulus longer than 5 seconds")
         #     return None
@@ -43,7 +44,7 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1
         for v in filtered_data:
             # print(type(v))
             stimulus, spike_train = (v["stimulus"], v["spikes"])
-            lifespan = stimulus['lifespan'] / 120
+            lifespan = stimulus['lifespan']
             if lifespan > 20:
                 print("skipping stimulus longer than 20 seconds")
                 continue
@@ -76,7 +77,7 @@ def plot_spike_trains_vFail(fig, axis_gen, data):
 
         for v in data[i:i+3]:
             stimulus, spike_train = (v["stimulus"], v["spikes"])
-            lifespan = stimulus['lifespan'] / 120
+            lifespan = stimulus['lifespan']
             end_time = lifespan + offset
             if lifespan > 20:
                 logger.warning("skipping stimulus longer than 20 seconds")
@@ -104,13 +105,13 @@ def plot_spike_train_triplet(fig, axis_gen, data):
     trial = 0
     # hardcoded 2 must correspond to pivot
     longest_group = max(map(lambda x: get_lifespan(x[1]),
-        data))/120 + 2
+        data)) + 2
     for group in data:
         # x offset for row
         offset = 0
         for i,v in enumerate(group):
             stimulus, spike_train = (v["stimulus"], v["spikes"])
-            lifespan = stimulus['lifespan'] / 120
+            lifespan = stimulus['lifespan']
 
             if i==0:
                 # only show last second before middle stimuli
@@ -184,8 +185,8 @@ def save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_add_retina_figure
     c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
-def filter_time(l):
-    return list(filter(lambda x: x["stimulus"]["lifespan"]==60, l))
+def filter_lifespan(l, lifespan=0.5):
+    return list(filter(lambda x: isclose(x["stimulus"]["lifespan"],lifespan), l))
 
 def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating integrity chart")
@@ -193,7 +194,7 @@ def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_lifespan=2),
         glia.f_has_stimulus_type(["SOLID"]),
-        filter_time
+        filter_lifespan
     )
     response = glia.apply_pipeline(get_solid,units, progress=True)
     plot_function = partial(plot_spike_trains,prepend_start_time=1,append_lifespan=2)
@@ -215,7 +216,7 @@ def integrity_spike_counts(cohort):
         on_lifespan = on_experiment["stimulus"]["lifespan"]
         off_lifespan = off_experiment["stimulus"]["lifespan"]
 
-        if dark_lifespan >=120 and on_lifespan==60 and off_lifespan >=60:
+        if dark_lifespan >=1 and isclose(on_lifespan, 0.5) and off_lifespan >=0.5:
             d = dark_experiment["spikes"]
             dark_experiments.append(d[(d>0.5) & (d<=1)].size)
             f = off_experiment['spikes']
