@@ -554,6 +554,7 @@ def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
         (units, stimulus_list, c_unit_fig, c_retina_fig,
             prepend, append))
 
+generate.add_command(acuity_cmd)
 
 
 # @main.command()
