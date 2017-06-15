@@ -75,7 +75,6 @@ def create_epl_gen(program, epl, window_width, window_height, seed,
     loop = asyncio.get_event_loop()
     generator = get_stimulus(url)
     a = loop.run_until_complete(generator)
-    print(a)
     return a
 
 def open_lab_notebook(filepath):
