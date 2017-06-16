@@ -1,6 +1,10 @@
-FROM continuumio/anaconda3:4.0.0p0
+FROM continuumio/anaconda3:4.4.0
 
 ENV PYTHONUNBUFFERED 0
+
+RUN apt-get update && apt-get -y install \
+    libgl1-mesa-glx
+
 # build matplotlib font cache
 RUN python -c 'import matplotlib.pyplot'
 

@@ -188,6 +188,7 @@ def create_stimulus_list(analog_file, stimulus_file, lab_notebook_fp,
         experiment_protocol)
     stimulus_gen = create_epl_gen(program, epl, window_width,
             window_height, seed, eyecandy_url)
+    print('checking start times')
         
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.8)
     stimulus_list = estimate_missing_start_times(start_times)

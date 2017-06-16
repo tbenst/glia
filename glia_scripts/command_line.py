@@ -18,7 +18,7 @@ import glia_scripts.grating as grating
 import glia_scripts.raster as raster
 import glia_scripts.convert as convert
 import errno
-from glia_scripts.classify import checkerboard_svc
+from glia_scripts.classify import svc
 import traceback
 import glia.config as config
 from glia.config import logger, logging, channel_map
@@ -257,11 +257,12 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     try:
         ctx.obj["stimulus_list"] = glia.load_stimulus(stimulus_file)
     except OSError:
-        logger.warning("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
+        print("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
         if flicker_version==0.3:
             ctx.obj["stimulus_list"] = glia.create_stimulus_list(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
                 calibration, distance, threshold)
+            print('finished creating stimulus list')
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
@@ -418,6 +419,8 @@ generate.add_command(bar_cmd)
     help="Output npz for letter classification")
 @click.option("--integrity", default=False, is_flag=True,
     help="Output npz for integrity classification")
+@click.option("--grating", '-g', default=False, is_flag=True,
+    help="Output npz for grating classification")
 @click.option("--checkerboard", '-c', default=False, is_flag=True,
     help="Output npz for checkerboard classification")
 @click.option("--eyechart", default=False, is_flag=True,
@@ -426,12 +429,15 @@ generate.add_command(bar_cmd)
 #     help="Output npz for letter classification")
 @analysis_function
 def convert_cmd(units, stimulus_list, filename, letter, integrity, checkerboard,
-    eyechart, version=2):
+    eyechart, grating, version=2):
     if letter:
         safe_run(convert.save_letter_npz,
             (units, stimulus_list, filename))
     elif checkerboard:
         safe_run(convert.save_checkerboard_npz,
+            (units, stimulus_list, filename))
+    elif grating:
+        safe_run(convert.save_grating_npz,
             (units, stimulus_list, filename))
     elif eyechart:
         safe_run(convert.save_eyechart_npz,
@@ -458,11 +464,13 @@ def strip_generated(name, choices=generate_choices):
 #     help="")
 @click.option("--checkerboard", '-c', default=False, is_flag=True,
     help="")
+@click.option("--grating", '-g', default=False, is_flag=True,
+    help="")
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-def classify_cmd(filename, stimulus, #letter, integrity, eyechart,
+def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
     checkerboard, version=2):
     "Classify using converted NPZ"
     if not os.path.isfile(filename):
@@ -493,11 +501,11 @@ def classify_cmd(filename, stimulus, #letter, integrity, eyechart,
     #     safe_run(convert.save_integrity_npz,
     #         (units, stimulus_list, name))
     if checkerboard:
-        if version==1:
-            raise(ValueError("not implemented."))
-        elif version==2:
-            safe_run(checkerboard_svc.main,
-                (data, stimulus_list, plot_directory))
+        safe_run(svc.checkerboard_svc,
+            (data, stimulus_list, plot_directory))
+    if grating:
+        safe_run(svc.grating_svc,
+            (data, stimulus_list, plot_directory))
     # elif eyechart:
     #     safe_run(convert.save_eyechart_npz,
     #         (units, stimulus_list, name))
@@ -540,6 +548,7 @@ generate.add_command(integrity_cmd)
 def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
     safe_run(grating.save_unit_spike_trains,
         (units, stimulus_list, c_unit_fig, c_retina_fig, width, height))
+
 
 @analyze.command("acuity")
 @click.option("--prepend", "-p", type=float, default=1,
