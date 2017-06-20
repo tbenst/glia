@@ -5,7 +5,6 @@ from functools import partial
 from warnings import warn
 from collections import namedtuple
 from copy import deepcopy
-
 import logging
 logger = logging.getLogger('glia')
 
@@ -209,6 +208,9 @@ def save_letter_npz(units, stimulus_list, name):
          validation_data=validation_data, validation_target=validation_target,
           test_data=test_data, test_target=test_target)
 
+
+
+
 def save_checkerboard_npz(units, stimulus_list, name):
     "Psychophysics discrimination checkerboard 0.2.0"
     print("Saving checkerboard NPZ file.")
@@ -218,7 +220,7 @@ def save_checkerboard_npz(units, stimulus_list, name):
     # eyecandy mistake)
 
     get_checkers = glia.compose(
-        partial(glia.create_experiments,
+        partial(glia.create_experiments, progress=True,
             stimulus_list=stimulus_list,append_lifespan=0.5),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
@@ -227,44 +229,58 @@ def save_checkerboard_npz(units, stimulus_list, name):
         glia.f_map(lambda x: [x[1],adjust_lifespan(x[2])]),
         glia.f_map(glia.merge_experiments),
         partial(glia.group_by,
-                key=lambda x: x["size"]),
+                key=lambda x: glia.checkerboard_contrast(x)),
         glia.f_map(partial(glia.group_by,
-                key=lambda x: x["metadata"]["cohort"]))
+                key=lambda x: x["size"])),
+        glia.f_map(glia.f_map(partial(glia.group_by,
+                key=lambda x: x["metadata"]["cohort"])))
     )
     checkers = get_checkers(units)
 
-    sizes = sorted(list(checkers.keys()))
+    contrasts = sorted(list(checkers.keys()))
+    ncontrasts = len(contrasts)
+    example_contrast = glia.get_value(checkers)
+    sizes = sorted(list(example_contrast.keys()))
     nsizes = len(sizes)
-    ncohorts = len(glia.get_value(checkers))
+
+    example_size = glia.get_value(example_contrast)
+    ncohorts = len(example_size)
     # print(list(checkers.values()))
-    duration = glia.get_value(glia.get_value(checkers))[0]["lifespan"]
+    duration = glia.get_value(example_size)[0]["lifespan"]
     d = int(np.ceil(duration*1000)) # 1ms bins
     tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
     # (TODO?) 2 dims for first checkerboard and second checkerboard
     # 4 per cohort
-    training_data = np.full((nsizes,tvt.training*4,d,8,8,10),0,dtype='int8')
-    training_target = np.full((nsizes,tvt.training*4),0,dtype='int8')
-    validation_data = np.full((nsizes,tvt.validation*4,d,8,8,10),0,dtype='int8')
-    validation_target = np.full((nsizes,tvt.validation*4),0,dtype='int8')
+    training_data = np.full((ncontrasts,nsizes,
+        tvt.training*4,d,8,8,10),0,dtype='int8')
+    training_target = np.full((ncontrasts,nsizes,
+        tvt.training*4),0,dtype='int8')
+    validation_data = np.full((ncontrasts,nsizes,
+        tvt.validation*4,d,8,8,10),0,dtype='int8')
+    validation_target = np.full((ncontrasts,nsizes,
+        tvt.validation*4),0,dtype='int8')
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
+    contrast_map = {c: i for i,c in enumerate(contrasts)}
     size_map = {s: i for i,s in enumerate(sizes)}
-    for size, cohorts in checkers.items():
-        X = glia.f_split_dict(tvt)(cohorts)
+    for contrast, sizes in checkers.items():
+        for size, cohorts in sizes.items():
+            X = glia.f_split_dict(tvt)(cohorts)
 
-        td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X), checker_discrimination_class)
-        size_index = size_map[size]
-        training_data[size_index] = td
-        training_target[size_index] = tt
+            td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X), checker_discrimination_class)
+            contrast_index = contrast_map[contrast]
+            size_index = size_map[size]
+            training_data[contrast_index, size_index] = td
+            training_target[contrast_index, size_index] = tt
 
-        td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X), checker_discrimination_class)
-        validation_data[size_index] = td
-        validation_target[size_index] = tt
+            td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X), checker_discrimination_class)
+            validation_data[contrast_index, size_index] = td
+            validation_target[contrast_index, size_index] = tt
 
-        # td, tt = glia.experiments_to_ndarrays(X.test, checker_class)
-        # test_data[size_index] = td
-        # test_target[size_index] = tt
+            # td, tt = glia.experiments_to_ndarrays(X.test, checker_class)
+            # test_data[size_index] = td
+            # test_target[size_index] = tt
     print('saving to ',name)
     np.savez(name, training_data=training_data, training_target=training_target,
          validation_data=validation_data, validation_target=validation_target)

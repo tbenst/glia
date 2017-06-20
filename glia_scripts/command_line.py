@@ -455,9 +455,11 @@ def strip_generated(name, choices=generate_choices):
 
 @main.command("classify")
 @click.argument('filename', type=str, default=None)
-@click.option('stimulus', "-s",
+@click.option('--stimulus', "-s",
     is_flag=True,
     help="Use .stim file")
+@click.option('--nsamples', "-n", type=int, default=0,
+    help="Show results for n different sample numbers.")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="")
 # @click.option("--integrity", default=False, is_flag=True,
@@ -471,7 +473,7 @@ def strip_generated(name, choices=generate_choices):
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
 def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
-    checkerboard, version=2):
+    checkerboard, nsamples, version=2):
     "Classify using converted NPZ"
     if not os.path.isfile(filename):
         filename = match_filename(filename, 'npz')
@@ -502,10 +504,10 @@ def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
     #         (units, stimulus_list, name))
     if checkerboard:
         safe_run(svc.checkerboard_svc,
-            (data, stimulus_list, plot_directory))
+            (data, stimulus_list, plot_directory, nsamples))
     if grating:
         safe_run(svc.grating_svc,
-            (data, stimulus_list, plot_directory))
+            (data, stimulus_list, plot_directory, nsamples))
     # elif eyechart:
     #     safe_run(convert.save_eyechart_npz,
     #         (units, stimulus_list, name))

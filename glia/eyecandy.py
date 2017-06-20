@@ -13,7 +13,7 @@ from uuid import uuid4, UUID
 from scipy.ndimage import filters
 from scipy import signal
 from warnings import warn
-
+from webcolors import html5_parse_legacy_color
 from .files import sampling_rate, read_raw_voltage
 from .config import logger
 # import pytest
@@ -395,3 +395,17 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True,
             raise
         predicted_start_time =  start_time + lifespan
         previous_lifespan = lifespan
+
+def hex_to_linear(i):
+    # i in [0,255]
+    # account for gamma compression
+    linear = ((i/255+0.055)/1.055)**2.4
+    return np.round(linear,3)
+
+def color_to_linear(color):
+    return hex_to_linear(sum(html5_parse_legacy_color(color))/3)
+
+def checkerboard_contrast(stimulus):
+    color = color_to_linear(stimulus['color'])
+    alternateColor = color_to_linear(stimulus['alternateColor'])
+    return np.abs(color - alternateColor)
