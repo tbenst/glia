@@ -44,6 +44,16 @@ def get_grating_sizes(stimulus_list):
     assert len(sizes)>0
     return sizes
 
+def get_grating_durations(stimulus_list):
+    f = glia.compose(
+        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='GRATING'),
+        partial(glia.group_by,
+                key=lambda x: x["stimulus"]["lifespan"])
+        )
+    durations = sorted(list(f(stimulus_list).keys()))
+    assert len(durations)>0
+    return durations
+
 def svm_helper(training_data, training_target, validation_data, validation_target):
     # Create a classifier: a support vector classifier
     classifier = svm.SVC()
@@ -229,11 +239,12 @@ def checkerboard_svc(data, stimulus_list, plot_directory, nsamples):
 
 def grating_svc(data, stimulus_list, plot_directory, nsamples):
     sizes = get_grating_sizes(stimulus_list)
+    durations = get_grating_durations(stimulus_list)
     # TODO function not written
     # contrasts = get_grating_contrasts(stimulus_list)
     if nsamples>0:
         plot_diff_nsamples(data, stimulus_list, plot_directory,
-            "grating", sizes, contrasts, nsamples)
+            "grating", sizes, durations, nsamples)
     else:
-        main(data, stimulus_list, plot_directory, "grating".
-            sizes, contrasts)
+        main(data, stimulus_list, plot_directory, "grating",
+            sizes, durations)
