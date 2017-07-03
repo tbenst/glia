@@ -7,6 +7,7 @@ matplotlib.rcParams['figure.max_open_warning'] = 250
 
 
 import glia
+import fnmatch
 import click
 import os
 import sys
@@ -38,7 +39,7 @@ def plot_function(f):
     @click.pass_context
     def new_func(ctx, *args, **kwargs):
         context_object = ctx.obj
-        return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"], 
+        return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
             ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
             *args[3:], **kwargs)
     return update_wrapper(new_func, f)
@@ -53,7 +54,7 @@ def analysis_function(f):
     return update_wrapper(new_func, f)
 
 
- 
+
 def safe_run(function, args):
     try:
         function(*args)
@@ -101,19 +102,30 @@ generate_choices = ["random","hz"]
 @click.option('number', "-n",
     type=int, default=2,
     help="Number of channels.")
+@click.option('nunits', "-u",
+    type=int, default=2,
+    help="Number of channels.")
 @click.option('stimulus', "-s",
     is_flag=True,
     help="Create .stim file")
 @click.pass_context
-def generate(ctx, filename, eyecandy, method, notebook, number, stimulus):
-    if not os.path.isfile(filename):
-        filename = match_filename(filename)
+def generate(ctx, filename, eyecandy, method, notebook, number,
+    nunits, stimulus):
     data_directory, data_name = os.path.split(filename)
-    name, extension = os.path.splitext(data_name)
+    if data_directory=='':
+        data_directory=os.getcwd()
 
-    
     if not notebook:
         notebook = find_notebook(data_directory)
+
+    lab_notebook = glia.open_lab_notebook(notebook)
+    name=None
+    for doc in lab_notebook:
+        n= doc['filename']
+        if fnmatch.fnmatch(n , filename+'*'):
+            name=n
+            break
+    assert name is not None
 
     ctx.obj = {'filename': method+"_"+name}
 
@@ -140,7 +152,7 @@ def generate(ctx, filename, eyecandy, method, notebook, number, stimulus):
     for channel_x in range(number):
         for channel_y in range(number):
             # for unit_j in range(randint(1,5)):
-            for unit_j in range(4):
+            for unit_j in range(nunits):
                 if method=='random':
                     u = glia.random_unit(total_time, retina_id,
                         (channel_x, channel_y), unit_j)
@@ -214,7 +226,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         calibration=None, distance=None, verbose=False, debug=False,processes=None,
         by_channel=False, integrity_filter=0.0):
     """Analyze data recorded with eyecandy.
-    """    
+    """
     #### FILEPATHS
     if not os.path.isfile(filename):
         filename = match_filename(filename)
@@ -309,7 +321,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         ctx.obj["c_unit_fig"] = partial(glia.add_to_unit_pdfs,
             unit_pdfs=ctx.obj["unit_pdfs"])
         ctx.obj["c_retina_fig"] = lambda x: ctx.obj["retina_pdf"].savefig(x)
-        
+
     elif output == "png":
         logger.debug("Outputting png")
         ctx.obj["c_unit_fig"] = glia.save_unit_fig
@@ -341,7 +353,7 @@ def create_cover_page(ax_gen, data):
         verticalalignment='center',
         fontsize=32)
     ax.set_axis_off()
-    
+
 @analyze.command()
 @plot_function
 def cover(units, stimulus_list, c_unit_fig, c_retina_fig):
@@ -350,7 +362,7 @@ def cover(units, stimulus_list, c_unit_fig, c_retina_fig):
     result = glia.plot_units(create_cover_page,data,ax_xsize=10, ax_ysize=5)
     c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
-    
+
 
 
 @analyze.command()
@@ -481,10 +493,10 @@ def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
     stim_name = strip_generated(name)
     if stimulus:
         stimulus_file = os.path.join(data_directory, stim_name + ".stim")
-        stimulus_list = glia.read_stimulus(stimulus_file)    
+        stimulus_list = glia.read_stimulus(stimulus_file)
     else:
         stimulus_file = os.path.join(data_directory, stim_name + ".stimulus")
-        stimulus_list = glia.load_stimulus(stimulus_file)    
+        stimulus_list = glia.load_stimulus(stimulus_file)
 
     data = np.load(filename)
 
@@ -726,7 +738,7 @@ generate.add_command(acuity_cmd)
 # amp_limits     = (0.3, 30)  # Amplitudes for the templates during spike detection
 # amp_auto       = True      # True if amplitudes are adjusted automatically for every templates
 # refractory     = 0         # Refractory period, in ms [0 is None]
-# max_chunk      = inf       # Fit only up to max_chunk   
+# max_chunk      = inf       # Fit only up to max_chunk
 
 # [merging]
 # cc_overlap     = 0.5       # Only templates with CC higher than cc_overlap may be merged

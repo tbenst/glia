@@ -1,0 +1,290 @@
+affiliation: University of Washington Medicine
+lab: Van Gelder Lab
+people: 'Tyler Benster, Darwin Babino'
+purpose: moved retina to get better coverage
+mouseNumber: '2'
+species: mouse
+mouseType: mel
+birthdate: '0001-01-01'
+gender: male
+eye: '1'
+orientation: ''
+dissectionTime: '10:00'
+solution: AMES
+retinaWeight: AMES
+meaType: 60MEA200/30iR-ITO
+meaTemperature: '34'
+perfusionTemperature: '34'
+perfusionFlowRate: 3 ml/min
+pinhole: '1'
+displayMode: video
+experimentNumber: '1'
+filename: checkerboard_contrast
+seed: '1368848134'
+program: checkerboard-contrast
+epl: >
+  const metadata = {name: "checkerboard-contrast", version: "0.2.4", inverted:
+  false}
+
+
+  let repetitions = 25
+
+  let durations = [0.5]
+
+  let contrasts = [0.25,0.5,1]
+
+  let angle = PI/4
+
+  let nsizes = 8
+
+  let startLogMAR = 2.1
+
+  let logMarStep = 0.1
+
+
+
+  function linearToHex(f) {
+      // gamma compress linear light intensity between zero and one
+      let n = Math.ceil((1.055*Math.pow(f,1/2.4)-0.055)*255)
+      let hex = n.toString(16)
+      return "#"+hex+hex+hex
+  }
+
+
+  function logMARtoPx(logMAR, pxPerDegree=7.5) {
+      let degrees = pow(10,logMAR)/60
+      return round(degrees*pxPerDegree)
+  }
+
+
+
+  let sizes = [...Array(nsizes).keys()].map(
+      x => x*logMarStep+startLogMAR).map(
+      x => logMARtoPx(x))
+
+  let colors = contrasts.map(
+      x => linearToHex(x))
+
+
+  function* measureIntegrity(stimuli,every=5*60) {
+      // every N seconds, do a flash
+      let integrityMeta
+      let elapsedTime = every
+      for (let s of stimuli) {
+          if (elapsedTime>=every && s.metadata.block===undefined) {
+              integrityMeta = {group: r.uuid(), label: "integrity"}
+              yield new Wait(1, integrityMeta)
+              yield new Solid(0.5, "white", integrityMeta)
+              yield new Wait(2, integrityMeta)
+              elapsedTime = 0
+              yield s
+          } else {
+              yield s
+          }
+          elapsedTime=elapsedTime+s["lifespan"]
+      }
+  }
+
+
+  function checkerboard_group(class1, class2, duration, size, cohort, color) {
+      const id = r.uuid()
+      let target
+      let color1
+      let color2
+      if (class1=='A') {
+          color1 = [color,"black"]
+      } else {
+          color1 = ["black", color]
+      }
+
+      if (class2=='A') {
+          color2 = [color,"black"]
+      } else {
+          color2 = ["black", color]
+      }
+
+      if (class1===class2) {
+          target = 'SAME'
+      } else {
+          target = 'DIFFERENT'
+      }
+      const before = new Wait(1, {group: id})
+      const first = new Checkerboard(duration, color1[0], color1[1], size, angle,
+          {group: id, cohort: cohort, block: true, class: class1,
+                     target: target})
+      const second = new Checkerboard(duration, color2[0], color2[1], size, angle,
+          {group: id, cohort: cohort, block: true, class: class2,
+                     target: target})
+      const after = new Wait(r.randi(1,1.5), {group: id, block: true})
+      return [before, first, second, after]
+  }
+
+
+  let x
+
+  let y
+
+  let stimuli = []
+
+  let l
+
+  let before
+
+  let after
+
+  let id
+
+  let cohort
+
+
+  for (let size of sizes) {
+      for (let color of colors) {
+          for (let duration of durations) {
+              for (let i = 0; i < repetitions; i++) {
+                  // use cohort to maintain balance in analysis
+                  cohort = r.uuid()
+                  stimuli.push(checkerboard_group('A','B', duration,size,
+                      cohort, color))
+                  stimuli.push(checkerboard_group('A','A', duration,size,
+                      cohort, color))
+                  stimuli.push(checkerboard_group('B','B', duration,size,
+                      cohort, color))
+                  stimuli.push(checkerboard_group('B','A', duration,size,
+                      cohort, color))
+              }
+          }
+      }
+  }
+
+
+  r.shuffle(stimuli)
+
+
+  let stimulusGenerator = measureIntegrity(flatten(stimuli))
+
+  for (let s of stimulusGenerator) {
+      yield s
+  }
+windowHeight: '800'
+windowWidth: '1280'
+date: 2017-06-19T17:21:27.515Z
+version: 0.5
+flickerVersion: 0.3
+---
+affiliation: University of Washington Medicine
+lab: Van Gelder Lab
+people: 'Tyler Benster, Darwin Babino'
+purpose: moved retina to get better coverage
+mouseNumber: '2'
+species: mouse
+mouseType: mel
+birthdate: '0001-01-01'
+gender: male
+eye: '1'
+orientation: ''
+dissectionTime: '10:00'
+solution: AMES
+retinaWeight: AMES
+meaType: 60MEA200/30iR-ITO
+meaTemperature: '34'
+perfusionTemperature: '34'
+perfusionFlowRate: 3 ml/min
+pinhole: '1'
+displayMode: video
+experimentNumber: '2'
+filename: grating-durations
+seed: '1368848134'
+program: grating-durations
+epl: |
+  const metadata = {name: "grating-durations", version: "0.1.2"}
+
+
+  let repetitions = 50
+  let durations = [0.5,1,1.5]
+  let angles = [PI/4]
+  let speeds = [200]
+  let nsizes = 8
+  let startLogMAR = 2.1
+  let logMarStep = 0.1
+
+
+  function logMARtoPx(logMAR, pxPerDegree=7.5) {
+      let degrees = pow(10,logMAR)/60
+      return round(degrees*pxPerDegree)
+  }
+
+  function inverseAngle(angle) {
+      return (angle + PI) % (2*PI)
+  }
+
+
+  let sizes = [...Array(nsizes).keys()].map(
+      x => x*logMarStep+startLogMAR).map(
+      x => logMARtoPx(x))
+
+
+  function* measureIntegrity(stimuli,every=5*60) {
+      // every N seconds, do a flash
+      let integrityMeta
+      let elapsedTime = every
+      for (let s of stimuli) {
+          if (elapsedTime>=every && s.metadata.block===undefined) {
+              integrityMeta = {group: r.uuid(), label: "integrity"}
+              yield new Wait(1, integrityMeta)
+              yield new Solid(0.5, "white", integrityMeta)
+              yield new Wait(2, integrityMeta)
+              elapsedTime = 0
+              yield s
+          } else {
+              yield s
+          }
+          elapsedTime=elapsedTime+s["lifespan"]
+      }
+  }
+
+  let stimuli = []
+  let left
+  let right
+  let before
+  let after
+  let id
+  let cohort
+
+  for (let size of sizes) {
+      for (let angle of angles) {
+          for (let speed of speeds) {
+              for (let duration of durations) {
+                  for (let i = 0; i < repetitions; i++) {
+                      // use cohort to maintain balance in analysis
+                      cohort = r.uuid()
+                      before = new Wait(1, {group: id})
+
+                      id = r.uuid()
+                      left = new Grating(duration,"black", speed, size, angle, "white",
+                          {group: id, cohort: cohort, class: "FORWARD", block: true})
+                      after = new Wait(r.randi(1,1.5), {group: id, block: true})
+                      stimuli.push([before,left,after])
+
+                      id = r.uuid()
+                      meta = {group: id, block: true}
+                      right = new Grating(duration,"black", speed, size, inverseAngle(angle), "white",
+                          {group: id, cohort: cohort, class: "REVERSE", block: true})
+                      after = new Wait(r.randi(1,1.5), {group: id, block: true})
+                      stimuli.push([before,right,after])
+                  }
+              }
+          }
+      }
+  }
+
+  r.shuffle(stimuli)
+
+  let stimulusGenerator = measureIntegrity(flatten(stimuli))
+  for (let s of stimulusGenerator) {
+      yield s
+  }
+windowHeight: '800'
+windowWidth: '1280'
+date: 2017-06-19T19:32:12.578Z
+version: 0.5
+flickerVersion: 0.3

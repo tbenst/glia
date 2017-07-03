@@ -1,11 +1,12 @@
 # Glia
+[![Build Status](https://travis-ci.org/tbenst/glia.svg?branch=master)](https://travis-ci.org/tbenst/glia)
 A package to support neuroscientists in analyzing MEAs.
 
 
 ## How to analyze data:
 1. Convert *.mcd files into *.voltages
 
-  1. Pull files from MEA computer onto local machine 
+  1. Pull files from MEA computer onto local machine
 
   2. Open docker and go to folder with data
 e.g. `docker run -v /c/Users/sandt/Desktop/160913:/data tbenst/mcd`

@@ -50,7 +50,7 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1
                 continue
             if spike_train.size>0:
                 glia.draw_spikes(ax, spike_train, ymin=trial+0.3,ymax=trial+1)
-            
+
             stimulus_end = prepend_start_time + lifespan
             duration = stimulus_end + append_lifespan
             ax.fill([0,prepend_start_time,prepend_start_time,0],
@@ -60,7 +60,7 @@ def plot_spike_trains(fig, axis_gen, data,prepend_start_time=1,append_lifespan=1
                     [trial,trial,trial+1,trial+1],
                     facecolor="gray", edgecolor="none", alpha=0.1)
             trial += 1
-            
+
         ax.set_title("Unit spike train per SOLID ({})".format(color))
         ax.set_xlabel("time (s)")
         ax.set_ylabel("trials")
@@ -85,14 +85,14 @@ def plot_spike_trains_vFail(fig, axis_gen, data):
             if spike_train.size>0:
                 glia.draw_spikes(ax, spike_train+offset, ymin=trial+0.3,
                     ymax=trial+1)
-            
+
             ax.fill([offset,end_time,end_time,offset],
                     [trial,trial,trial+1,trial+1],
                     facecolor=stimulus["backgroundColor"], edgecolor="none", alpha=0.1)
             offset = end_time
         trial += 1
 
-        
+
     ax.set_title("Unit spike train per SOLID group")
     ax.set_xlabel("time (s)")
     ax.set_ylabel("trials")
@@ -100,7 +100,7 @@ def plot_spike_trains_vFail(fig, axis_gen, data):
 get_lifespan = lambda e: e["stimulus"]["lifespan"]
 
 def plot_spike_train_triplet(fig, axis_gen, data):
-    # 
+    #
     ax = next(axis_gen)
     trial = 0
     # hardcoded 2 must correspond to pivot
@@ -134,7 +134,7 @@ def plot_spike_train_triplet(fig, axis_gen, data):
             if spike_train.size>0:
                 glia.draw_spikes(ax, spike_train+offset, ymin=trial+0.3,
                     ymax=trial+1)
-            
+
             ax.fill([offset,end_time,end_time,offset],
                     [trial,trial,trial+1,trial+1],
                     facecolor=stimulus["backgroundColor"],
@@ -149,7 +149,7 @@ def plot_spike_train_triplet(fig, axis_gen, data):
 
         trial += 1
 
-        
+
     ax.set_title("Unit spike train per SOLID group")
     ax.set_xlabel("time (s)")
     ax.set_ylabel("trials")
@@ -174,7 +174,7 @@ def save_unit_psth(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepen
 
 def save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit spike trains")
-    
+
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list,prepend_start_time=prepend,append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
@@ -190,7 +190,7 @@ def filter_lifespan(l, lifespan=0.5):
 
 def save_integrity_chart(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating integrity chart")
-    
+
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list,prepend_start_time=1,append_lifespan=2),
         glia.f_has_stimulus_type(["SOLID"]),
@@ -240,7 +240,7 @@ def unit_classification_accuracy(tvt):
     for dark vs on and dark vs off"""
     dark_training, on_training, off_training = integrity_spike_counts(tvt.training)
     dark_test, on_test, off_test = integrity_spike_counts(tvt.validation)
-    
+
     X_on_train = np.array(dark_training + on_training).reshape((-1,1))
     Y_on_train = np.hstack([np.full(len(dark_training), 0,dtype='int8'),
                   np.full(len(on_training),1,dtype='int8')])
@@ -259,7 +259,7 @@ def unit_classification_accuracy(tvt):
     X_off_test = np.array(dark_test + off_test).reshape((-1,1))
     Y_off_test = np.hstack([np.full(len(dark_test), 0,dtype='int8'),
                   np.full(len(off_test),1,dtype='int8')])
-    
+
     off = svm.SVC(kernel='linear')
     off.fit(X_off_train, Y_off_train)
     off_predicted = on.predict(X_off_test)
@@ -364,11 +364,11 @@ def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figur
         response)
 
     units_accuracy = glia.pmap(unit_classification_accuracy,classification_data)
-    c_add_retina_figure("Integrity Accuracy",plot_units_accuracy(units_accuracy))
+    c_add_retina_figure("integrity-accuracy",plot_units_accuracy(units_accuracy))
 
 def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit wedges")
-    
+
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list,prepend_start_time=prepend,append_lifespan=append),
         glia.f_has_stimulus_type(["SOLID"]),
@@ -414,11 +414,11 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
                              figure_title="Integrity Test (5 Minute Spacing)")
 
     units_accuracy = glia.pmap(ideal_unit_classification_accuracy, response)
-    c_add_retina_figure("Integrity Accuracy",plot_units_accuracy(units_accuracy))
+    c_add_retina_figure("integrity-accuracy",plot_units_accuracy(units_accuracy))
 
 # def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_figure):
 #     print("Creating integrity chart")
-    
+
 #     get_solid = glia.compose(
 #         glia.f_create_experiments(stimulus_list),
 #         glia.filter_integrity
@@ -446,7 +446,7 @@ def save_unit_wedges_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
 
 def save_unit_kinetics_v1(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating solid unit kinetics")
-    
+
 
     for i in range(5):
         s = i*150
@@ -466,7 +466,7 @@ def save_unit_kinetics_v1(units, stimulus_list, c_unit_fig, c_add_retina_figure)
 
 def save_unit_kinetics(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating solid unit kinetics")
-    
+
     get_solid = glia.compose(
         glia.f_create_experiments(stimulus_list),
         partial(glia.group_by,
