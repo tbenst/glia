@@ -7,6 +7,8 @@ services:
   - docker
 
 before_install:
+
+
   - docker pull tbenst/eye-candy
   - docker pull redis
   - cd .. && git clone https://github.com/tbenst/eye-candy.git
@@ -15,8 +17,24 @@ before_install:
 
 
 install:
-  - pip install .
+  - >
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  - >
+    conda create -q -n test python=$TRAVIS_PYTHON_VERSION
+    numpy scipy matplotlib
+  - source activate test
+  # - pip install .
   - pip install -r requirements.txt
+  - python setup.py install
 
 before_script:
 
