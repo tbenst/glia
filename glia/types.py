@@ -1,7 +1,6 @@
 from uuid import uuid4
 from hashlib import md5
 import base64
-import glia.humanhash as humanhash
 import numpy as np
 import glia.config as config
 from collections import namedtuple as nt
@@ -21,7 +20,7 @@ class Analytic(object):
         self.start_time = experiment.start_time
         self.stimulus = experiment.stimulus
 
-        
+
 
 class Mouse:
     def __init__(self, mouse_line, dob, gender):
@@ -41,7 +40,7 @@ class Retina:
 # use md5 as key to retrieve unit_name
 
 class Unit:
-    
+
     # store humanized names as value with unit_id as key
     lookup = {}
 

@@ -8,4 +8,3 @@ from .pipeline import *
 from .spike_train import *
 from .functional import *
 from .topology import *
-import glia.humanhash
