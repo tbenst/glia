@@ -28,7 +28,7 @@ install:
   - source activate glia
   # - pip install .
   - pip install -r requirements.txt
-  - python setup.py install
+  # - python setup.py install
 
 before_script:
 
