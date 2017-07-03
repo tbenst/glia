@@ -9,7 +9,7 @@ services:
 before_install:
   - docker pull tbenst/eye-candy
   - docker pull redis
-  - git pull https://github.com/tbenst/eye-candy.git
+  - git clone https://github.com/tbenst/eye-candy.git
   - cd eye-candy && docker-compose up -d
 
 
