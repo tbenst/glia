@@ -9,13 +9,12 @@ services:
 before_install:
   - docker pull tbenst/eye-candy
   - docker pull redis
-  - git clone https://github.com/tbenst/eye-candy.git
-  - pwd
+  - cd .. && git clone https://github.com/tbenst/eye-candy.git
   - cd eye-candy && docker-compose up -d
+  - cd ../glia
 
 
 install:
-  - pwd
   - pip install .
   - pip install -r requirements.txt
 
