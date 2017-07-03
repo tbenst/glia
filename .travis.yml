@@ -10,10 +10,12 @@ before_install:
   - docker pull tbenst/eye-candy
   - docker pull redis
   - git clone https://github.com/tbenst/eye-candy.git
+  - pwd
   - cd eye-candy && docker-compose up -d
 
 
 install:
+  - pwd
   - pip install .
   - pip install -r requirements.txt
 
