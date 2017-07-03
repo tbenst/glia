@@ -1,9 +1,23 @@
 language: python
 python:
   - "3.6"
-# command to install dependencies
+
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker pull tbenst/eye-candy
+  - docker pull redis
+  - git pull https://github.com/tbenst/eye-candy.git
+  - cd eye-candy && docker-compose up -d
+
+
 install:
   - pip install .
   - pip install -r requirements.txt
+
+before_script:
+
 # command to run tests
 script: make test
