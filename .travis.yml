@@ -26,9 +26,9 @@ install:
 
   - conda env create
   - source activate glia
-  - pip install .
+  # - pip install .
   - pip install -r requirements.txt
-  # - python setup.py develop
+  - python setup.py develop
 
 before_script:
 
