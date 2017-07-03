@@ -7,10 +7,6 @@ services:
   - docker
 
 before_install:
-
-
-  - docker pull tbenst/eye-candy
-  - docker pull redis
   - cd .. && git clone https://github.com/tbenst/eye-candy.git
   - cd eye-candy && docker-compose up -d
   - cd ../glia
@@ -30,7 +26,7 @@ install:
 
   - >
     conda create -q -n test python=$TRAVIS_PYTHON_VERSION
-    numpy scipy matplotlib
+    numpy scipy matplotlib pandas scikit-learn
   - source activate test
   # - pip install .
   - pip install -r requirements.txt
