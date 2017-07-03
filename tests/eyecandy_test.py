@@ -1,4 +1,4 @@
-from conftest import assert_within
+from lib import assert_within
 
 
 # def get_stimulus_start_times_test(stimulus_start_times,stimulus_list):

@@ -1,4 +1,4 @@
-from conftest import assert_within
+from lib import assert_within
 import numpy as np
 import glia
 

@@ -4,12 +4,12 @@ import numpy as np
 from uuid import uuid4
 import tracemalloc
 import os
+import requests
+import yaml
+from bs4 import BeautifulSoup
 import linecache
 from random import randint
 # from data.stimulus_list import gratings_stimulus_list
-
-def assert_within(a,b,within=1):
-    assert abs(a-b) <= within
 
 @pytest.fixture(scope="module")
 def sampling_rate():
@@ -93,3 +93,36 @@ def display_top(snapshot, group_by='lineno', limit=10):
         print("%s other: %.1f KiB" % (len(other), size / 1024))
     total = sum(stat.size for stat in top_stats)
     print("Total allocated size: %.1f KiB" % (total / 1024))
+
+
+eyecandy_url = 'http://localhost:3000'
+@pytest.fixture(scope="module")
+def programs_notebook():
+    s = requests.Session()
+    index = s.get(eyecandy_url)
+    soup = BeautifulSoup(index.content)
+    raw_programs = soup.select("select[name=program] option")
+    programs = list(filter(lambda x: x!="custom",
+                    [p["value"] for p in raw_programs]))
+    s.post(eyecandy_url + '/window',
+                      headers={
+                           'windowHeight': "1140",
+                           'windowWidth': "912",
+                           })
+    lab_notebook_str = ""
+    for p in programs:
+
+        r = s.post(eyecandy_url + '/start-program',
+                         data={
+                              'filename': p,
+                              'program': p,
+                              'seed': "12345",
+                              'submitButton': 'start',
+                              })
+
+        if r.status_code != 200:
+            raise(ValueError(f"Internal Server Error for {p}"))
+        lab_notebook_str+=r.text
+        lab_notebook = list(yaml.safe_load_all(lab_notebook_str))
+
+    return (programs, lab_notebook)

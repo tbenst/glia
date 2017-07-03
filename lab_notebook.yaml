@@ -1,0 +1,335 @@
+{date: !!timestamp '2017-07-03 21:43:55.324000', epl: "const metadata = {name: \"\
+    acuity\", version: \"0.3.2\"}\n\nfunction* measureIntegrity(stimuli,every=5*60)\
+    \ {\n\t// every N seconds, do a flash\n\tlet integrityMeta\n\tlet elapsedTime\
+    \ = every\n\tfor (let s of stimuli) {\n\t\tif (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n\t\t\tintegrityMeta = {group: r.uuid(), label: \"integrity\"}\n\t\t\tyield\
+    \ new Wait(1, integrityMeta)\n\t\t\tyield new Solid(0.5, \"white\", integrityMeta)\n\
+    \t\t\tyield new Wait(2, integrityMeta)\n\t\t\telapsedTime = 0\n\t\t\tyield s\n\
+    \t\t} else {\n\t\t\tyield s\n\t\t}\n\t\telapsedTime=elapsedTime+s[\"lifespan\"\
+    ]\n\t}\n}\n\nlet widths = [...Array(12).keys()].map(x => (x+1)*10)\nlet speeds\
+    \ = [...Array(8).keys()].map(x => (1+x)*100)\n// 12 angles, offset by 22 degrees\
+    \ to reduce diamond artifact\nlet angles = [...Array(12).keys()].map(x => (x*2+1)*PI/12)\n\
+    let stimuli = []\n\nlet width\nlet lit\nlet lifespan\nlet group = Array(3)\nlet\
+    \ id\nlet before\nlet after\nlet solid\n\nfor (let speed of speeds) {\n\tfor (let\
+    \ width of widths) {\n\t\tlifespan = calcBarLifespan(speed,width,windowHeight,windowWidth)\n\
+    \t\tid = r.uuid()\n\n\t\tfor (let angle of angles) {\n\t\t\tstimuli.push(new Bar(lifespan,\"\
+    black\",\n\t\t\t\tspeed, width, angle, \"white\", {group: id}))\n\t\t}\n\t\t\n\
+    \t\t// block means \"do not insert a integrity check before me\"\n\t\tlit = width/speed\n\
+    \t\tsolid = new Solid(lit, \"white\", {group: id, block: true})\n\t\tbefore =\
+    \ new Wait(floor((lifespan-lit)/2), {group: id})\n\t\tafter = new Wait(ceil((lifespan-lit)/2),\
+    \ {group: id, block: true})\n\n\t\t// before + lit + after = lifespan\n\t\t//\
+    \ this pads the white flash\n\t\tstimuli.push([before, solid, after])\n\t}\n}\n\
+    \nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n\tyield s\n}\n", filename: acuity, flickerVersion: 0.3,
+  program: acuity, seed: '12345', version: 0.5, windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:55.668000', epl: "const metadata = {name:\
+    \ \"acuity-with-flashes\", version: \"0.4.2\"}\n\nlet widths = [...Array(12).keys()].map(x\
+    \ => (x+1)*10)\nlet speeds = [...Array(8).keys()].map(x => (1+x)*100)\n// 12 angles,\
+    \ offset by 22 degrees to reduce diamond artifact\nlet angles = [...Array(12).keys()].map(x\
+    \ => (x*2+1)*PI/12)\nlet stimuli = []\n\nlet width\nlet lifespan\nlet id\n\nfor\
+    \ (let speed of speeds) {\n\tfor (let width of widths) {\n\t\tlifespan = calcBarLifespan(speed,width,windowHeight,windowWidth)\n\
+    \t\tid = r.uuid()\n\n\t\tfor (let angle of angles) {\n\t\t\tintegrityMeta = {group:\
+    \ r.uuid(), label: \"integrity\"}\n\t\t\tstimuli.push([\n\t\t\t\tnew Wait(1, integrityMeta),\n\
+    \t\t\t\tnew Solid(1, \"white\", integrityMeta),\n\t\t\t\tnew Wait(1, integrityMeta),\n\
+    \t\t\t\tnew Bar(lifespan,\"black\", speed, width, angle, \"white\",\n\t\t\t\t\t\
+    {group: id})\n\t\t\t])\n\t\t}\n\t}\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator\
+    \ = flatten(stimuli)\nfor (let s of stimulusGenerator) {\n\tyield s\n}\n", filename: acuity-with-flashes,
+  flickerVersion: 0.3, program: acuity-with-flashes, seed: '12345', version: 0.5,
+  windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:56.038000', epl: "const metadata = {name:\
+    \ \"checkerboard\", version: \"0.2.4\", inverted: false}\n\nlet repetitions =\
+    \ 40\nlet durations = [0.5]\nlet angle = PI/4\nlet nsizes = 8\nlet startLogMAR\
+    \ = 2.1\nlet logMarStep = 0.1\n\n\nfunction logMARtoPx(logMAR, pxPerDegree=7.5)\
+    \ {\n    let degrees = pow(10,logMAR)/60\n    return round(degrees*pxPerDegree)\n\
+    }\n\n\nlet sizes = [...Array(nsizes).keys()].map(\n    x => x*logMarStep+startLogMAR).map(\n\
+    \    x => logMARtoPx(x))\n\n\nfunction* measureIntegrity(stimuli,every=5*60) {\n\
+    \    // every N seconds, do a flash\n    let integrityMeta\n    let elapsedTime\
+    \ = every\n    for (let s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"\
+    white\", integrityMeta)\n            yield new Wait(2, integrityMeta)\n      \
+    \      elapsedTime = 0\n            yield s\n        } else {\n            yield\
+    \ s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\n\
+    function checkerboard_group(class1, class2, duration, size, cohort) {\n    const\
+    \ id = r.uuid()\n    let target\n    let color1\n    let color2\n    if (class1=='A')\
+    \ {\n        color1 = [\"white\",\"black\"]\n    } else {\n        color1 = [\"\
+    black\", \"white\"]\n    }\n\n    if (class2=='A') {\n        color2 = [\"white\"\
+    ,\"black\"]\n    } else {\n        color2 = [\"black\", \"white\"]\n    }\n\n\
+    \    if (class1===class2) {\n        target = 'SAME'\n    } else {\n        target\
+    \ = 'DIFFERENT'\n    }\n    const before = new Wait(1, {group: id})\n    const\
+    \ first = new Checkerboard(duration, color1[0], color1[1], size, angle,\n    \
+    \    {group: id, cohort: cohort, block: true, class: class1,\n               \
+    \    target: target})\n    const second = new Checkerboard(duration, color2[0],\
+    \ color2[1], size, angle,\n        {group: id, cohort: cohort, block: true, class:\
+    \ class2,\n                   target: target})\n    const after = new Wait(r.randi(1,1.5),\
+    \ {group: id, block: true})\n    return [before, first, second, after]\n}\n\n\
+    let x\nlet y\nlet stimuli = []\nlet l\nlet before\nlet after\nlet id\nlet cohort\n\
+    \nfor (let size of sizes) {\n    for (let duration of durations) {\n        for\
+    \ (let i = 0; i < repetitions; i++) {\n            // use cohort to maintain balance\
+    \ in analysis\n            cohort = r.uuid()\n            stimuli.push(checkerboard_group('A','B',\
+    \ duration,size, cohort))\n            stimuli.push(checkerboard_group('A','A',\
+    \ duration,size, cohort))\n            stimuli.push(checkerboard_group('B','B',\
+    \ duration,size, cohort))\n            stimuli.push(checkerboard_group('B','A',\
+    \ duration,size, cohort))\n        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator\
+    \ = measureIntegrity(flatten(stimuli))\nfor (let s of stimulusGenerator) {\n \
+    \   yield s\n}\n", filename: checkerboard, flickerVersion: 0.3, program: checkerboard,
+  seed: '12345', version: 0.5, windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:56.867000', epl: "const metadata = {name:\
+    \ \"checkerboard-contrast\", version: \"0.2.4\", inverted: false}\n\nlet repetitions\
+    \ = 25\nlet durations = [0.5]\nlet contrasts = [0,0.1,1]\nlet angle = PI/4\nlet\
+    \ nsizes = 8\nlet startLogMAR = 2.1\nlet logMarStep = 0.1\n\n\nfunction linearToHex(f)\
+    \ {\n    // gamma compress linear light intensity between zero and one\n    let\
+    \ n = Math.ceil((1.055*Math.pow(f,1/2.4)-0.055)*255)\n    let hex = n.toString(16)\n\
+    \    return \"#\"+hex+hex+hex\n}\n\nfunction logMARtoPx(logMAR, pxPerDegree=7.5)\
+    \ {\n    let degrees = pow(10,logMAR)/60\n    return round(degrees*pxPerDegree)\n\
+    }\n\n\nlet sizes = [...Array(nsizes).keys()].map(\n    x => x*logMarStep+startLogMAR).map(\n\
+    \    x => logMARtoPx(x))\n\nlet colors = contrasts.map(\n    x => linearToHex(x))\n\
+    \n\nfunction* measureIntegrity(stimuli,every=5*60) {\n    // every N seconds,\
+    \ do a flash\n    let integrityMeta\n    let elapsedTime = every\n    for (let\
+    \ s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"\
+    white\", integrityMeta)\n            yield new Wait(2, integrityMeta)\n      \
+    \      elapsedTime = 0\n            yield s\n        } else {\n            yield\
+    \ s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\n\
+    function checkerboard_group(class1, class2, duration, size, cohort, color) {\n\
+    \    const id = r.uuid()\n    let target\n    let color1\n    let color2\n   \
+    \ if (class1=='A') {\n        color1 = [color,\"black\"]\n    } else {\n     \
+    \   color1 = [\"black\", color]\n    }\n\n    if (class2=='A') {\n        color2\
+    \ = [color,\"black\"]\n    } else {\n        color2 = [\"black\", color]\n   \
+    \ }\n\n    if (class1===class2) {\n        target = 'SAME'\n    } else {\n   \
+    \     target = 'DIFFERENT'\n    }\n    const before = new Wait(1, {group: id})\n\
+    \    const first = new Checkerboard(duration, color1[0], color1[1], size, angle,\n\
+    \        {group: id, cohort: cohort, block: true, class: class1,\n           \
+    \        target: target})\n    const second = new Checkerboard(duration, color2[0],\
+    \ color2[1], size, angle,\n        {group: id, cohort: cohort, block: true, class:\
+    \ class2,\n                   target: target})\n    const after = new Wait(r.randi(1,1.5),\
+    \ {group: id, block: true})\n    return [before, first, second, after]\n}\n\n\
+    let x\nlet y\nlet stimuli = []\nlet l\nlet before\nlet after\nlet id\nlet cohort\n\
+    \nfor (let size of sizes) {\n    for (let color of colors) {\n        for (let\
+    \ duration of durations) {\n            for (let i = 0; i < repetitions; i++)\
+    \ {\n                // use cohort to maintain balance in analysis\n         \
+    \       cohort = r.uuid()\n                stimuli.push(checkerboard_group('A','B',\
+    \ duration,size,\n                    cohort, color))\n                stimuli.push(checkerboard_group('A','A',\
+    \ duration,size,\n                    cohort, color))\n                stimuli.push(checkerboard_group('B','B',\
+    \ duration,size,\n                    cohort, color))\n                stimuli.push(checkerboard_group('B','A',\
+    \ duration,size,\n                    cohort, color))\n            }\n       \
+    \ }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n    yield s\n}\n", filename: checkerboard-contrast,
+  flickerVersion: 0.3, program: checkerboard-contrast, seed: '12345', version: 0.5,
+  windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:57.574000', epl: "const metadata = {name:\
+    \ \"checkerboard-durations\", version: \"0.2.4\", inverted: false}\n\nlet repetitions\
+    \ = 25\nlet durations = [0.1,0.25,0.5]\nlet angle = PI/4\nlet nsizes = 8\nlet\
+    \ startLogMAR = 2.1\nlet logMarStep = 0.1\n\n\nfunction logMARtoPx(logMAR, pxPerDegree=7.5)\
+    \ {\n    let degrees = pow(10,logMAR)/60\n    return round(degrees*pxPerDegree)\n\
+    }\n\n\nlet sizes = [...Array(nsizes).keys()].map(\n    x => x*logMarStep+startLogMAR).map(\n\
+    \    x => logMARtoPx(x))\n\n\nfunction* measureIntegrity(stimuli,every=5*60) {\n\
+    \    // every N seconds, do a flash\n    let integrityMeta\n    let elapsedTime\
+    \ = every\n    for (let s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"\
+    white\", integrityMeta)\n            yield new Wait(2, integrityMeta)\n      \
+    \      elapsedTime = 0\n            yield s\n        } else {\n            yield\
+    \ s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\n\
+    function checkerboard_group(class1, class2, duration, size, cohort) {\n    const\
+    \ id = r.uuid()\n    let target\n    let color1\n    let color2\n    if (class1=='A')\
+    \ {\n        color1 = [\"white\",\"black\"]\n    } else {\n        color1 = [\"\
+    black\", \"white\"]\n    }\n\n    if (class2=='A') {\n        color2 = [\"white\"\
+    ,\"black\"]\n    } else {\n        color2 = [\"black\", \"white\"]\n    }\n\n\
+    \    if (class1===class2) {\n        target = 'SAME'\n    } else {\n        target\
+    \ = 'DIFFERENT'\n    }\n    const before = new Wait(1, {group: id})\n    const\
+    \ first = new Checkerboard(duration, color1[0], color1[1], size, angle,\n    \
+    \    {group: id, cohort: cohort, block: true, class: class1,\n               \
+    \    target: target})\n    const second = new Checkerboard(duration, color2[0],\
+    \ color2[1], size, angle,\n        {group: id, cohort: cohort, block: true, class:\
+    \ class2,\n                   target: target})\n    const after = new Wait(r.randi(1,1.5),\
+    \ {group: id, block: true})\n    return [before, first, second, after]\n}\n\n\
+    let x\nlet y\nlet stimuli = []\nlet l\nlet before\nlet after\nlet id\nlet cohort\n\
+    \nfor (let size of sizes) {\n    for (let duration of durations) {\n        for\
+    \ (let i = 0; i < repetitions; i++) {\n            // use cohort to maintain balance\
+    \ in analysis\n            cohort = r.uuid()\n            stimuli.push(checkerboard_group('A','B',\
+    \ duration,size, cohort))\n            stimuli.push(checkerboard_group('A','A',\
+    \ duration,size, cohort))\n            stimuli.push(checkerboard_group('B','B',\
+    \ duration,size, cohort))\n            stimuli.push(checkerboard_group('B','A',\
+    \ duration,size, cohort))\n        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator\
+    \ = measureIntegrity(flatten(stimuli))\nfor (let s of stimulusGenerator) {\n \
+    \   yield s\n}\n", filename: checkerboard-durations, flickerVersion: 0.3, program: checkerboard-durations,
+  seed: '12345', version: 0.5, windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:57.933000', epl: "const metadata = {name:\
+    \ \"grating\", version: \"0.1.2\"}\n\n\nlet repetitions = 75\nlet durations =\
+    \ [2]\nlet angles = [PI/4]\nlet speeds = [200]\nlet nsizes = 8\nlet startLogMAR\
+    \ = 2.1\nlet logMarStep = 0.1\n\n\nfunction logMARtoPx(logMAR, pxPerDegree=7.5)\
+    \ {\n    let degrees = pow(10,logMAR)/60\n    return round(degrees*pxPerDegree)\n\
+    }\n\nfunction inverseAngle(angle) {\n    return (angle + PI) % (2*PI)\n}\n\n\n\
+    let sizes = [...Array(nsizes).keys()].map(\n    x => x*logMarStep+startLogMAR).map(\n\
+    \    x => logMARtoPx(x))\n\n\nfunction* measureIntegrity(stimuli,every=5*60) {\n\
+    \    // every N seconds, do a flash\n    let integrityMeta\n    let elapsedTime\
+    \ = every\n    for (let s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"\
+    white\", integrityMeta)\n            yield new Wait(2, integrityMeta)\n      \
+    \      elapsedTime = 0\n            yield s\n        } else {\n            yield\
+    \ s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\n\
+    let stimuli = []\nlet left\nlet right\nlet before\nlet after\nlet id\nlet cohort\n\
+    \nfor (let size of sizes) {\n    for (let angle of angles) {\n        for (let\
+    \ speed of speeds) {\n            for (let duration of durations) {\n        \
+    \        for (let i = 0; i < repetitions; i++) {\n                    // use cohort\
+    \ to maintain balance in analysis\n                    cohort = r.uuid()\n   \
+    \                 before = new Wait(1, {group: id})\n                    \n  \
+    \                  id = r.uuid()\n                    left = new Grating(duration,\"\
+    black\", speed, size, angle, \"white\",\n                        {group: id, cohort:\
+    \ cohort, class: \"FORWARD\", block: true})\n                    after = new Wait(r.randi(1,1.5),\
+    \ {group: id, block: true})\n                    stimuli.push([before,left,after])\n\
+    \                    \n                    id = r.uuid()\n                   \
+    \ meta = {group: id, block: true}\n                    right = new Grating(duration,\"\
+    black\", speed, size, inverseAngle(angle), \"white\",\n                      \
+    \  {group: id, cohort: cohort, class: \"REVERSE\", block: true})\n           \
+    \         after = new Wait(r.randi(1,1.5), {group: id, block: true})\n       \
+    \             stimuli.push([before,right,after])\n                }\n        \
+    \    }\n        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n    yield s\n}\n", filename: grating, flickerVersion: 0.3,
+  program: grating, seed: '12345', version: 0.5, windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:58.646000', epl: "const metadata = {name:\
+    \ \"grating-durations\", version: \"0.1.2\"}\n\n\nlet repetitions = 50\nlet durations\
+    \ = [0.5,1,1.5]\nlet angles = [PI/4]\nlet speeds = [200]\nlet nsizes = 8\nlet\
+    \ startLogMAR = 2.1\nlet logMarStep = 0.1\n\n\nfunction logMARtoPx(logMAR, pxPerDegree=7.5)\
+    \ {\n    let degrees = pow(10,logMAR)/60\n    return round(degrees*pxPerDegree)\n\
+    }\n\nfunction inverseAngle(angle) {\n    return (angle + PI) % (2*PI)\n}\n\n\n\
+    let sizes = [...Array(nsizes).keys()].map(\n    x => x*logMarStep+startLogMAR).map(\n\
+    \    x => logMARtoPx(x))\n\n\nfunction* measureIntegrity(stimuli,every=5*60) {\n\
+    \    // every N seconds, do a flash\n    let integrityMeta\n    let elapsedTime\
+    \ = every\n    for (let s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"\
+    white\", integrityMeta)\n            yield new Wait(2, integrityMeta)\n      \
+    \      elapsedTime = 0\n            yield s\n        } else {\n            yield\
+    \ s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\n\
+    let stimuli = []\nlet left\nlet right\nlet before\nlet after\nlet id\nlet cohort\n\
+    \nfor (let size of sizes) {\n    for (let angle of angles) {\n        for (let\
+    \ speed of speeds) {\n            for (let duration of durations) {\n        \
+    \        for (let i = 0; i < repetitions; i++) {\n                    // use cohort\
+    \ to maintain balance in analysis\n                    cohort = r.uuid()\n   \
+    \                 before = new Wait(1, {group: id})\n                    \n  \
+    \                  id = r.uuid()\n                    left = new Grating(duration,\"\
+    black\", speed, size, angle, \"white\",\n                        {group: id, cohort:\
+    \ cohort, class: \"FORWARD\", block: true})\n                    after = new Wait(r.randi(1,1.5),\
+    \ {group: id, block: true})\n                    stimuli.push([before,left,after])\n\
+    \                    \n                    id = r.uuid()\n                   \
+    \ meta = {group: id, block: true}\n                    right = new Grating(duration,\"\
+    black\", speed, size, inverseAngle(angle), \"white\",\n                      \
+    \  {group: id, cohort: cohort, class: \"REVERSE\", block: true})\n           \
+    \         after = new Wait(r.randi(1,1.5), {group: id, block: true})\n       \
+    \             stimuli.push([before,right,after])\n                }\n        \
+    \    }\n        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n    yield s\n}\n", filename: grating-durations,
+  flickerVersion: 0.3, program: grating-durations, seed: '12345', version: 0.5, windowHeight: '1140',
+  windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:59.256000', epl: "const metadata = {name:\
+    \ \"grating-speeds\", version: \"0.1.2\"}\n\n\nlet repetitions = 50\nlet durations\
+    \ = [1]\nlet angles = [PI/4]\nlet speeds = [200,400,600]\nlet nsizes = 8\nlet\
+    \ startLogMAR = 2.1\nlet logMarStep = 0.1\n\n\nfunction logMARtoPx(logMAR, pxPerDegree=7.5)\
+    \ {\n    let degrees = pow(10,logMAR)/60\n    return round(degrees*pxPerDegree)\n\
+    }\n\nfunction inverseAngle(angle) {\n    return (angle + PI) % (2*PI)\n}\n\n\n\
+    let sizes = [...Array(nsizes).keys()].map(\n    x => x*logMarStep+startLogMAR).map(\n\
+    \    x => logMARtoPx(x))\n\n\nfunction* measureIntegrity(stimuli,every=5*60) {\n\
+    \    // every N seconds, do a flash\n    let integrityMeta\n    let elapsedTime\
+    \ = every\n    for (let s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"\
+    white\", integrityMeta)\n            yield new Wait(2, integrityMeta)\n      \
+    \      elapsedTime = 0\n            yield s\n        } else {\n            yield\
+    \ s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\n\
+    let stimuli = []\nlet left\nlet right\nlet before\nlet after\nlet id\nlet cohort\n\
+    \nfor (let size of sizes) {\n    for (let angle of angles) {\n        for (let\
+    \ speed of speeds) {\n            for (let duration of durations) {\n        \
+    \        for (let i = 0; i < repetitions; i++) {\n                    // use cohort\
+    \ to maintain balance in analysis\n                    cohort = r.uuid()\n   \
+    \                 before = new Wait(1, {group: id})\n                    \n  \
+    \                  id = r.uuid()\n                    left = new Grating(duration,\"\
+    black\", speed, size, angle, \"white\",\n                        {group: id, cohort:\
+    \ cohort, class: \"FORWARD\", block: true})\n                    after = new Wait(r.randi(1,1.5),\
+    \ {group: id, block: true})\n                    stimuli.push([before,left,after])\n\
+    \                    \n                    id = r.uuid()\n                   \
+    \ meta = {group: id, block: true}\n                    right = new Grating(duration,\"\
+    black\", speed, size, inverseAngle(angle), \"white\",\n                      \
+    \  {group: id, cohort: cohort, class: \"REVERSE\", block: true})\n           \
+    \         after = new Wait(r.randi(1,1.5), {group: id, block: true})\n       \
+    \             stimuli.push([before,right,after])\n                }\n        \
+    \    }\n        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n    yield s\n}\n", filename: grating-speeds,
+  flickerVersion: 0.3, program: grating-speeds, seed: '12345', version: 0.5, windowHeight: '1140',
+  windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:59.308000', epl: "const metadata = {name:\
+    \ \"kinetics\", version: \"0.2.0\"}\n\nlet stimuli = []\nlet group = []\nlet meta\n\
+    let onTime = 1\n\n// \"kinetic wedge\" of different gap sizes\n// .1 second steps\
+    \ through 6 seconds\nfor (let i=0.1; i<=6; i=i+0.1) {\n\tmeta = {group: r.uuid()}\n\
+    \tgroup = []\n\tgroup.push(new Wait(1, meta))\n\t// 5 repetitions\n\tgroup.push(new\
+    \ Solid(onTime, \"white\", meta))\n\tfor (let j = 0; j < 4; j++) {\n\t\tgroup.push(new\
+    \ Wait(i, meta))\n\t\tgroup.push(new Solid(onTime, \"white\", meta))\n\t}\n\t\
+    group.push(new Wait(1, meta))\n\n\tstimuli.push(group)\n}\n\n\nr.shuffle(stimuli)\n\
+    for (let group of stimuli) {\n\tfor (let stimulus of group) {\n\t\tyield stimulus\n\
+    \t}\n}\n", filename: kinetics, flickerVersion: 0.3, program: kinetics, seed: '12345',
+  version: 0.5, windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:43:59.780000', epl: "const metadata = {name:\
+    \ \"letters\", version: \"0.2.0\", inverted: false}\n// TODO pre-render letters\n\
+    let repetitions = 200\nlet sizes = [300]\nlet durations = [0.5]\n\n\nfunction*\
+    \ measureIntegrity(stimuli,every=5*60) {\n    // every N seconds, do a flash\n\
+    \    let integrityMeta\n    let elapsedTime = every\n    for (let s of stimuli)\
+    \ {\n        if (elapsedTime>=every && s.metadata.block===undefined) {\n     \
+    \       integrityMeta = {group: r.uuid(), label: \"integrity\"}\n            yield\
+    \ new Wait(1, integrityMeta)\n            yield new Solid(0.5, \"white\", integrityMeta)\n\
+    \            yield new Wait(2, integrityMeta)\n            elapsedTime = 0\n \
+    \           yield s\n        } else {\n            yield s\n        }\n      \
+    \  elapsedTime=elapsedTime+s[\"lifespan\"]\n    }\n}\n\nlet letters = [\"C\",\
+    \ \"D\", \"H\", \"K\", \"N\", \"O\", \"R\", \"S\", \"V\", \"Z\"]\nlet x\nlet y\n\
+    let stimuli = []\nlet l\nlet before\nlet after\nlet id\nlet cohort\n\nfor (let\
+    \ i = 0; i < repetitions; i++) {\n    for (let size of sizes) {\n        for (let\
+    \ duration of durations) {\n            cohort = r.uuid(i)\n            for (let\
+    \ letter of letters) {\n                id = r.uuid(i)\n                // block\
+    \ means \"do not insert a integrity check before me\"\n                // backgroundColor,\
+    \ letter, x, y, size, color\n                x = windowWidth/2 - size/2\n    \
+    \            y = windowHeight/2 + size/2\n                l = new Letter(duration,\
+    \ \"black\", letter,x,y,size, \n                    \"white\", {group: id, cohort:\
+    \ cohort, block: true})\n                before = new Wait(1, {group: id})\n \
+    \               after = new Wait(r.randi(0.5,1), {group: id, block: true})\n\n\
+    \                // before + lit + after = lifespan\n                // this pads\
+    \ the white flash\n                stimuli.push([before, l, after])\n        \
+    \    }\n        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n    yield s\n}\n", filename: letters, flickerVersion: 0.3,
+  program: letters, seed: '12345', version: 0.5, windowHeight: '1140', windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:44:00.035000', epl: "const metadata = {name:\
+    \ \"letters\", version: \"0.2.0\", inverted: true}\n\nlet repetitions = 12\nlet\
+    \ sizes = [200,400,600]\nlet durations = [0.5,1,1.5]\n\n\nfunction* measureIntegrity(stimuli,every=5*60)\
+    \ {\n    // every N seconds, do a flash\n    let integrityMeta\n    let elapsedTime\
+    \ = every\n    for (let s of stimuli) {\n        if (elapsedTime>=every && s.metadata.block===undefined)\
+    \ {\n            integrityMeta = {group: r.uuid(), label: \"integrity\"}\n   \
+    \         yield new Solid(1, \"white\",integrityMeta)\n            yield new Solid(0.5,\
+    \ \"black\", integrityMeta)\n            yield new Solid(2, \"white\",integrityMeta)\n\
+    \            elapsedTime = 0\n            yield s\n        } else {\n        \
+    \    yield s\n        }\n        elapsedTime=elapsedTime+s[\"lifespan\"]\n   \
+    \ }\n}\n\nlet letters = [\"C\", \"D\", \"H\", \"K\", \"N\", \"O\", \"R\", \"S\"\
+    , \"V\", \"Z\"]\nlet x\nlet y\nlet stimuli = []\nlet l\nlet before\nlet after\n\
+    let id\nlet cohort\n\nfor (let i = 0; i < repetitions; i++) {\n    for (let size\
+    \ of sizes) {\n        for (let duration of durations) {\n            cohort =\
+    \ r.uuid(i)\n            for (let letter of letters) {\n                id = r.uuid(i)\n\
+    \                // block means \"do not insert a integrity check before me\"\n\
+    \                // backgroundColor, letter, x, y, size, color\n             \
+    \   x = windowWidth/2 - size/2\n                y = windowHeight/2 + size/2\n\
+    \                l = new Letter(duration, \"white\", letter,x,y,size, \n     \
+    \               \"black\", {group: id, cohort: cohort, block: true})\n       \
+    \         before = new Solid(1, \"white\", {group: id})\n                after\
+    \ = new Solid(r.randi(0.5,1), \"white\", {group: id, block: true})\n\n       \
+    \         // before + lit + after = lifespan\n                // this pads the\
+    \ white flash\n                stimuli.push([before, l, after])\n            }\n\
+    \        }\n    }\n}\n\nr.shuffle(stimuli)\n\nlet stimulusGenerator = measureIntegrity(flatten(stimuli))\n\
+    for (let s of stimulusGenerator) {\n    yield s\n}\n", filename: letters-inverted,
+  flickerVersion: 0.3, program: letters-inverted, seed: '12345', version: 0.5, windowHeight: '1140',
+  windowWidth: '912'}
+--- {date: !!timestamp '2017-07-03 21:44:00.098000', epl: "const metadata = {name:\
+    \ \"wedge\", version: \"0.2.0\"}\n\n\n// \"light wedge\" of different durations\n\
+    let solid = []\n\n// .1 second steps through 6 seconds\nfor (let i=0.1; i<=6;\
+    \ i=i+0.1) {\n\tsolid.push(new Solid(i))\n}\n\nyield new Wait(2)\n// 5 repetitions\n\
+    for (let i = 0; i < 5; i++) {\n\tr.shuffle(solid)\n\tfor (let stimulus of solid)\
+    \ {\n\t\tyield stimulus\n\t\tyield new Wait(2)\n\t}\n}\n", filename: wedge, flickerVersion: 0.3,
+  program: wedge, seed: '12345', version: 0.5, windowHeight: '1140', windowWidth: '912'}

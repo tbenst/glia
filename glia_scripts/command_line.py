@@ -7,7 +7,7 @@ matplotlib.rcParams['figure.max_open_warning'] = 250
 
 
 import glia
-import fnmatch
+from fnmatch import fnmatch
 import click
 import os
 import sys
@@ -120,12 +120,19 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
 
     lab_notebook = glia.open_lab_notebook(notebook)
     name=None
+    doc = None
     for doc in lab_notebook:
         n= doc['filename']
-        if fnmatch.fnmatch(n , filename+'*'):
+        logger.warning(n)
+        if fnmatch(n , filename):
+            # exact match
             name=n
             break
-    assert name is not None
+        elif fnmatch(n , filename+'*'):
+            name=n
+
+    if name is None:
+        raise(ValueError(f"could not match {filename} in lab notebook."))
 
     ctx.obj = {'filename': method+"_"+name}
 

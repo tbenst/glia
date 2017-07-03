@@ -364,7 +364,7 @@ def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figur
         response)
 
     units_accuracy = glia.pmap(unit_classification_accuracy,classification_data)
-    c_add_retina_figure("integrity-accuracy",plot_units_accuracy(units_accuracy))
+    c_add_retina_figure("integrity_accuracy",plot_units_accuracy(units_accuracy))
 
 def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
     print("Creating solid unit wedges")
@@ -414,7 +414,7 @@ def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_fi
                              figure_title="Integrity Test (5 Minute Spacing)")
 
     units_accuracy = glia.pmap(ideal_unit_classification_accuracy, response)
-    c_add_retina_figure("integrity-accuracy",plot_units_accuracy(units_accuracy))
+    c_add_retina_figure("integrity_accuracy",plot_units_accuracy(units_accuracy))
 
 # def save_integrity_chart_vFail(units, stimulus_list, c_unit_fig, c_add_retina_figure):
 #     print("Creating integrity chart")

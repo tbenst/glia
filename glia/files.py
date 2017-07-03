@@ -39,8 +39,15 @@ def read_plexon_txt_file(filepath, retina_id, channel_map=None):
     with open(filepath) as file:
         row_count = 0
         for row in csv.reader(file, delimiter=','):
+            # skip header
+            if re.match('Channel',row[0]): continue
             row_count+=1
-            channel = int(row[0])
+            # match raw or number
+            m = re.match("adc(\d+)",row[0])
+            if m:
+                channel = int(m.group(1))
+            else:
+                channel = int(row[0])
             unit_num = int(row[1]) - 1
             if channel_map:
                 c = channel_map[channel]
@@ -71,7 +78,7 @@ def read_plexon_txt_file(filepath, retina_id, channel_map=None):
         print(total_spike,row_count)
         print(unit_dictionary.keys())
         raise
-    
+
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
 def combine_units_by_channel(units):
