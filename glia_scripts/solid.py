@@ -337,15 +337,14 @@ def plot_units_accuracy(units_accuracy):
 
 def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figure):
     print("Creating integrity chart")
-    get_solid = glia.compose(
+    get_integrity= glia.compose(
         glia.f_create_experiments(stimulus_list),
         glia.filter_integrity,
         partial(glia.group_by,
             key=lambda x: x["stimulus"]["metadata"]["group"]),
         glia.group_dict_to_list,
         )
-    response = glia.apply_pipeline(get_solid,units, progress=True)
-    
+    response = glia.apply_pipeline(get_integrity,units, progress=True)
     chronological = glia.apply_pipeline(
         partial(sorted,key=lambda x: x[0]["stimulus"]["stimulusIndex"]),
         response)

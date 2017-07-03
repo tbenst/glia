@@ -14,11 +14,21 @@ def px_to_logmar(px,px_per_deg=7.5):
     minutes = px/px_per_deg*60
     return np.log10(minutes)
 
-def get_sizes(stimulus_list):
+def get_checkerboard_sizes(stimulus_list):
     f = glia.compose(
         glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='CHECKERBOARD'),
         partial(glia.group_by,
                 key=lambda x: x["stimulus"]["size"])
+        )
+    sizes = sorted(list(f(stimulus_list).keys()))
+    assert len(sizes)>0
+    return sizes
+
+def get_grating_sizes(stimulus_list):
+    f = glia.compose(
+        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='GRATING'),
+        partial(glia.group_by,
+                key=lambda x: x["stimulus"]["width"])
         )
     sizes = sorted(list(f(stimulus_list).keys()))
     assert len(sizes)>0
@@ -34,9 +44,8 @@ def svm_helper(training_data, training_target, validation_data, validation_targe
 
     return metrics.accuracy_score(expected, predicted)
 
-def main(data, stimulus_list, plot_directory):
-
-    sizes = get_sizes(stimulus_list)
+def main(data, stimulus_list, plot_directory, sizes, name):
+    print(f"plotting {name} classification accuracy.")
 
     shape = data["training_data"].shape
     (nsizes, n_training, timesteps, n_x, n_y, n_units) = shape
@@ -109,5 +118,13 @@ def main(data, stimulus_list, plot_directory):
     ax.set_ylim(0.35,1.05)
     ax.set_xlim(1.9,3.65)
     ax.legend(loc=(0.5,0.1))
-    ax.set_title('Checkerboard classification via Support Vector Clustering')
-    fig.savefig(os.path.join(plot_directory,"checkerboard_acuity.png"))
+    ax.set_title(f'{name} classification via Support Vector Clustering')
+    fig.savefig(os.path.join(plot_directory, f"{name}_acuity.png"))
+
+def checkerboard_svc(data, stimulus_list, plot_directory):
+    sizes = get_checkerboard_sizes(stimulus_list)
+    main(data, stimulus_list, plot_directory, sizes, "checkerboard")
+
+def grating_svc(data, stimulus_list, plot_directory):
+    sizes = get_grating_sizes(stimulus_list)
+    main(data, stimulus_list, plot_directory, sizes, "grating")

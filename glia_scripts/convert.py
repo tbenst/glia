@@ -52,6 +52,15 @@ def checker_class(stimulus):
     else:
         raise ValueError
 
+def grating_class(stimulus):
+    grating = stimulus["metadata"]["class"]
+    if grating=='FORWARD':
+        return 0
+    elif grating=='REVERSE':
+        return 1
+    else:
+        raise ValueError
+
 def checker_discrimination_class(stimulus):
     checker = stimulus["metadata"]["target"]
     if checker=='SAME':
@@ -260,3 +269,50 @@ def save_checkerboard_npz(units, stimulus_list, name):
     np.savez(name, training_data=training_data, training_target=training_target,
          validation_data=validation_data, validation_target=validation_target)
           # test_data=test_data, test_target=test_target)
+
+
+
+def save_grating_npz(units, stimulus_list, name):
+    print("Saving grating NPZ file.")
+
+    get_gratings = glia.compose(
+        partial(glia.create_experiments,
+            stimulus_list=stimulus_list,append_lifespan=0.5,progress=True),
+        glia.f_map(lambda x: adjust_lifespan(x)),
+        glia.f_filter(lambda x: x['stimulusType']=='GRATING'),
+        partial(glia.group_by,
+                key=lambda x: x["width"]),
+        glia.f_map(partial(glia.group_by,
+                key=lambda x: x["metadata"]["cohort"]))    )
+    gratings = get_gratings(units)
+
+    gratings = get_gratings(units)
+
+    sizes = sorted(list(gratings.keys()))
+    nsizes = len(sizes)
+    ncohorts = len(glia.get_value(gratings))
+    duration = glia.get_value(glia.get_value(gratings))[0]["lifespan"]
+    d = int(np.ceil(duration*1000)) # 1ms bins
+    tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    # 2 per cohort
+    training_data = np.full((nsizes,tvt.training*2,d,8,8,10),0,dtype='int8')
+    training_target = np.full((nsizes,tvt.training*2),0,dtype='int8')
+    validation_data = np.full((nsizes,tvt.validation*2,d,8,8,10),0,dtype='int8')
+    validation_target = np.full((nsizes,tvt.validation*2),0,dtype='int8')
+
+    size_map = {s: i for i,s in enumerate(sizes)}
+    for size, cohorts in gratings.items():
+        X = glia.f_split_dict(tvt)(cohorts)
+
+        td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X), grating_class)
+        size_index = size_map[size]
+        training_data[size_index] = td
+        training_target[size_index] = tt
+
+        td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X), grating_class)
+        validation_data[size_index] = td
+        validation_target[size_index] = tt
+
+    print('saving to ',name)
+    np.savez(name, training_data=training_data, training_target=training_target,
+         validation_data=validation_data, validation_target=validation_target)

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='glia',
-      version='0.4',
+      version='0.5',
       description='Elegant support functions for Neuroscientists.',
       url='https://github.com/tbenst/glia',
       author='Tyler Benster',
@@ -25,7 +25,6 @@ setup(name='glia',
           # Specify the Python versions you support here. In particular, ensure
           # that you indicate whether you support Python 2, Python 3 or both.
           'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
       ],
       keywords='neuroscience mea microelectrode',

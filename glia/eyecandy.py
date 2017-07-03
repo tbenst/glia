@@ -1,9 +1,11 @@
 import re
 import numpy as np
+import asyncio
 import requests
 import json
 import pickle
 import yaml
+import concurrent.futures
 from typing import List, Dict
 from functools import reduce
 import os
@@ -13,6 +15,7 @@ from scipy import signal
 from warnings import warn
 
 from .files import sampling_rate, read_raw_voltage
+from .config import logger
 # import pytest
 
 file = str
@@ -23,31 +26,39 @@ Seconds = float
 ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
 
-# legacy
-def create_eyecandy_gen(program_type, program, window_width, window_height, seed,
-        eyecandy_url):
-    # Create program from eyecandy YAML. 
-    r = requests.post(eyecandy_url + '/analysis/start-program',
-                      data={'program': program,
-                           "programType": program_type,
-                           'windowHeight': window_height,
-                           'windowWidth': window_width,
-                           "seed": seed})
-    sid = r.text
-    def eyecandy_gen():
-        done = False
-        while (True):
-            # Get the next stimulus using program sid
-            json = requests.get(eyecandy_url + '/analysis/program/{}'.format(sid)).json()
-            done = json["done"]
-            if done:
-                break
-            else:
-                value = json["value"]
-                value["stimulusIndex"] = json["stimulusIndex"]
-                yield value
+# TODO thread with async/await
 
-    return eyecandy_gen()
+async def get_stimulus(url):
+    done = False
+    stimuli = []
+    while(not done):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+
+            loop = asyncio.get_event_loop()
+            futures = [
+                loop.run_in_executor(
+                    executor, 
+                    requests.get, 
+                    url
+                )
+                for i in range(20)
+            ]
+            for response in await asyncio.gather(*futures):
+                try:
+                    json = response.json()
+                except:
+                    # requests beyond last stimuli will return error
+                    continue
+                if json['done']==True:
+                    done = True
+                else:
+                    value = json["value"]
+                    value["stimulusIndex"] = json["stimulusIndex"]
+                    stimuli.append(value)
+    return iter(sorted(stimuli, key=lambda x: x['stimulusIndex']))
+
+
+
 
 def create_epl_gen(program, epl, window_width, window_height, seed,
         eyecandy_url):
@@ -59,20 +70,12 @@ def create_epl_gen(program, epl, window_width, window_height, seed,
                            'windowWidth': window_width,
                            "seed": seed})
     sid = r.text
-    def eyecandy_gen():
-        done = False
-        while (True):
-            # Get the next stimulus using program sid
-            json = requests.get(eyecandy_url + '/analysis/program/{}'.format(sid)).json()
-            done = json["done"]
-            if done:
-                break
-            else:
-                value = json["value"]
-                value["stimulusIndex"] = json["stimulusIndex"]
-                yield value
+    url = eyecandy_url + '/analysis/program/{}'.format(sid)
 
-    return eyecandy_gen()
+    loop = asyncio.get_event_loop()
+    generator = get_stimulus(url)
+    a = loop.run_until_complete(generator)
+    return a
 
 def open_lab_notebook(filepath):
     """Take a filepath for YAML lab notebook and return dictionary."""
@@ -87,76 +90,31 @@ def get_experiment_protocol(lab_notebook_yaml, name):
             return experiment
 
 def get_epl_from_experiment(experiment):
-    return (experiment["program"],experiment["epl"],
-                    experiment["windowWidth"],experiment["windowHeight"],
-                    experiment["seed"])
+    try:
+        ret = (experiment["program"],experiment["epl"],
+                        experiment["windowWidth"],experiment["windowHeight"],
+                        experiment["seed"])
+    except:
+        raise(ValueError("Must use older version glia with frame-based lifespan."))
+    return ret
 
-def get_program_from_experiment(experiment):
-    """Get stimulus text from protocol suitable for eye-candy."""
-    # in python and comparing two identical floats is equal
-    if experiment["version"]>=0.5:
-        # "old" version 0.4, forms with epl are also labeled 0.4 :(
-        return (experiment["programType"],experiment["program"],
-            experiment["windowWidth"],experiment["windowHeight"],
-            experiment["seed"])                
-    else:
-        return ValueError("Must use older version glia with frame-based lifespan.")
-
-    
-def get_stimulus_from_eyecandy(start_times, eyecandy_gen, fix_missing=False):
-    """Return list of tuples (start time, corresponding eyecandy_gen)"""
-    # compensate for weird analog behavior at end of recording
-    # start_times.pop()
-    if fix_missing:
-        ret = [{'start_time': start_times[0], 'stimulus': next(eyecandy_gen)}]
-        predicted_start_time = ret[0]["stimulus"]["lifespan"]+start_times[0]
-        for time in start_times[1:]:
-
-            # only assign start times that roughly matched the prediction
-            while(time > predicted_start_time):
-                # this will eventually cause an error when the generator runs out
-                if np.abs(time - predicted_start_time) < 0.5:
-                    break
-
-                try:
-                    new = next(eyecandy_gen)
-                except:
-                    for r in ret:
-                        print(r['start_time'],r['stimulus']['stimulusType'])
-                    raise
-                predicted_start_time += new['lifespan']
-                ret.append({"stimulus": new, "start_time": None})
-                print(time,predicted_start_time)
-
-            try:
-                new = next(eyecandy_gen)
-            except:
-                for r in ret:
-                    print(r['start_time'],r['stimulus']['stimulusType'])
-                raise
-            predicted_start_time = time + new['lifespan']
-            ret.append({"stimulus": new, "start_time": time})
-
-        forward_stimulus_list = fill_missing_stimulus_times(ret)
-        backward_stimulus_list = fill_missing_stimulus_times(ret, reverse=True)
-        stimulus_list = []
-        for forward, backward, r in zip(forward_stimulus_list,backward_stimulus_list,ret):
-            forward_start = forward["start_time"]
-            backward_start = backward["start_time"]
-            assert forward["stimulus"]==backward["stimulus"]
-            stimulus = forward["stimulus"]
-            stimulus_list.append({'start_time': maybe_average(forward_start,backward_start),
-                'stimulus': stimulus})
-            # print(r["stimulus"]["stimulusType"],forward_start,backward_start,r["start_time"])
-        return stimulus_list
-    else:
-        return list((map(lambda x: {'start_time': x, 'stimulus': next(eyecandy_gen)}, start_times)))
 
 def dump_stimulus(stimulus_list, file_path):
+    ".stimulus file"
     pickle.dump(stimulus_list, open(file_path, "wb"))
 
 def load_stimulus(file_path):
     return pickle.load(open(file_path, "rb"))
+
+def save_stimulus(stimulus_list, file_path):
+    ".stim file"
+    with open(file_path, 'w') as outfile:
+        yaml.dump(stimulus_list, outfile)
+
+def read_stimulus(file_path):
+    with open(file_path, 'r') as file:
+        ret = list(yaml.safe_load(file))
+    return ret
 
 def get_threshold(analog_file, nsigma=3):
     analog = read_raw_voltage(analog_file)
@@ -226,25 +184,43 @@ def create_stimulus_list(analog_file, stimulus_file, lab_notebook_fp,
     stimulus_values = get_stimulus_values_from_analog(analog,calibration)
     filtered = assign_stimulus_index_to_analog(analog,stimulus_values,distance)
 
-    if "epl" in experiment_protocol:
-        program, epl,window_width,window_height,seed = get_epl_from_experiment(
-            experiment_protocol)
-        stimulus_gen = create_epl_gen(program, epl, window_width,
-                window_height, seed, eyecandy_url)
+    program, epl,window_width,window_height,seed = get_epl_from_experiment(
+        experiment_protocol)
+    stimulus_gen = create_epl_gen(program, epl, window_width,
+            window_height, seed, eyecandy_url)
+    print('checking start times')
         
-    else:
-        program_type, program,window_width,window_height,seed = get_program_from_experiment(
-            experiment_protocol)
-
-        stimulus_gen = create_eyecandy_gen(program_type, program, window_width,
-                window_height, seed, eyecandy_url)
-
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.8)
     stimulus_list = estimate_missing_start_times(start_times)
 
     validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
     # create the.stimulus file
     dump_stimulus(stimulus_list, stimulus_file)
+
+    return stimulus_list
+
+def create_stimulus_list_without_analog(stimulus_file, lab_notebook_fp,
+        data_name, eyecandy_url):
+    lab_notebook = open_lab_notebook(lab_notebook_fp)
+    experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
+
+    program, epl,window_width,window_height,seed = get_epl_from_experiment(
+        experiment_protocol)
+    stimulus_gen = create_epl_gen(program, epl, window_width,
+            window_height, seed, eyecandy_url)
+        
+    stimulus_list = []
+    start_time = 0
+    for stimulus in stimulus_gen:
+        new = {'start_time': start_time,
+            'stimulus': stimulus}
+        stimulus_list.append(new)
+        start_time += stimulus['lifespan']
+
+
+    validate_stimulus_list(stimulus_list,stimulus_gen,False, 0.01)
+    # create the.stimulus file
+    save_stimulus(stimulus_list, stimulus_file)
 
     return stimulus_list
 
