@@ -104,14 +104,15 @@ def programs_notebook():
     raw_programs = soup.select("select[name=program] option")
     programs = list(filter(lambda x: x!="custom",
                     [p["value"] for p in raw_programs]))
+
     s.post(eyecandy_url + '/window',
                       headers={
                            'windowHeight': "1140",
                            'windowWidth': "912",
                            })
+
     lab_notebook_str = ""
     for p in programs:
-
         r = s.post(eyecandy_url + '/start-program',
                          data={
                               'filename': p,
@@ -119,7 +120,6 @@ def programs_notebook():
                               'seed': "12345",
                               'submitButton': 'start',
                               })
-
         if r.status_code != 200:
             raise(ValueError(f"Internal Server Error for {p}"))
         lab_notebook_str+=r.text

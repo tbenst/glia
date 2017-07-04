@@ -27,7 +27,8 @@ def integrity_test(programs_notebook):
 def checkerboard_test(programs_notebook):
     (programs, lab_notebook) = programs_notebook
     ran = False
-    for p in programs:
+    for i,p in enumerate(programs):
+        if i<2: continue
         program = glia.get_experiment_protocol(lab_notebook,p)
         if re.search("checkerboard", program['epl']):
             with Run(lab_notebook) as r:
