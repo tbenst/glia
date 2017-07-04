@@ -5,6 +5,7 @@ import requests
 import json
 import pickle
 import yaml
+import demjson
 import concurrent.futures
 from typing import List, Dict
 from functools import reduce
@@ -37,8 +38,8 @@ async def get_stimulus(url):
             loop = asyncio.get_event_loop()
             futures = [
                 loop.run_in_executor(
-                    executor, 
-                    requests.get, 
+                    executor,
+                    requests.get,
                     url
                 )
                 for i in range(20)
@@ -62,7 +63,7 @@ async def get_stimulus(url):
 
 def create_epl_gen(program, epl, window_width, window_height, seed,
         eyecandy_url):
-    # Create program from eyecandy YAML. 
+    # Create program from eyecandy YAML.
     r = requests.post(eyecandy_url + '/analysis/start-program',
                       data={'program': program,
                            "epl": epl,
@@ -70,19 +71,19 @@ def create_epl_gen(program, epl, window_width, window_height, seed,
                            'windowWidth': window_width,
                            "seed": seed})
     sid = r.text
-    url = eyecandy_url + '/analysis/program/{}'.format(sid)
-
+    metadata = demjson.decode(
+        requests.get(f'{eyecandy_url}/analysis/metadata/{sid}').text)
     loop = asyncio.get_event_loop()
-    generator = get_stimulus(url)
+    generator = get_stimulus(f'{eyecandy_url}/analysis/program/{sid}')
     a = loop.run_until_complete(generator)
-    return a
+    return (metadata, a)
 
 def open_lab_notebook(filepath):
     """Take a filepath for YAML lab notebook and return dictionary."""
     with open( filepath, 'r') as f:
         y = list(yaml.safe_load_all(f))
     return y
-    
+
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
     for experiment in lab_notebook_yaml:
@@ -106,15 +107,15 @@ def dump_stimulus(stimulus_list, file_path):
 def load_stimulus(file_path):
     return pickle.load(open(file_path, "rb"))
 
-def save_stimulus(stimulus_list, file_path):
+def save_stimulus(stimuli, file_path):
     ".stim file"
     with open(file_path, 'w') as outfile:
-        yaml.dump(stimulus_list, outfile)
+        yaml.dump(stimuli, outfile)
 
 def read_stimulus(file_path):
     with open(file_path, 'r') as file:
-        ret = list(yaml.safe_load(file))
-    return ret
+        ret = yaml.safe_load(file)
+    return (ret["metadata"], list(ret["stimulus_list"]))
 
 def get_threshold(analog_file, nsigma=3):
     analog = read_raw_voltage(analog_file)
@@ -171,7 +172,7 @@ def fill_missing_stimulus_times(stimulus_list, reverse=False):
     else:
         return ret
 
-def create_stimulus_list(analog_file, stimulus_file, lab_notebook_fp,
+def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
         data_name, eyecandy_url, ignore_extra=False, calibration=(0.55,0.24,0.88),
         distance=1100, within_threshold=None):
     """Uses stimulus index modulo 3 Strategy.
@@ -186,29 +187,30 @@ def create_stimulus_list(analog_file, stimulus_file, lab_notebook_fp,
 
     program, epl,window_width,window_height,seed = get_epl_from_experiment(
         experiment_protocol)
-    stimulus_gen = create_epl_gen(program, epl, window_width,
+    metadata, stimulus_gen = create_epl_gen(program, epl, window_width,
             window_height, seed, eyecandy_url)
     print('checking start times')
-        
+
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.8)
     stimulus_list = estimate_missing_start_times(start_times)
 
     validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
     # create the.stimulus file
-    dump_stimulus(stimulus_list, stimulus_file)
+    stimuli = {"metadata": metadata, "stimulus_list": stimulus_list}
+    save_stimulus(stimuli, stimulus_file)
 
-    return stimulus_list
+    return (metadata, stimulus_list)
 
-def create_stimulus_list_without_analog(stimulus_file, lab_notebook_fp,
+def create_stimuli_without_analog(stimulus_file, lab_notebook_fp,
         data_name, eyecandy_url):
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
 
     program, epl,window_width,window_height,seed = get_epl_from_experiment(
         experiment_protocol)
-    stimulus_gen = create_epl_gen(program, epl, window_width,
+    metadata, stimulus_gen = create_epl_gen(program, epl, window_width,
             window_height, seed, eyecandy_url)
-        
+
     stimulus_list = []
     start_time = 0
     for stimulus in stimulus_gen:
@@ -220,9 +222,10 @@ def create_stimulus_list_without_analog(stimulus_file, lab_notebook_fp,
 
     validate_stimulus_list(stimulus_list,stimulus_gen,False, 0.01)
     # create the.stimulus file
-    save_stimulus(stimulus_list, stimulus_file)
+    stimuli = {"metadata": metadata, "stimulus_list": stimulus_list}
+    save_stimulus(stimuli, stimulus_file)
 
-    return stimulus_list
+    return (metadata, stimulus_list)
 
 
 def get_index_near_value(analog, value, distance):
@@ -257,13 +260,13 @@ def state_lasts_full_frame(state,index,filtered, sampling_rate, percentage_thres
     frame = filtered[index:index+frame_length]
     state_count = (frame==state).sum()
 #     print("full frame",state_count,frame_length)
-    
+
     # percentage_threshold==0.5: at least half of these values must have correct state
     if state_count>frame_length*percentage_threshold:
         return True
     else:
         return False
-    
+
 
 # @jit
 def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percentage_threshold):
@@ -273,8 +276,8 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
     stimulus_list = []
     for i,state in np.ndenumerate(filtered):
         i = i[0]
-        
-        # 
+
+        #
         if state==-1:
             # invalid state
             pass
@@ -295,11 +298,11 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
                 # should handle StopIteration TODO
                 next_stimulus = next(stimulus_gen)
 
-            stimulus_list.append({"start_time": i/sampling_rate, 
+            stimulus_list.append({"start_time": i/sampling_rate,
                                  "stimulus": next_stimulus})
             next_stimulus = next(stimulus_gen)
             previous_state = state
-           
+
         else:
             try:
                 # new stimulus detected--transition states
@@ -322,7 +325,7 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
                         stimulus_list.append({"start_time": None,
                                           "stimulus": next_stimulus})
                         next_stimulus = next(stimulus_gen)
-                        stimulus_list.append({"start_time": i/sampling_rate, 
+                        stimulus_list.append({"start_time": i/sampling_rate,
                                              "stimulus": next_stimulus})
                         next_stimulus = next(stimulus_gen)
                         previous_state = state
@@ -346,7 +349,7 @@ def estimate_missing_start_times(ret):
         stimulus = forward["stimulus"]
         stimulus_list.append({'start_time': maybe_average(forward_start,backward_start),
             'stimulus': stimulus})
-    
+
     return stimulus_list
 
 

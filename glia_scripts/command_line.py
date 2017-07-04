@@ -107,7 +107,7 @@ generate_choices = ["random","hz"]
     help="Number of channels.")
 @click.option('stimulus', "-s",
     is_flag=True,
-    help="Create .stim file")
+    help="Create .stim file without analog")
 @click.pass_context
 def generate(ctx, filename, eyecandy, method, notebook, number,
     nunits, stimulus):
@@ -139,17 +139,18 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
     if stimulus:
         stimulus_file = os.path.join(data_directory, name + ".stim")
         try:
-            stimulus_list = glia.read_stimulus(stimulus_file)
+            metadata, stimulus_list = glia.read_stimulus(stimulus_file)
             print('found .stim file')
         except:
             print('creating .stim file.')
-            stimulus_list = glia.create_stimulus_list_without_analog(stimulus_file,
+            metadata, stimulus_list = glia.create_stimuli_without_analog(stimulus_file,
                 notebook, name, eyecandy)
     else:
         stimulus_file = os.path.join(data_directory, name + ".stimulus")
-        stimulus_list = glia.load_stimulus(stimulus_file)
+        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
 
     ctx.obj["stimulus_list"] = stimulus_list
+    ctx.obj["metadata"] = metadata
     # total_time = sum(map(lambda x: x['stimulus']['lifespan'], stimulus_list))
     last_stim = stimulus_list[-1]
     total_time = last_stim['start_time']+last_stim['stimulus']['lifespan']
@@ -173,7 +174,7 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
     ctx.obj["units"] = units
 
     # prepare_output
-    plot_directory = os.path.join(data_directory, name+"-plots")
+    plot_directory = os.path.join(data_directory, f"{method}_{name}-plots")
     config.plot_directory = plot_directory
 
     os.makedirs(plot_directory, exist_ok=True)
@@ -274,13 +275,17 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
     #### LOAD STIMULUS
     try:
-        ctx.obj["stimulus_list"] = glia.load_stimulus(stimulus_file)
+        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
+        ctx.obj["stimulus_list"] = stimulus_list
+        ctx.obj["metadata"] = metadata
     except OSError:
         print("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
         if flicker_version==0.3:
-            ctx.obj["stimulus_list"] = glia.create_stimulus_list(
+            metadata, stimulus_list = glia.create_stimuli(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
                 calibration, distance, threshold)
+            ctx.obj["stimulus_list"] = stimulus_list
+            ctx.obj["metadata"] = metadata
             print('finished creating stimulus list')
         elif trigger == "ttl":
             raise ValueError('not implemented')
@@ -487,25 +492,35 @@ def strip_generated(name, choices=generate_choices):
     help="")
 @click.option("--grating", '-g', default=False, is_flag=True,
     help="")
+@click.option("--notebook", "-n", type=click.Path(exists=True))
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
 def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
-    checkerboard, nsamples, version=2):
+    checkerboard, nsamples, notebook, version=2):
     "Classify using converted NPZ"
     if not os.path.isfile(filename):
         filename = match_filename(filename, 'npz')
+
+    data_directory, data_name = os.path.split(filename)
+    if data_directory=='':
+        data_directory=os.getcwd()
+
+    if not notebook:
+        notebook = find_notebook(data_directory)
+
+    lab_notebook = glia.open_lab_notebook(notebook)
 
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     stim_name = strip_generated(name)
     if stimulus:
         stimulus_file = os.path.join(data_directory, stim_name + ".stim")
-        stimulus_list = glia.read_stimulus(stimulus_file)
+        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
     else:
         stimulus_file = os.path.join(data_directory, stim_name + ".stimulus")
-        stimulus_list = glia.load_stimulus(stimulus_file)
+        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
 
     data = np.load(filename)
 
@@ -522,11 +537,13 @@ def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
     #     safe_run(convert.save_integrity_npz,
     #         (units, stimulus_list, name))
     if checkerboard:
-        safe_run(svc.checkerboard_svc,
-            (data, stimulus_list, plot_directory, nsamples))
+        svc.checkerboard_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples)
     if grating:
         safe_run(svc.grating_svc,
-            (data, stimulus_list, plot_directory, nsamples))
+            (data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples))
     # elif eyechart:
     #     safe_run(convert.save_eyechart_npz,
     #         (units, stimulus_list, name))

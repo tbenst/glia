@@ -28,9 +28,9 @@ def checkerboard_test(programs_notebook):
     (programs, lab_notebook) = programs_notebook
     ran = False
     for i,p in enumerate(programs):
-        if i<2: continue
-        program = glia.get_experiment_protocol(lab_notebook,p)
-        if re.search("checkerboard", program['epl']):
+        # TODO
+        # if i>=2: continue
+        if re.search("checkerboard", p):
             with Run(lab_notebook) as r:
                 r.command(lab_notebook,
                     partial(assert_isfile,
@@ -39,7 +39,7 @@ def checkerboard_test(programs_notebook):
                     ['-s', '-n 1', '-u 1', p, 'convert', '-c'])
                 r.command(lab_notebook,
                     partial(assert_isfile,
-                        f"random_{p}-plots/00-all/checkerboard_acuity.png"),
+                        f"random_{p}-plots/00-all/{p}_acuity.png"),
                     glia_scripts.classify_cmd,
                     ['-cs', f"random_{p}.npz"])
                 ran = True
