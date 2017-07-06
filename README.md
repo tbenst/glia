@@ -1,5 +1,6 @@
 # Glia
 [![Build Status](https://travis-ci.org/tbenst/glia.svg?branch=master)](https://travis-ci.org/tbenst/glia)
+
 A package to support neuroscientists in analyzing MEAs.
 
 
