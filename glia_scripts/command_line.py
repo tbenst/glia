@@ -40,7 +40,7 @@ def plot_function(f):
     def new_func(ctx, *args, **kwargs):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
-            ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
+            ctx.obj["metadata"], ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
             *args[3:], **kwargs)
     return update_wrapper(new_func, f)
 
@@ -49,7 +49,7 @@ def analysis_function(f):
     def new_func(ctx, *args, **kwargs):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
-            ctx.obj['filename'],
+            ctx.obj["metadata"], ctx.obj['filename'],
             *args[2:], **kwargs)
     return update_wrapper(new_func, f)
 
@@ -136,18 +136,14 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
 
     ctx.obj = {'filename': method+"_"+name}
 
-    if stimulus:
-        stimulus_file = os.path.join(data_directory, name + ".stim")
-        try:
-            metadata, stimulus_list = glia.read_stimulus(stimulus_file)
-            print('found .stim file')
-        except:
-            print('creating .stim file.')
-            metadata, stimulus_list = glia.create_stimuli_without_analog(stimulus_file,
-                notebook, name, eyecandy)
-    else:
-        stimulus_file = os.path.join(data_directory, name + ".stimulus")
-        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
+    stimulus_file = os.path.join(data_directory, name + ".stim")
+    try:
+        metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
+        print('found .stim file')
+    except:
+        print('creating .stim file.')
+        metadata, stimulus_list = glia.create_stimuli_without_analog(stimulus_file,
+            notebook, name, eyecandy)
 
     ctx.obj["stimulus_list"] = stimulus_list
     ctx.obj["metadata"] = metadata
@@ -155,7 +151,7 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
     last_stim = stimulus_list[-1]
     total_time = last_stim['start_time']+last_stim['stimulus']['lifespan']
     units = {}
-    retina_id = 'test'
+    retina_id = f'{method}_{name}'
     print('generating test data')
     for channel_x in range(number):
         for channel_y in range(number):
@@ -174,7 +170,7 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
     ctx.obj["units"] = units
 
     # prepare_output
-    plot_directory = os.path.join(data_directory, f"{method}_{name}-plots")
+    plot_directory = os.path.join(data_directory, f"{retina_id}-plots")
     config.plot_directory = plot_directory
 
     os.makedirs(plot_directory, exist_ok=True)
@@ -241,7 +237,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
-    stimulus_file = os.path.join(data_directory, name + ".stimulus")
+    stimulus_file = os.path.join(data_directory, name + ".stim")
     ctx.obj = {"filename": os.path.join(data_directory,name)}
 
     if not notebook:
@@ -275,18 +271,19 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
     #### LOAD STIMULUS
     try:
-        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
+        metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
         ctx.obj["stimulus_list"] = stimulus_list
         ctx.obj["metadata"] = metadata
-    except OSError:
-        print("No .stimulus file found. Attempting to create from .analog file.".format(trigger))
+        assert method=='analog-flicker'
+    except:
+        print("No .stim file found. Creating from .analog file.".format(trigger))
         if flicker_version==0.3:
             metadata, stimulus_list = glia.create_stimuli(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
                 calibration, distance, threshold)
             ctx.obj["stimulus_list"] = stimulus_list
             ctx.obj["metadata"] = metadata
-            print('finished creating stimulus list')
+            print('finished creating .stim file')
         elif trigger == "ttl":
             raise ValueError('not implemented')
         else:
@@ -368,7 +365,7 @@ def create_cover_page(ax_gen, data):
 
 @analyze.command()
 @plot_function
-def cover(units, stimulus_list, c_unit_fig, c_retina_fig):
+def cover(units, stimulus_list, metadata, c_unit_fig, c_retina_fig):
     "Add cover page."
     data = {k:v.name for k,v in units.items()}
     result = glia.plot_units(create_cover_page,data,ax_xsize=10, ax_ysize=5)
@@ -391,81 +388,84 @@ def all(ctx):
     help="plot (seconds) before SOLID start time")
 @click.option("--append", "-a", type=float, default=1,
     help="plot (seconds) after SOLID end time")
-@click.option("--wedge/--no-wedge", default=False,
-    help="Sort by flash duration")
-@click.option("--kinetics", default=False, is_flag=True,
-    help="Sort by third stimuli duration (WAIT)")
-@click.option("--version", "-v", type=str, default="2")
+@click.option("--chronological", "-c", type=float, default=False,
+    help="plot chronological order")
 @plot_function
-def solid_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
-        prepend, append, wedge, kinetics, version=1):
+def solid_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
+        prepend, append, chronological):
     "Create PTSH and raster of spikes in response to solid."
     # safe_run(solid.save_unit_psth,
     #     (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
-    if wedge:
-        if version=="1":
-            safe_run(solid.save_unit_wedges,
-                (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig, prepend, append))
-        elif version=="2":
-            safe_run(solid.save_unit_wedges_v2,
-                (units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig))
-    if kinetics:
-        if version=="1":
-            safe_run(solid.save_unit_kinetics_v1,
-                (units, stimulus_list, c_unit_fig, c_retina_fig))
-        elif version=="2":
-            safe_run(solid.save_unit_kinetics,
-                (units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig))
-
+    name = metadata['name']
+    if chronological:
+        solid.save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append)
+    elif name=="wedge":
+        solid.save_unit_wedges_v2(
+            units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig)
+    elif name=="kinetics":
+        solid.save_unit_kinetics(
+            units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig)
     else:
-        safe_run(solid.save_unit_spike_trains,
-            (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
+        raise(ValueError(f"No match for {name}"))
 
 generate.add_command(solid_cmd)
 
 @analyze.command("bar")
 @click.option("--by", "-b", type=click.Choice(["angle", "width","acuity"]), default="angle")
 @plot_function
-def bar_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, by):
+def bar_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig, by):
     # if all_methods or "direction" in methods:
     if by=="angle":
-        safe_run(bar.save_unit_response_by_angle,
-            (units, stimulus_list, c_unit_fig, c_retina_fig))
+        bar.save_unit_response_by_angle(
+            units, stimulus_list, c_unit_fig, c_retina_fig)
     elif by=="acuity":
-        safe_run(bar.save_acuity_direction,
-            (units, stimulus_list, partial(c_unit_fig,"acuity"),
-                c_retina_fig))
+        bar.save_acuity_direction(
+            units, stimulus_list, partial(c_unit_fig,"acuity"),
+                c_retina_fig)
+
+def debug_lambda(x,f):
+    print('debug: ', x)
+    return f(x)
 
 generate.add_command(bar_cmd)
 
 @analyze.command("convert")
-@click.option("--letter", '-l', default=False, is_flag=True,
-    help="Output npz for letter classification")
-@click.option("--integrity", default=False, is_flag=True,
-    help="Output npz for integrity classification")
-@click.option("--grating", '-g', default=False, is_flag=True,
-    help="Output npz for grating classification")
-@click.option("--checkerboard", '-c', default=False, is_flag=True,
-    help="Output npz for checkerboard classification")
-@click.option("--eyechart", default=False, is_flag=True,
-    help="Output npz for eyechart classification")
-# @click.option("--letter", default=False, is_flag=True,
-#     help="Output npz for letter classification")
 @analysis_function
-def convert_cmd(units, stimulus_list, filename, letter, integrity, checkerboard,
-    eyechart, grating, version=2):
-    if letter:
-        safe_run(convert.save_letter_npz,
-            (units, stimulus_list, filename))
-    elif checkerboard:
-        safe_run(convert.save_checkerboard_npz,
-            (units, stimulus_list, filename))
-    elif grating:
-        safe_run(convert.save_grating_npz,
-            (units, stimulus_list, filename))
-    elif eyechart:
-        safe_run(convert.save_eyechart_npz,
-            (units, stimulus_list, filename))
+def convert_cmd(units, stimulus_list, metadata, filename, version=2):
+    name = metadata['name']
+    if name=='letters':
+        convert.save_letter_npz(
+            units, stimulus_list, filename)
+    elif name=='checkerboard':
+        convert.save_checkerboard_npz(
+            units, stimulus_list, filename,
+            lambda x: 'ONE CONDITION')
+            # partial(debug_lambda, f=lambda x: 'ONE CONDITION'))
+    elif name=='checkerboard-contrast':
+        convert.save_checkerboard_npz(
+            units, stimulus_list, filename,
+            lambda x: glia.checkerboard_contrast(x))
+    elif name=='checkerboard-durations':
+        convert.save_checkerboard_npz(
+            units, stimulus_list, filename,
+            lambda x: x["lifespan"])
+    elif name=='grating':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: 'ONE CONDITION')
+    elif name=='grating-speeds':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: x["speed"])
+    elif name=='grating-durations':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: x["lifespan"])
+    elif name=='eyechart':
+        convert.save_eyechart_npz(
+            units, stimulus_list, filename)
+    else:
+        raise(ValueError(f'Unknown name {name}'))
 
 generate.add_command(convert_cmd)
 
@@ -479,26 +479,20 @@ def strip_generated(name, choices=generate_choices):
 
 @main.command("classify")
 @click.argument('filename', type=str, default=None)
-@click.option('--stimulus', "-s",
-    is_flag=True,
-    help="Use .stim file")
 @click.option('--nsamples', "-n", type=int, default=0,
     help="Show results for n different sample numbers.")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="")
 # @click.option("--integrity", default=False, is_flag=True,
 #     help="")
-@click.option("--checkerboard", '-c', default=False, is_flag=True,
-    help="")
-@click.option("--grating", '-g', default=False, is_flag=True,
-    help="")
 @click.option("--notebook", "-n", type=click.Path(exists=True))
+@click.option('--skip', "-s", default=False, is_flag=True,
+    help="Skip method assertion (for testing)")
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
-    checkerboard, nsamples, notebook, version=2):
+def classify_cmd(filename, nsamples, notebook, skip, version=2):
     "Classify using converted NPZ"
     if not os.path.isfile(filename):
         filename = match_filename(filename, 'npz')
@@ -515,12 +509,10 @@ def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     stim_name = strip_generated(name)
-    if stimulus:
-        stimulus_file = os.path.join(data_directory, stim_name + ".stim")
-        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
-    else:
-        stimulus_file = os.path.join(data_directory, stim_name + ".stimulus")
-        metadata, stimulus_list = glia.read_stimulus(stimulus_file)
+    stimulus_file = os.path.join(data_directory, stim_name + ".stim")
+    metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
+    if not skip:
+        assert method=='analog-flicker' # if failed, delete .stim
 
     data = np.load(filename)
 
@@ -536,14 +528,17 @@ def classify_cmd(filename, stimulus, grating, #letter, integrity, eyechart,
     # elif integrity:
     #     safe_run(convert.save_integrity_npz,
     #         (units, stimulus_list, name))
-    if checkerboard:
+    name = metadata['name']
+    if re.match('checkerboard',name):
         svc.checkerboard_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples)
-    if grating:
-        safe_run(svc.grating_svc,
-            (data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples))
+    elif re.match('grating',name):
+        svc.grating_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples)
+    else:
+        raise(ValueError(f"unknown name: {name}"))
     # elif eyechart:
     #     safe_run(convert.save_eyechart_npz,
     #         (units, stimulus_list, name))
@@ -553,26 +548,26 @@ generate.add_command(convert_cmd)
 
 @analyze.command("raster")
 @plot_function
-def raster_cmd(units, stimulus_list, c_unit_fig, c_retina_fig):
-    safe_run(raster.save_raster,
-        (units, stimulus_list, partial(c_unit_fig,"raster"), c_retina_fig))
+def raster_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig):
+    raster.save_raster(
+        units, stimulus_list, partial(c_unit_fig,"raster"), c_retina_fig)
 
 @analyze.command("integrity")
 @click.option("--version", "-v", type=str, default="2")
 @plot_function
-def integrity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, version=1):
+def integrity_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig, version=1):
     if version=="1":
-        safe_run(solid.save_integrity_chart,
-            (units, stimulus_list, partial(c_unit_fig,"integrity"),
-                c_retina_fig))
+        solid.save_integrity_chart(
+            units, stimulus_list, partial(c_unit_fig,"integrity"),
+                c_retina_fig)
     elif version=="2":
-        safe_run(solid.save_integrity_chart_v2,
-            (units, stimulus_list, partial(c_unit_fig,"integrity"),
-                c_retina_fig))
+        solid.save_integrity_chart_v2(
+            units, stimulus_list, partial(c_unit_fig,"integrity"),
+                c_retina_fig)
     elif version=="fail":
-        safe_run(solid.save_integrity_chart_vFail,
-            (units, stimulus_list, partial(c_unit_fig,"integrity"),
-                c_retina_fig))
+        solid.save_integrity_chart_vFail(
+            units, stimulus_list, partial(c_unit_fig,"integrity"),
+                c_retina_fig)
 
 generate.add_command(integrity_cmd)
 
@@ -583,9 +578,9 @@ generate.add_command(integrity_cmd)
 @click.option("-h", "--height", type=int,
     help="Manually provide screen height for old versions of Eyecandy")
 @plot_function
-def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
-    safe_run(grating.save_unit_spike_trains,
-        (units, stimulus_list, c_unit_fig, c_retina_fig, width, height))
+def grating_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig, width, height):
+    grating.save_unit_spike_trains(
+        units, stimulus_list, c_unit_fig, c_retina_fig, width, height)
 
 
 @analyze.command("acuity")
@@ -595,10 +590,10 @@ def grating_cmd(units, stimulus_list, c_unit_fig, c_retina_fig, width, height):
     help="plot (seconds) after SOLID end time")
 @click.option("--version", "-v", type=float, default=3)
 @plot_function
-def acuity_cmd(units, stimulus_list, c_unit_fig, c_retina_fig,
+def acuity_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
         prepend, append, version):
-    safe_run(acuity.save_acuity_chart,
-        (units, stimulus_list, c_unit_fig, c_retina_fig,
-            prepend, append))
+    acuity.save_acuity_chart(
+        units, stimulus_list, c_unit_fig, c_retina_fig,
+            prepend, append)
 
 generate.add_command(acuity_cmd)

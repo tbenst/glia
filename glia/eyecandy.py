@@ -17,7 +17,7 @@ from warnings import warn
 from webcolors import html5_parse_legacy_color
 from .files import sampling_rate, read_raw_voltage
 from .config import logger
-# import pytest
+import json
 
 file = str
 Dir = str
@@ -78,6 +78,28 @@ def create_epl_gen(program, epl, window_width, window_height, seed,
     a = loop.run_until_complete(generator)
     return (metadata, a)
 
+
+def create_epl_gen_v2(program, epl, window_width, window_height, seed,
+        eyecandy_url):
+    # Create program from eyecandy YAML.
+    r = requests.post(eyecandy_url + '/analysis/run-program',
+                      data={'program': program,
+                           "epl": epl,
+                           'windowHeight': window_height,
+                           'windowWidth': window_width,
+                           "seed": seed})
+    response = r.json()
+
+    stimuli = []
+    for json in response['stimulusList']:
+        value = json["value"]
+        value["stimulusIndex"] = json["stimulusIndex"]
+        stimuli.append(value)
+    metadata = demjson.decode(response["metadata"])
+    assert type(metadata)==dict
+    return (metadata,
+        iter(sorted(stimuli, key=lambda x: x['stimulusIndex'])))
+
 def open_lab_notebook(filepath):
     """Take a filepath for YAML lab notebook and return dictionary."""
     with open( filepath, 'r') as f:
@@ -115,7 +137,7 @@ def save_stimulus(stimuli, file_path):
 def read_stimulus(file_path):
     with open(file_path, 'r') as file:
         ret = yaml.safe_load(file)
-    return (ret["metadata"], list(ret["stimulus_list"]))
+    return (ret["metadata"], list(ret["stimulus_list"]), ret['method'])
 
 def get_threshold(analog_file, nsigma=3):
     analog = read_raw_voltage(analog_file)
@@ -125,11 +147,11 @@ def get_threshold(analog_file, nsigma=3):
 
 def maybe_average(a,b):
     if not a:
-        return b
+        return float(b)
     elif not b:
-        return a
+        return float(a)
     else:
-        return (a+b)/2
+        return float((a+b)/2)
 
 
 def fill_missing_stimulus_times(stimulus_list, reverse=False):
@@ -187,7 +209,7 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
 
     program, epl,window_width,window_height,seed = get_epl_from_experiment(
         experiment_protocol)
-    metadata, stimulus_gen = create_epl_gen(program, epl, window_width,
+    metadata, stimulus_gen = create_epl_gen_v2(program, epl, window_width,
             window_height, seed, eyecandy_url)
     print('checking start times')
 
@@ -196,7 +218,8 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
 
     validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
     # create the.stimulus file
-    stimuli = {"metadata": metadata, "stimulus_list": stimulus_list}
+    stimuli = {"metadata": metadata, "stimulus_list": stimulus_list,
+               "method": 'analog-flicker'}
     save_stimulus(stimuli, stimulus_file)
 
     return (metadata, stimulus_list)
@@ -208,7 +231,7 @@ def create_stimuli_without_analog(stimulus_file, lab_notebook_fp,
 
     program, epl,window_width,window_height,seed = get_epl_from_experiment(
         experiment_protocol)
-    metadata, stimulus_gen = create_epl_gen(program, epl, window_width,
+    metadata, stimulus_gen = create_epl_gen_v2(program, epl, window_width,
             window_height, seed, eyecandy_url)
 
     stimulus_list = []
@@ -222,7 +245,8 @@ def create_stimuli_without_analog(stimulus_file, lab_notebook_fp,
 
     validate_stimulus_list(stimulus_list,stimulus_gen,False, 0.01)
     # create the.stimulus file
-    stimuli = {"metadata": metadata, "stimulus_list": stimulus_list}
+    stimuli = {"metadata": metadata, "stimulus_list": stimulus_list,
+               "method": 'eyecandy-timing'}
     save_stimulus(stimuli, stimulus_file)
 
     return (metadata, stimulus_list)
@@ -298,7 +322,7 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
                 # should handle StopIteration TODO
                 next_stimulus = next(stimulus_gen)
 
-            stimulus_list.append({"start_time": i/sampling_rate,
+            stimulus_list.append({"start_time": float(i/sampling_rate),
                                  "stimulus": next_stimulus})
             next_stimulus = next(stimulus_gen)
             previous_state = state
@@ -412,3 +436,10 @@ def checkerboard_contrast(stimulus):
     color = color_to_linear(stimulus['color'])
     alternateColor = color_to_linear(stimulus['alternateColor'])
     return np.abs(color - alternateColor)
+
+def bar_contrast(stimulus):
+    color = color_to_linear(stimulus['barColor'])
+    alternateColor = color_to_linear(stimulus['backgroundColor'])
+    return np.abs(color - alternateColor)
+
+grating_contrast = bar_contrast

@@ -19,6 +19,16 @@ def assert_isfile(filename):
         if os.path.isdir(directory): print(os.listdir(directory))
         raise
 
+def assert_has_at_least_x_files(directory, x):
+    try:
+        assert os.path.isdir(directory)
+        assert len(os.listdir())>=x
+    except:
+        print(os.listdir(), directory)
+        parent, child = os.path.split(directory)
+        print(os.listdir(parent))
+        raise
+
 def cli():
     """Yield a click.testing.CliRunner to invoke the CLI."""
     class_ = click.testing.CliRunner

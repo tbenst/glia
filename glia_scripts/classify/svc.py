@@ -14,15 +14,15 @@ def px_to_logmar(px,px_per_deg=7.5):
     minutes = px/px_per_deg*60
     return np.log10(minutes)
 
-def get_checkerboard_sizes(stimulus_list):
+def get_stimulus_parameters(stimulus_list, stimulus_type, parameter):
     f = glia.compose(
-        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='CHECKERBOARD'),
+        glia.f_filter(lambda x: x["stimulus"]['stimulusType']==stimulus_type),
         partial(glia.group_by,
-                key=lambda x: x["stimulus"]["size"])
+                key=lambda x: x["stimulus"][parameter])
         )
-    sizes = sorted(list(f(stimulus_list).keys()))
-    assert len(sizes)>0
-    return sizes
+    parameters = sorted(list(f(stimulus_list).keys()))
+    assert len(parameters)>0
+    return parameters
 
 def get_checkerboard_contrasts(stimulus_list):
     f = glia.compose(
@@ -34,36 +34,6 @@ def get_checkerboard_contrasts(stimulus_list):
     assert len(contrasts)>0
     return contrasts
 
-def get_checkerboard_durations(stimulus_list):
-    f = glia.compose(
-        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='CHECKERBOARD'),
-        partial(glia.group_by,
-            key=lambda x: x["stimulus"]["lifespan"])
-        )
-    contrasts = sorted(list(f(stimulus_list).keys()))
-    assert len(contrasts)>0
-    return contrasts
-
-def get_grating_sizes(stimulus_list):
-    f = glia.compose(
-        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='GRATING'),
-        partial(glia.group_by,
-                key=lambda x: x["stimulus"]["width"])
-        )
-    sizes = sorted(list(f(stimulus_list).keys()))
-    assert len(sizes)>0
-    return sizes
-
-def get_grating_durations(stimulus_list):
-    f = glia.compose(
-        glia.f_filter(lambda x: x["stimulus"]['stimulusType']=='GRATING'),
-        partial(glia.group_by,
-                key=lambda x: x["stimulus"]["lifespan"])
-        )
-    durations = sorted(list(f(stimulus_list).keys()))
-    assert len(durations)>0
-    return durations
-
 def svm_helper(training_data, training_target, validation_data, validation_target):
     # Create a classifier: a support vector classifier
     classifier = svm.SVC()
@@ -74,13 +44,13 @@ def svm_helper(training_data, training_target, validation_data, validation_targe
 
     return metrics.accuracy_score(expected, predicted)
 
-def error_bars_for_condition(data, target, ndraws=20):
-    accuracy_score = []
-    n = data.shape[1]
+def error_bars(data, target, ndraws=20):
+    n = data.shape[0]
+    accuracy = np.full((ndraws,), 0)
     (ntrain, nvalid, _) = glia.tvt_by_percentage(n,60,40,0)
-    indices = np.indices(n)
+    indices = np.arange(n)
     for i in range(ndraws):
-        indices = np.random.shuffle(indices)
+        np.random.shuffle(indices)
         training_ind = indices[0:ntrain]
         validation_ind = indices[ntrain:]
 
@@ -89,15 +59,16 @@ def error_bars_for_condition(data, target, ndraws=20):
         validation_data = data[validation_ind]
         validation_target = target[validation_ind]
 
-        accuracy_score.append(svm_helper(training_data, training_target,
-            validation_data, validation_target))
-    return (mean,below,above)
+        accuracy[i] = svm_helper(training_data, training_target,
+            validation_data, validation_target)
+    std = np.std(accuracy)
+    return (np.mean(accuracy),std,std)
 
 
 def bin_100ms(data):
     # turn the data in a (samples, feature) matrix from 100ms time bins:
-    new_steps = int(timesteps/100)
     (nconditions, nsizes, n_training, timesteps, n_x, n_y, n_units) = data.shape
+    new_steps = int(timesteps/100)
     return np.sum(data.reshape(
                         (nconditions, nsizes,
                             n_training, new_steps, 100, n_x,n_y,n_units)),
@@ -107,18 +78,20 @@ def bin_100ms(data):
 
 def bin_sum(data):
     (nconditions, nsizes, n_training, timesteps, n_x, n_y, n_units) = data.shape
-    return np.sum(data["training_data"],axis=3).reshape(
+    return np.sum(data,axis=3).reshape(
         (nconditions, nsizes, n_training, n_x*n_y*n_units))
 
 def plot_acuity(logmar, accuracy, yerror,
-                n_validation, name, conditions, condition_name):
-    sig5 = np.repeat(binom.ppf(0.95, n_validation, 0.5)/n_validation, len(sizes))
-    sig1 = np.repeat(binom.ppf(0.99, n_validation, 0.5)/n_validation, len(sizes))
+                n_validation, name, conditions, condition_name, plot_directory):
+    print(f"plotting {name} {condition_name} classification accuracy.")
+    sig5 = np.repeat(binom.ppf(0.95, n_validation, 0.5)/n_validation, len(logmar))
+    sig1 = np.repeat(binom.ppf(0.99, n_validation, 0.5)/n_validation, len(logmar))
 
     fig, ax = plt.subplots()
+    nconditions = len(conditions)
     for condition in range(nconditions):
-        ax.errorbar(logmar, accuracy[condition], marker='o',
-            yerr=yerror, label=f'{conditions[condition]}')
+        ax.errorbar(logmar, accuracy[condition], marker='o', markersize=4, capsize=4,
+            yerr=yerror[condition], label=f'{conditions[condition]}')
     ax.plot(logmar, sig1, 'k--', label='1% significance')
     ax.set_ylabel("Accuracy")
     ax.set_xlabel("logMAR")
@@ -147,28 +120,35 @@ def plot_acuity(logmar, accuracy, yerror,
 def acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, name,
             sizes, conditions, condition_name):
-    print(f"plotting {name} classification accuracy.")
-
-    shape = training_data.shape
-    (nconditions, nsizes, n_training, timesteps, n_x, n_y, n_units) = shape
-    n_validation = validation_data.shape[2]
+    print(f"training classifiers.")
+    # polymorphic over ndarray or list for conditions
+    nconditions = len(training_data)
+    assert nconditions==len(training_target)
+    assert nconditions==len(validation_data)
+    assert nconditions==len(validation_target)
+    nsizes = training_data[0].shape[0]
+    assert nsizes==training_target[0].shape[0]
+    assert nsizes==validation_data[0].shape[0]
+    assert nsizes==validation_target[0].shape[0]
+    n_validation = validation_data[0].shape[1]
 
     nclasses = 2
-
     accuracy_100 = np.full((nconditions, nsizes), 0, dtype=np.float)
     yerror = np.full((nconditions,2,nsizes),0, dtype=np.float)
     for condition in range(nconditions):
         for size in range(nsizes):
-            data = np.vstack([training_data,validation_data])
-            target = np.vstack([training_target,validation_target])
-            (mean,below,above) = error_bars_for_condition(data,target)
-            accuracy_100[condition, size] = svm_helper(data)
+            data = np.concatenate(
+                [training_data[condition][size],validation_data[condition][size]])
+            target = np.concatenate(
+                [training_target[condition][size],validation_target[condition][size]])
+            (mean,below,above) = error_bars(data,target)
+            accuracy_100[condition, size] = mean
             yerror[condition, :, size] = [below,above]
 
     logmar = list(map(px_to_logmar,sizes))
 
     plot_acuity(logmar, accuracy_100, yerror, n_validation,
-                name, conditions, condition_name)
+                name, conditions, condition_name, plot_directory)
 #
 # def plot_diff_nsamples(data, stimulus_list, plot_directory, name,
 #     sizes, nsamples=10):
@@ -253,8 +233,9 @@ def acuity(training_data, training_target, validation_data, validation_target,
 
 def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
                 nsamples):
-    sizes = get_checkerboard_sizes(stimulus_list)
-    if metadata["name"]=='checkerboard-contrasts':
+    sizes = get_stimulus_parameters(stimulus_list, "CHECKERBOARD", 'size')
+    name = metadata["name"]
+    if name=='checkerboard-contrast':
         training_data = bin_100ms(data["training_data"])
         validation_data = bin_100ms(data["validation_data"])
         training_target = data["training_target"]
@@ -262,28 +243,31 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
 
         conditions = get_checkerboard_contrasts(stimulus_list)
         condition_name = "contrast"
-    elif metadata["name"]=="checkerboard-durations":
+    elif name=="checkerboard-durations":
         training_data = bin_100ms(data["training_data"])
         validation_data = bin_100ms(data["validation_data"])
         training_target = data["training_target"]
         validation_target = data["validation_target"]
 
-        conditions = get_checkerboard_durations(stimulus_list)
-        condition_name = "duration"
-    elif metadata["name"]=="checkerboard":
-        training_100ms = bin_100ms(data["training_data"])
-        training_sum = bin_sum(data["training_data"])
+        conditions = get_stimulus_parameters(stimulus_list,
+            "CHECKERBOARD", 'lifespan')
+        condition_name = "durations"
+    elif name=="checkerboard":
+        training_100ms = bin_100ms(data["training_data"])[0]
+        training_sum = bin_sum(data["training_data"])[0]
         training_data = [training_100ms, training_sum]
-        validation_100ms = bin_100ms(data["validation_data"])
-        validation_sum = bin_sum(data["validation_data"])
+        validation_100ms = bin_100ms(data["validation_data"])[0]
+        validation_sum = bin_sum(data["validation_data"])[0]
         validation_data = [validation_100ms, validation_sum]
-        training_target = data["training_target"]
-        validation_target = data["validation_target"]
+        tt = data["training_target"][0]
+        training_target = [tt,tt]
+        vt = data["validation_target"][0]
+        validation_target = [vt,vt]
 
         conditions = ['100ms bins', 'spike count']
         condition_name = None
     else:
-        raise(ValueError(f'Unknown experiment {name}'))
+        raise(ValueError(f'Unknown experiment {metadata["name"]}'))
     if nsamples>0:
         plot_diff_nsamples(data, stimulus_list, plot_directory,
             "checkerboard", sizes, conditions, condition_name)
@@ -291,16 +275,68 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, "checkerboard",
             sizes, conditions, condition_name)
+#
 
 def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
                 nsamples):
-    sizes = get_grating_sizes(stimulus_list)
-    durations = get_grating_durations(stimulus_list)
-    # TODO function not written
-    # contrasts = get_grating_contrasts(stimulus_list)
+    sizes = get_stimulus_parameters(stimulus_list, "GRATING", "width")
+    if metadata["name"]=='grating-contrast':
+        training_data = bin_100ms(data["training_data"])
+        validation_data = bin_100ms(data["validation_data"])
+        training_target = data["training_target"]
+        validation_target = data["validation_target"]
+
+        conditions = get_grating_contrasts(stimulus_list)
+        condition_name = "contrast"
+    elif metadata["name"]=="grating-durations":
+        training_data = bin_100ms(data["training_data"])
+        validation_data = bin_100ms(data["validation_data"])
+        training_target = data["training_target"]
+        validation_target = data["validation_target"]
+
+        conditions = get_stimulus_parameters(stimulus_list, "GRATING", 'lifespan')
+        condition_name = "durations"
+    elif metadata["name"]=="grating-speeds":
+        training_data = bin_100ms(data["training_data"])
+        validation_data = bin_100ms(data["validation_data"])
+        training_target = data["training_target"]
+        validation_target = data["validation_target"]
+
+        conditions = get_stimulus_parameters(stimulus_list, "GRATING", 'speed')
+        condition_name = "speeds"
+    elif metadata["name"]=="grating":
+        training_100ms = bin_100ms(data["training_data"])[0]
+        training_sum = bin_sum(data["training_data"])[0]
+        training_data = [training_100ms, training_sum]
+        validation_100ms = bin_100ms(data["validation_data"])[0]
+        validation_sum = bin_sum(data["validation_data"])[0]
+        validation_data = [validation_100ms, validation_sum]
+        tt = data["training_target"][0]
+        training_target = [tt,tt]
+        vt = data["validation_target"][0]
+        validation_target = [vt,vt]
+
+        conditions = ['100ms bins', 'spike count']
+        condition_name = None
+    else:
+        raise(ValueError(f'Unknown experiment {metadata["name"]}'))
     if nsamples>0:
         plot_diff_nsamples(data, stimulus_list, plot_directory,
-            "grating", sizes, durations, nsamples)
+            "grating", sizes, conditions, condition_name)
     else:
-        acuity(data, stimulus_list, plot_directory, "grating",
-            sizes, durations)
+        acuity(training_data, training_target, validation_data, validation_target,
+            stimulus_list, plot_directory, "grating",
+            sizes, conditions, condition_name)
+#
+# def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
+#                 nsamples):
+#     sizes = get_grating_sizes(stimulus_list)
+#     durations = get_grating_durations(stimulus_list)
+#     # TODO function not written
+#     # contrasts = get_grating_contrasts(stimulus_list)
+#     if nsamples>0:
+#         plot_diff_nsamples(data, stimulus_list, plot_directory,
+#             "grating", sizes, durations, nsamples)
+#     else:
+#         acuity(data, stimulus_list, plot_directory, "grating",
+#             sizes, durations)
