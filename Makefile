@@ -1,5 +1,5 @@
 test:
-	py.test --doctest-modules
+	python test.py
 
 install:
 	python setup.py install
