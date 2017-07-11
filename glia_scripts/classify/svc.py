@@ -91,7 +91,7 @@ def plot_acuity(logmar, accuracy, yerror,
     nconditions = len(conditions)
     for condition in range(nconditions):
         ax.errorbar(logmar, accuracy[condition], marker='o', markersize=4, capsize=4,
-            yerr=yerror[condition], label=f'{conditions[condition]}')
+            yerr=yerror[condition], label=f'{conditions[condition]:.2f}')
     ax.plot(logmar, sig1, 'k--', label='1% significance')
     ax.set_ylabel("Accuracy")
     ax.set_xlabel("logMAR")
