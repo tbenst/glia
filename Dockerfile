@@ -1,9 +1,15 @@
-FROM continuumio/anaconda3:4.4.0
+FROM continuumio/miniconda3:4.3.14
 
 ENV PYTHONUNBUFFERED 0
 
 RUN apt-get update && apt-get -y install \
     libgl1-mesa-glx
+
+ADD ./environment.yml /tmp
+RUN conda env create -f /tmp/environment.yml
+
+# alternative to `source activate glia`
+ENV PATH /opt/conda/envs/glia/bin:$PATH
 
 # build matplotlib font cache
 RUN python -c 'import matplotlib.pyplot'
