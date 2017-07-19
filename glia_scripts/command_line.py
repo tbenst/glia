@@ -4,8 +4,6 @@ import matplotlib
 matplotlib.use("agg")
 matplotlib.rcParams['figure.max_open_warning'] = 250
 
-
-
 import glia
 from fnmatch import fnmatch
 import click
@@ -32,7 +30,7 @@ from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
 from random import randint
 import numpy as np
-
+import cProfile
 
 
 def plot_function(f):
@@ -207,8 +205,8 @@ def find_stim(name):
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://localhost:3000")
 @click.option("--processes", "-p", type=int, help="Number of processors")
-@click.option("--calibration", "-c", default=(0.55,0.24,0.88), help="Sets the analog value for each stimulus index.")
-@click.option("--distance", "-d", default=1100, help="Sets the distance from calibration for detecting stimulus index.")
+@click.option("--calibration", "-c", default="auto", help="""Sets the analog value
+    for each stimulus index. Should be dimension (3,2)""")
 @click.option("--output", "-o", type=click.Choice(["png","pdf"]), default="png")
 @click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
 @click.option("--fix-missing",  is_flag=True, help="Attempt to fill in missing start times, use with --ignore-extra.")
@@ -227,7 +225,7 @@ def find_stim(name):
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, verbose=False, debug=False,processes=None,
+        calibration=None, verbose=False, debug=False,processes=None,
         by_channel=False, integrity_filter=0.0):
     """Analyze data recorded with eyecandy.
     """
@@ -280,7 +278,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         if flicker_version==0.3:
             metadata, stimulus_list = glia.create_stimuli(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
-                calibration, distance, threshold)
+                calibration, threshold)
             ctx.obj["stimulus_list"] = stimulus_list
             ctx.obj["metadata"] = metadata
             print('finished creating .stim file')
@@ -346,7 +344,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, distance=None, version=None, verbose=False, debug=False,processes=None,
+        calibration=None, version=None, verbose=False, debug=False,processes=None,
         by_channel=False, integrity_filter=0.0):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
@@ -422,6 +420,12 @@ def bar_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig, by):
         bar.save_acuity_direction(
             units, stimulus_list, partial(c_unit_fig,"acuity"),
                 c_retina_fig)
+
+
+@analyze.command("stim")
+def stim_cmd():
+    "Create .stim file without running other commands."
+    pass
 
 def debug_lambda(x,f):
     print('debug: ', x)
@@ -597,3 +601,6 @@ def acuity_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
             prepend, append)
 
 generate.add_command(acuity_cmd)
+
+if __name__ == '__main__':
+    main()

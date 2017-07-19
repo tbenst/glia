@@ -195,34 +195,69 @@ def fill_missing_stimulus_times(stimulus_list, reverse=False):
         return ret
 
 def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, ignore_extra=False, calibration=(0.55,0.24,0.88),
-        distance=1100, within_threshold=None):
+        data_name, eyecandy_url, ignore_extra=False, calibration='auto',
+        within_threshold=None):
     """Uses stimulus index modulo 3 Strategy.
 
-    calibration determines the mean in linear light space for each stimulus index"""
+    calibration determines the mean in linear light space for each stimulus
+    index"""
     analog = read_raw_voltage(analog_file)[:,1]
+    if calibration=='auto':
+        calibration = auto_calibration(analog)
+    else:
+        calibration = np.array(calibration)
+
     sampling = sampling_rate(analog_file)
     lab_notebook = open_lab_notebook(lab_notebook_fp)
     experiment_protocol = get_experiment_protocol(lab_notebook, data_name)
-    stimulus_values = get_stimulus_values_from_analog(analog,calibration)
-    filtered = assign_stimulus_index_to_analog(analog,stimulus_values,distance)
+    filtered = assign_stimulus_index_to_analog(analog,calibration)
 
     program, epl,window_width,window_height,seed = get_epl_from_experiment(
         experiment_protocol)
     metadata, stimulus_gen = create_epl_gen_v2(program, epl, window_width,
             window_height, seed, eyecandy_url)
-    print('checking start times')
 
+    print('getting start times')
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.8)
+    total = len(start_times)
+    number_missing = len(list(filter(lambda x: x['start_time'] is None,
+        start_times)))
+    print(f'{number_missing}/{total} start times were missing. Estimating missing times')
     stimulus_list = estimate_missing_start_times(start_times)
 
-    validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
+    try:
+        print('validating stimulus list')
+        validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
+    except:
+        save_stimulus(start_times, stimulus_file+'.debug')
+        raise
     # create the.stimulus file
     stimuli = {"metadata": metadata, "stimulus_list": stimulus_list,
                "method": 'analog-flicker'}
     save_stimulus(stimuli, stimulus_file)
 
     return (metadata, stimulus_list)
+
+def auto_calibration(analog):
+    bins = np.linspace(np.min(analog),np.max(analog),128)
+    histogram = np.histogram(analog,bins)
+    idx_local_maxima = np.logical_and(
+        np.r_[True, histogram[0][1:] > histogram[0][:-1]],
+        np.r_[histogram[0][:-1] > histogram[0][1:], True]
+    )
+    idx_above_thresh = histogram[0]>np.mean(histogram[0])/2
+
+    idx = np.where(np.logical_and(idx_local_maxima, idx_above_thresh))[0]
+    try:
+        assert(len(idx)==6)
+    except:
+        ValueError(f"Autocalibration failed, but found candidate values {idx}")
+    v = histogram[1]
+    calibration = np.array([[np.floor(v[idx[0]-3]), np.ceil(v[idx[1]+3]]),
+                   [np.floor(v[idx[2]-3]), np.ceil(v[idx[3]+3]]),
+                   [np.floor(v[idx[4]-3]), np.ceil(v[idx[5]+3]])])
+    print(f"analog autocalibration of {calibration}")
+    return calibration
 
 def create_stimuli_without_analog(stimulus_file, lab_notebook_fp,
         data_name, eyecandy_url):
@@ -251,28 +286,48 @@ def create_stimuli_without_analog(stimulus_file, lab_notebook_fp,
 
     return (metadata, stimulus_list)
 
+#
+# def get_index_near_value(analog, value, distance):
+#     floor = value - distance
+#     ceiling = value + distance
+#     indices = np.where((analog > floor) & (analog < ceiling))
+#     return indices
 
-def get_index_near_value(analog, value, distance):
-    floor = value - distance
-    ceiling = value + distance
-    indices = np.where((analog > floor) & (analog < ceiling))
-    return indices
+# deprecate
+# def get_stimulus_values_from_analog(analog, calibration=(0.88,0.55,0.24)):
+#     # according to flickr 0.4 linear lightspace
+#     maximum = np.max(analog)
+#     minimum = np.min(analog)
+#     # mean value{light intensity}, refers to stimulus modulus
+#     stimulus_0 = float(calibration[0]*(maximum-minimum)+minimum)
+#     stimulus_1 = float(calibration[1]*(maximum-minimum)+minimum)
+#     stimulus_2 = float(calibration[2]*(maximum-minimum)+minimum)
+#     return (stimulus_0, stimulus_1, stimulus_2)
 
-def get_stimulus_values_from_analog(analog, calibration=(0.88,0.55,0.24)):
-    # according to flickr 0.4 linear lightspace
-    maximum = np.max(analog)
-    minimum = np.min(analog)
-    # mean value{light intensity}, refers to stimulus modulus
-    stimulus_0 = calibration[0]*(maximum-minimum)+minimum
-    stimulus_1 = calibration[1]*(maximum-minimum)+minimum
-    stimulus_2 = calibration[2]*(maximum-minimum)+minimum
-    return (stimulus_0, stimulus_1, stimulus_2)
+def assign_stimulus_index_to_analog(analog,calibration):
+    # eyecandy flicker start in the middle, then bottom, then top, repeat
+    # not logical, but there for legacy reasons
+    stimulus_1 = np.where(
+        np.logical_and(
+            analog>calibration[0,0],
+            analog<calibration[0,1]
+        )
+    )[0]
 
-def assign_stimulus_index_to_analog(analog,stimulus_values, distance=1200):
-    stimulus_0 = get_index_near_value(analog,stimulus_values[0], distance)
-    stimulus_1 = get_index_near_value(analog,stimulus_values[1], distance)
-    stimulus_2 = get_index_near_value(analog,stimulus_values[2], distance)
-    filtered = np.full(analog.shape,-1,dtype="int")
+    stimulus_0 = np.where(
+        np.logical_and(
+            analog>calibration[1,0],
+            analog<calibration[1,1]
+        )
+    )[0]
+
+    stimulus_2 = np.where(
+        np.logical_and(
+            analog>calibration[2,0],
+            analog<calibration[2,1]
+        )
+    )[0]
+    filtered = np.full(analog.shape,-1,dtype="int8")
     filtered[stimulus_0] = 0
     filtered[stimulus_1] = 1
     filtered[stimulus_2] = 2
@@ -292,7 +347,7 @@ def state_lasts_full_frame(state,index,filtered, sampling_rate, percentage_thres
         return False
 
 
-# @jit
+# good optimization candidate..
 def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percentage_threshold):
     m = filtered.size
     previous_state = -1
@@ -328,9 +383,9 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
             previous_state = state
 
         else:
+            # new stimulus detected--transition states
             try:
-                # new stimulus detected--transition states
-    #             print(next_stimulus)
+                # print(next_stimulus)
                 # flickering encodes modulus
                 next_stimulus_index = next_stimulus["stimulusIndex"]%3
 
@@ -344,6 +399,9 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
 
                 else:
                     # current state does not match anticipated next
+                    logger.warning(f"""got state {state} but expected
+                        {next_stimulus_index} at index {i} and
+                        stimulus index {next_stimulus['stimulusIndex']}""")
                     if state==(next_stimulus_index+1)%3:
                         # recover if we only missed one
                         stimulus_list.append({"start_time": None,
@@ -391,7 +449,8 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True,
                             within_threshold=None):
     # probably should modify to compare with filtered
     try:
-        print(next(stimulus_gen))
+        print(next(stimulus_gen),
+            f"previous start time: {stimulus_list[-1]['start_time']}")
         if not ignore_extra:
             raise ValueError("More stimuli than start times detected." \
                 "Use --ignore-extra to ignore.")
