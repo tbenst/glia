@@ -93,7 +93,7 @@ def plot_acuity(logmar, accuracy, yerror,
         if type(conditions[condition]) is float:
             label = f'{conditions[condition]:.2f}'
         else:
-            label = f'{conditions[condition]'
+            label = f'{conditions[condition]}'
 
         ax.errorbar(logmar, accuracy[condition], marker='o', markersize=4, capsize=4,
             yerr=yerror[condition], label=label)
