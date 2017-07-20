@@ -18,6 +18,7 @@ from webcolors import html5_parse_legacy_color
 from .files import sampling_rate, read_raw_voltage
 from .config import logger
 import json
+import matplotlib.pyplot as plt
 
 file = str
 Dir = str
@@ -203,7 +204,8 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     index"""
     analog = read_raw_voltage(analog_file)[:,1]
     if calibration=='auto':
-        calibration = auto_calibration(analog)
+        data_directory, data_name = os.path.split(stimulus_file)
+        calibration = auto_calibration(analog, data_directory)
     else:
         calibration = np.array(calibration)
 
@@ -238,24 +240,33 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
 
     return (metadata, stimulus_list)
 
-def auto_calibration(analog):
+def auto_calibration(analog, data_directory):
     bins = np.linspace(np.min(analog),np.max(analog),128)
     histogram = np.histogram(analog,bins)
     idx_local_maxima = np.logical_and(
         np.r_[True, histogram[0][1:] > histogram[0][:-1]],
         np.r_[histogram[0][:-1] > histogram[0][1:], True]
     )
-    idx_above_thresh = histogram[0]>np.mean(histogram[0])/2
+    idx_above_thresh = histogram[0]>np.percentile(histogram[0],80)
 
     idx = np.where(np.logical_and(idx_local_maxima, idx_above_thresh))[0]
-    try:
-        assert(len(idx)==6)
-    except:
-        ValueError(f"Autocalibration failed, but found candidate values {idx}")
     v = histogram[1]
-    calibration = np.array([[np.floor(v[idx[0]-3]), np.ceil(v[idx[1]+3]]),
-                   [np.floor(v[idx[2]-3]), np.ceil(v[idx[3]+3]]),
-                   [np.floor(v[idx[4]-3]), np.ceil(v[idx[5]+3]])])
+    try:
+        assert(idx.size==6)
+    except:
+        fig,ax = plt.subplots()
+        bins = np.linspace(np.min(analog),np.max(analog),128)
+        histogram = ax.hist(analog,bins)
+        fig.savefig(os.path.join(data_directory, "analog_histogram.png"))
+
+        raise(ValueError("Autocalibration failed, but found candidate values" \
+            f"{np.round(v[idx])}. See analog_histogram.png for guidance in" \
+            "manually setting the calibration such that it contains most values"))
+    calibration = np.array([
+        np.floor(v[idx[0]-5]), np.ceil(v[idx[1]+5]),
+        np.floor(v[idx[2]-5]), np.ceil(v[idx[3]+5]),
+        np.floor(v[idx[4]-5]), np.ceil(v[idx[5]+5])
+    ])
     print(f"analog autocalibration of {calibration}")
     return calibration
 
@@ -309,22 +320,22 @@ def assign_stimulus_index_to_analog(analog,calibration):
     # not logical, but there for legacy reasons
     stimulus_1 = np.where(
         np.logical_and(
-            analog>calibration[0,0],
-            analog<calibration[0,1]
+            analog>calibration[0],
+            analog<calibration[1]
         )
     )[0]
 
     stimulus_0 = np.where(
         np.logical_and(
-            analog>calibration[1,0],
-            analog<calibration[1,1]
+            analog>calibration[2],
+            analog<calibration[3]
         )
     )[0]
 
     stimulus_2 = np.where(
         np.logical_and(
-            analog>calibration[2,0],
-            analog<calibration[2,1]
+            analog>calibration[4],
+            analog<calibration[5]
         )
     )[0]
     filtered = np.full(analog.shape,-1,dtype="int8")

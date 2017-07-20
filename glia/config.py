@@ -20,6 +20,9 @@ logger.addFilter(dup_filter)
 processes = multiprocessing.cpu_count()
 plot_directory = None
 
+analog_calibration = 'auto'
+user_config = None
+
 # (x,y)
 channel_map = {
     1: (3,6),

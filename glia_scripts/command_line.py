@@ -30,6 +30,7 @@ from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
 from random import randint
 import numpy as np
+import yaml
 import cProfile
 
 
@@ -184,7 +185,8 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
         os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
 
 def find_notebook(directory):
-    notebooks = glob(os.path.join(directory, '*.yml')) + \
+    notebooks = glob(os.path.join(directory, 'lab*.yml')) + \
+        glob(os.path.join(directory, '*.yml')) + \
         glob(os.path.join(directory, '*.yaml'))
     if len(notebooks)==0:
         raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
@@ -205,14 +207,14 @@ def find_stim(name):
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://localhost:3000")
 @click.option("--processes", "-p", type=int, help="Number of processors")
-@click.option("--calibration", "-c", default="auto", help="""Sets the analog value
-    for each stimulus index. Should be dimension (3,2)""")
+# @click.option("--calibration", "-c", default="auto", help="""Sets the analog value
+#     for each stimulus index. Should be dimension (3,2)""")
+@click.option("--configuration", "-c", type=click.Path(exists=True), help="""Use
+    configuration file for analog calibration, etc.""")
 @click.option("--output", "-o", type=click.Choice(["png","pdf"]), default="png")
 @click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
 @click.option("--fix-missing",  is_flag=True, help="Attempt to fill in missing start times, use with --ignore-extra.")
 @click.option("--threshold", "-r", type=float, default=9, help="Set the threshold for flicker")
-@click.option("--window-height", "-h", type=int, help="Manually set the window resolution. Only applies to legacy eyecandy")
-@click.option("--window-width", "-w", type=int)
 @click.option("--integrity-filter", "-w", type=float, default=0.0,
     help="Only include units where classification percentage exceeds the specified amount.")
 @click.option("--verbose", "-v", is_flag=True)
@@ -224,8 +226,8 @@ def find_stim(name):
     """)
 @click.pass_context
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, verbose=False, debug=False,processes=None,
+        fix_missing=False, output=None, notebook=None,
+        configuration=None, verbose=False, debug=False,processes=None,
         by_channel=False, integrity_filter=0.0):
     """Analyze data recorded with eyecandy.
     """
@@ -237,6 +239,24 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     analog_file = os.path.join(data_directory, name +'.analog')
     stimulus_file = os.path.join(data_directory, name + ".stim")
     ctx.obj = {"filename": os.path.join(data_directory,name)}
+
+
+    if configuration!=None:
+        with open(configuration, 'r') as f:
+            user_config = yaml.safe_load(f)
+        config.user_config = user_config
+        if "analog_calibration" in user_config:
+            config.analog_calibration = user_config["analog_calibration"]
+        if "notebook" in user_config:
+            notebook = user_config["notebook"]
+        if "eyecandy" in user_config:
+            eyecandy = user_config["eyecandy"]
+        if "processes" in user_config:
+            processes = user_config["processes"]
+        if "integrity_filter" in user_config:
+            integrity_filter = user_config["integrity_filter"]
+        if "by_channel" in user_config:
+            by_channel = user_config["by_channel"]
 
     if not notebook:
         notebook = find_notebook(data_directory)
@@ -278,7 +298,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         if flicker_version==0.3:
             metadata, stimulus_list = glia.create_stimuli(
                 analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
-                calibration, threshold)
+                config.analog_calibration, threshold)
             ctx.obj["stimulus_list"] = stimulus_list
             ctx.obj["metadata"] = metadata
             print('finished creating .stim file')
@@ -343,8 +363,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 @analyze.resultcallback()
 @click.pass_context
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, window_height=None, window_width=None, output=None, notebook=None,
-        calibration=None, version=None, verbose=False, debug=False,processes=None,
+        fix_missing=False, output=None, notebook=None,
+        configuration=None, version=None, verbose=False, debug=False,processes=None,
         by_channel=False, integrity_filter=0.0):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
