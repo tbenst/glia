@@ -1,4 +1,5 @@
 import matplotlib
 import pytest
 matplotlib.use('agg')
-pytest.main(['--doctest-modules'])
+code = pytest.main(['--doctest-modules'])
+exit(code)

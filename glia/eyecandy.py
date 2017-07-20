@@ -105,13 +105,21 @@ def open_lab_notebook(filepath):
     """Take a filepath for YAML lab notebook and return dictionary."""
     with open( filepath, 'r') as f:
         y = list(yaml.safe_load_all(f))
+    try:
+        assert "epl" in y[0]
+    except:
+        raise(ValueError(f"{filepath} is not in lab notebook format"))
     return y
 
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
     for experiment in lab_notebook_yaml:
+        logger.info(f"inside get_experiment_protocol: {experiment['filename']},"
+        f" {name}")
         if experiment["filename"]==name:
             return experiment
+
+    raise(Exception(f"Could not find matching experiment name."))
 
 def get_epl_from_experiment(experiment):
     try:
@@ -119,7 +127,8 @@ def get_epl_from_experiment(experiment):
                         experiment["windowWidth"],experiment["windowHeight"],
                         experiment["seed"])
     except:
-        raise(ValueError("Must use older version glia with frame-based lifespan."))
+        raise(ValueError(f"""Could not find required field. Here's what we found
+        {experiment}"""))
     return ret
 
 
@@ -204,7 +213,7 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     index"""
     analog = read_raw_voltage(analog_file)[:,1]
     if calibration=='auto':
-        data_directory, data_name = os.path.split(stimulus_file)
+        data_directory, name = os.path.split(stimulus_file)
         calibration = auto_calibration(analog, data_directory)
     else:
         calibration = np.array(calibration)

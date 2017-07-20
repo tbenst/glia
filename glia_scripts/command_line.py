@@ -186,19 +186,13 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
 
 def find_notebook(directory):
     notebooks = glob(os.path.join(directory, 'lab*.yml')) + \
-        glob(os.path.join(directory, '*.yml')) + \
-        glob(os.path.join(directory, '*.yaml'))
+        glob(os.path.join(directory, 'lab*.yaml'))
     if len(notebooks)==0:
         raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
             "or specify file path with -n.")
-    return notebooks[0]
-
-def find_stim(name):
-    notebooks = glob(os.path.join(directory, '*.yml')) + \
-        glob(os.path.join(directory, '*.yaml'))
-    if len(notebooks)==0:
-        raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
-            "or specify file path with -n.")
+    elif len(notebooks)>1:
+        logger.warning(f"""Found multiple possible lab notebooks.
+        Using {notebooks[0]}. If wrong, try manually specifying""")
     return notebooks[0]
 
 @main.group(chain=True)
@@ -233,13 +227,13 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     """
     #### FILEPATHS
     if not os.path.isfile(filename):
-        filename = match_filename(filename)
+        filename = match_filename(filename,"txt")
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
     stimulus_file = os.path.join(data_directory, name + ".stim")
     ctx.obj = {"filename": os.path.join(data_directory,name)}
-
+    print(f"Analyzing {name}")
 
     if configuration!=None:
         with open(configuration, 'r') as f:
@@ -283,6 +277,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     logger.info("Verbose logging on")
 
     lab_notebook = glia.open_lab_notebook(notebook)
+    logger.info(name)
     experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
     flicker_version = experiment_protocol["flickerVersion"]
 
