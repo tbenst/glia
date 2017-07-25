@@ -30,7 +30,7 @@ def get_checkerboard_contrasts(stimulus_list):
         partial(glia.group_by,
                 key=lambda x: glia.checkerboard_contrast(x["stimulus"]))
         )
-    contrasts = sorted(list(f(stimulus_list).keys()))
+    contrasts = [float(x) for x in sorted(list(f(stimulus_list).keys()))]
     assert len(contrasts)>0
     return contrasts
 
