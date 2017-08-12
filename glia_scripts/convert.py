@@ -118,6 +118,7 @@ def save_eyechart_npz(units, stimulus_list, name):
     d = int(np.ceil(duration*1000)) # 1ms bins
     nunits = len(units.keys())
     tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    logger.info(f"{tvt}, {ncohorts}")
     training_data = np.full((nsizes,tvt.training,d,nunits),0,dtype='int8')
     training_target = np.full((nsizes,tvt.training),0,dtype='int8')
     validation_data = np.full((nsizes,tvt.validation,d,nunits),0,dtype='int8')
@@ -250,7 +251,9 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
     ncohorts = len(example_size)
     # print(list(checkers.values()))
     d = int(np.ceil(max_duration*1000)) # 1ms bins
+
     tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    logger.info(f"{tvt}, {ncohorts}")
     # (TODO?) 2 dims for first checkerboard and second checkerboard
     # 4 per cohort
     training_data = np.full((nconditions,nsizes,
@@ -272,6 +275,7 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
 
             td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
                         checker_discrimination_class)
+            logger.info(td.shape)
             missing_duration = d - td.shape[1]
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
@@ -371,84 +375,3 @@ def save_grating_npz(units, stimulus_list, name, group_by):
     np.savez(name, training_data=training_data, training_target=training_target,
          validation_data=validation_data, validation_target=validation_target)
           # test_data=test_data, test_target=test_target)
-
-
-
-# def save_grating_npz(units, stimulus_list, name, group_by):
-#     print("Saving grating NPZ file.")
-#
-#     get_gratings = glia.compose(
-#         partial(glia.create_experiments,
-#             stimulus_list=stimulus_list),
-#         glia.f_filter(lambda x: x['stimulusType']=='GRATING'),
-#         partial(glia.group_by,
-#                 key=lambda x: x["lifespan"]),
-#         glia.f_map(partial(glia.group_by,
-#                 key=lambda x: x["speed"])),
-#         glia.f_map(glia.f_map(partial(glia.group_by,
-#                 key=lambda x: x["width"]))),
-#         glia.f_map(glia.f_map(glia.f_map(partial(glia.group_by,
-#                 key=lambda x: x["metadata"]["cohort"]))))
-#     )
-#
-#     gratings = get_gratings(units)
-#
-#     durations = sorted(list(gratings.keys()))
-#     ndurations = len(durations)
-#     max_duration = durations[-1]
-#     example_duration = gratings[max_duration]
-#     example_speed = gratings[max_duration]
-#     speeds = sorted(list(example_speed.keys()))
-#     nspeeds = len(speeds)
-#     sizes = sorted(list(example_speed.keys()))
-#     nsizes = len(sizes)
-#
-#     example_size = glia.get_value(example_speed)
-#     ncohorts = len(example_size)
-#
-#     d = int(np.ceil(max_duration*1000)) # 1ms bins
-#     tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
-#     # 2 per cohort
-#     training_data = np.full((ndurations, nspeeds, nsizes,
-#         tvt.training*2,d,8,8,10),0,dtype='int8')
-#     training_target = np.full((ndurations, nspeeds, nsizes,
-#         tvt.training*2),0,dtype='int8')
-#     validation_data = np.full((ndurations, nspeeds, nsizes,
-#         tvt.validation*2,d,8,8,10),0,dtype='int8')
-#     validation_target = np.full((ndurations, nspeeds, nsizes,
-#         tvt.validation*2),0,dtype='int8')
-#
-#     size_map = {s: i for i,s in enumerate(sizes)}
-#     speed_map = {s: i for i,s in enumerate(speeds)}
-#     duration_map = {s: i for i,s in enumerate(durations)}
-#     print("durations:", durations)
-#     for duration, speeds in gratings.items():
-#         for speed, sizes in speeds.items():
-#             for size, cohorts in sizes.items():
-#                 isize = size_map[size]
-#                 ispeed = speed_map[speed]
-#                 iduration = duration_map[duration]
-#                 my_d = int(np.ceil(duration*1000))
-#                 missing_duration = d - my_d
-#
-#                 X = glia.f_split_dict(tvt)(cohorts)
-#
-#                 td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-#                     grating_class)
-#                 pad_td = np.pad(td,
-#                     ((0,0),(0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
-#                     mode='constant')
-#                 training_data[iduration, ispeed, isize] = pad_td
-#                 training_target[iduration, ispeed, isize] = tt
-#
-#                 td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-#                     grating_class)
-#                 pad_td = np.pad(td,
-#                     ((0,0),(0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
-#                     mode='constant')
-#                 validation_data[iduration, ispeed, isize] = pad_td
-#                 validation_target[iduration, ispeed, isize] = tt
-#
-#     print('saving to ',name)
-#     np.savez(name, training_data=training_data, training_target=training_target,
-#          validation_data=validation_data, validation_target=validation_target)

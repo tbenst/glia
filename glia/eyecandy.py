@@ -89,7 +89,11 @@ def create_epl_gen_v2(program, epl, window_width, window_height, seed,
                            'windowHeight': window_height,
                            'windowWidth': window_width,
                            "seed": seed})
-    response = r.json()
+    try:
+        response = r.json()
+    except:
+        print("couldn't parse json from ", r)
+        raise
 
     stimuli = []
     for json in response['stimulusList']:
@@ -240,6 +244,8 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
         print('validating stimulus list')
         validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra, within_threshold)
     except:
+        data_directory, name = os.path.split(analog_file)
+        analog_histogram(analog, data_directory)
         save_stimulus(start_times, stimulus_file+'.debug')
         raise
     # create the.stimulus file
@@ -248,6 +254,12 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     save_stimulus(stimuli, stimulus_file)
 
     return (metadata, stimulus_list)
+
+def analog_histogram(analog, data_directory):
+    fig,ax = plt.subplots()
+    bins = np.linspace(np.min(analog),np.max(analog),128)
+    histogram = ax.hist(analog,bins)
+    fig.savefig(os.path.join(data_directory, "analog_histogram.png"))
 
 def auto_calibration(analog, data_directory):
     bins = np.linspace(np.min(analog),np.max(analog),128)
@@ -263,10 +275,7 @@ def auto_calibration(analog, data_directory):
     try:
         assert(idx.size==6)
     except:
-        fig,ax = plt.subplots()
-        bins = np.linspace(np.min(analog),np.max(analog),128)
-        histogram = ax.hist(analog,bins)
-        fig.savefig(os.path.join(data_directory, "analog_histogram.png"))
+        analog_histogram(analog, data_directory)
 
         raise(ValueError("Autocalibration failed, but found candidate values" \
             f"{np.round(v[idx])}. See analog_histogram.png for guidance in" \

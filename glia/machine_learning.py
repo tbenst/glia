@@ -40,7 +40,7 @@ def f_split_dict(tvt):
             i += 1
         assert i == tvt.training+tvt.validation+tvt.test
         return split
-            
+
     return anonymous
 
 training_cohorts = compose(
@@ -84,7 +84,7 @@ def f_split_list(tvt, get_list=lambda x: x):
             print(len(my_list), tvt.training+tvt.validation+tvt.test)
             raise e
         return split
-            
+
     return anonymous
 
 
@@ -111,10 +111,10 @@ def units_to_ndarrays(units, get_class, get_list=lambda x: x):
                 data[i,s,u] = 1
             stimulus = e["stimulus"]
             classes[i] = get_class(stimulus)
-            
+
 
     return (data, classes)
-                
+
 def spike_train_to_sparse(experiment, key_map, shape):
     array = np.full(shape, 0, dtype=np.int8)
     for unit_id, spikes in experiment['units'].items():
@@ -134,9 +134,10 @@ def spike_train_to_sparse(experiment, key_map, shape):
 def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'],
     progress=False):
     """
-    
+
     get_class is a function"""
     nE = len(experiments)
+    logger.info(f"number of experiments to convert to ndarray: {nE}")
     print("converting to ndarray")
 
     key_map = {}
@@ -155,7 +156,7 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     classes = np.full(nE, np.nan, dtype=np.int8)
 
     # accumulate indices for value 1
-    # easy to parallelize accumulation & then single-threaded mutation 
+    # easy to parallelize accumulation & then single-threaded mutation
     sparse = []
 
     classes = np.array(f_map(get_class)(experiments), dtype=np.int8)
@@ -180,7 +181,6 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     #                 raise ValueError()
     #             data[i,s,row,column,unit_num] = 1
     #     classes[i] = get_class(e)
-            
+
 
     return (data, classes)
-                
