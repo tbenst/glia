@@ -148,7 +148,11 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
         key_map[k] = (row,column,unit_num)
     duration = experiments[0]['lifespan']
     for l in experiments:
-        assert duration==l['lifespan']
+        try:
+            assert duration==l['lifespan']
+        except:
+            logger.info(f"duration: {duration} != {l['lifespan']}, for {l}" )
+            raise
     d = int(np.ceil(duration*1000)) # 1ms bins
     # TODO hardcoded 64 channel x 10 unit
     shape = (nE,d,8,8,10)

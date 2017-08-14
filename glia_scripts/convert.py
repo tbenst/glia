@@ -107,7 +107,6 @@ def save_eyechart_npz(units, stimulus_list, name):
         glia.f_map(glia.f_map(f_flatten)),
     )
     letters = get_letters(units)
-    # TODO account for cohorts
     sizes = sorted(list(letters.keys()))
     nsizes = len(sizes)
     ncohorts = len(list(letters.values())[0])
@@ -158,56 +157,71 @@ def save_letter_npz(units, stimulus_list, name):
     # TODO TEST!!!
     get_letters = glia.compose(
         partial(glia.create_experiments,
-            # stimulus_list=stimulus_list,progress=True),
-            stimulus_list=stimulus_list,append_lifespan=0.5,progress=True),
+            stimulus_list=stimulus_list,progress=True),
+            # stimulus_list=stimulus_list,append_lifespan=0.5,progress=True),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
         glia.f_filter(group_contains_letter),
         glia.f_map(lambda x: x[0:2]),
         # glia.f_map(lambda x: x[1]),
-        glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
+        # glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
         partial(glia.group_by,
-                key=lambda x: x[1]["metadata"]["cohort"]),
-                # key=lambda x: x["metadata"]["cohort"]),
-        glia.f_map(f_flatten),
-        glia.f_map(balance_blanks)
+                key=lambda x: x[1]["size"]),
+        glia.f_map(partial(glia.group_by,
+                key=lambda x: x[1]["metadata"]["cohort"])),
+        glia.f_map(glia.f_map(f_flatten)),
+        glia.f_map(glia.f_map(balance_blanks))
     )
     letters = get_letters(units)
+    sizes = sorted(list(letters.keys()))
+    nsizes = len(sizes)
+    ncohorts = len(list(letters.values())[0])
+    ex_letters = glia.get_value(list(letters.values())[0])
+    nletters = len(ex_letters)
+    print("nletters",nletters)
+    duration = ex_letters[0]["lifespan"]
+    d = int(np.ceil(duration*1000)) # 1ms bins
+    nunits = len(units.keys())
+    tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    logger.info(f"{tvt}, ncohorts: {ncohorts}")
 
+    experiments_per_cohort = 11
+    training_data = np.full((nsizes,
+        tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+    training_target = np.full((nsizes,
+        tvt.training*experiments_per_cohort),0,dtype='int8')
+    validation_data = np.full((nsizes,
+        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+    validation_target = np.full((nsizes,
+        tvt.validation*experiments_per_cohort),0,dtype='int8')
 
-    ncohorts = len(letters.keys())
-    training_validation_test = glia.tvt_by_percentage(ncohorts,60,20,20)
-    tvt_letters = glia.f_split_dict(training_validation_test)(letters)
+    size_map = {s: i for i,s in enumerate(sizes)}
+    for size, cohorts in letters.items():
+        X = glia.f_split_dict(tvt)(cohorts)
+        logger.info(f"ncohorts: {len(cohorts)}")
+        td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
+                    letter_class)
+        logger.info(td.shape)
+        missing_duration = d - td.shape[1]
+        pad_td = np.pad(td,
+            ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
+            mode='constant')
+        size_index = size_map[size]
+        training_data[size_index] = pad_td
+        training_target[size_index] = tt
 
-    training_letters = glia.compose(
-            lambda x: x.training,
-            glia.group_dict_to_list,
-            f_flatten
-        )(tvt_letters)
-    # print("#34",training_letters[34])
-    validation_letters = glia.compose(
-            lambda x: x.validation,
-            glia.group_dict_to_list,
-            f_flatten
-        )(tvt_letters)
-
-    test_letters = glia.compose(
-            lambda x: x.test,
-            glia.group_dict_to_list,
-            f_flatten
-        )(tvt_letters)
-
-    training_data, training_target = glia.experiments_to_ndarrays(
-        training_letters, letter_class, progress=True)
-    validation_data, validation_target = glia.experiments_to_ndarrays(
-        validation_letters, letter_class, progress=True)
-    test_data, test_target = glia.experiments_to_ndarrays(
-        test_letters, letter_class, progress=True)
+        td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+                    letter_class)
+        pad_td = np.pad(td,
+            ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
+            mode='constant')
+        validation_data[size_index] = pad_td
+        validation_target[size_index] = tt
 
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target,
-          test_data=test_data, test_target=test_target)
+         validation_data=validation_data, validation_target=validation_target)
+    #   test_data=test_data, test_target=test_target)
 
 
 def save_checkerboard_npz(units, stimulus_list, name, group_by):

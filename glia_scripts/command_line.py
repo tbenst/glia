@@ -556,6 +556,10 @@ def classify_cmd(filename, nsamples, notebook, skip, version=2):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples)
+    elif re.match('letter',name):
+        svc.letter_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples)
     else:
         raise(ValueError(f"unknown name: {name}"))
     # elif eyechart:
