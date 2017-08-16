@@ -24,15 +24,14 @@ def adjust_lifespan(experiment,adjustment=0.5):
         e["lifespan"] = experiment["lifespan"]+adjustment
     return e
 
-def truncate(experiment,adjustment=0.5):
+def truncate(experiment,lifespan):
     e = deepcopy(experiment)
     if 'stimulus' in experiment:
-        lifespan = e["stimulus"]["lifespan"] #-adjustment
-    #     e["stimulus"]["lifespan"] = lifespan
         e["spikes"] = e["spikes"][np.where(e["spikes"]<lifespan)]
+        e['lifespan'] = lifespan
     else:
-        lifespan = e['lifespan']
         e['units'] = glia.f_map(lambda x: x[np.where(x<lifespan)])(e['units'])
+        e['lifespan'] = lifespan
     return e
 
 
@@ -158,14 +157,11 @@ def save_letter_npz(units, stimulus_list, name):
     get_letters = glia.compose(
         partial(glia.create_experiments,
             stimulus_list=stimulus_list,progress=True),
-            # stimulus_list=stimulus_list,append_lifespan=0.5,progress=True),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
         glia.f_filter(group_contains_letter),
         glia.f_map(lambda x: x[0:2]),
-        # glia.f_map(lambda x: x[1]),
-        # glia.f_map(lambda x: [truncate(x[0]), adjust_lifespan(x[1])]),
         partial(glia.group_by,
                 key=lambda x: x[1]["size"]),
         glia.f_map(partial(glia.group_by,
@@ -181,6 +177,18 @@ def save_letter_npz(units, stimulus_list, name):
     nletters = len(ex_letters)
     print("nletters",nletters)
     duration = ex_letters[0]["lifespan"]
+
+    # small hack to fix bug in letters 0.2.0
+    letter_duration = ex_letters[1]['lifespan']
+    if duration!=letter_duration:
+        new_letters = {}
+        for size, cohorts in letters.items():
+            new_letters[size] = {}
+            for cohort, stimuli in cohorts.items():
+                new_letters[size][cohort] = list(map(lambda s: truncate(s, letter_duration), stimuli))
+        letters = new_letters
+
+
     d = int(np.ceil(duration*1000)) # 1ms bins
     nunits = len(units.keys())
     tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
