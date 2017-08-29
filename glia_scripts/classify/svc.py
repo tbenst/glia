@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 import sklearn
 import os
 from functools import reduce, partial
+from glia import logger
 
 from scipy.stats import binom
 
@@ -285,23 +286,26 @@ def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
     sizes = get_stimulus_parameters(stimulus_list, "LETTER", 'size')
     name = metadata["name"]
     if name=="letters":
-        n_sizes, n_training, n_steps, n_x, n_y, n_units = data["training_data"].shape
-        bin100ms = lambda x: np.sum(x.reshape(x.shape[0], 10, 100,n_x, n_y,n_units),
-                axis=2).reshape(x.shape[0],-1)
+        # n_sizes, n_training, n_steps, n_x, n_y, n_units = data["training_data"].shape
+        logger.debug(data["training_data"].shape)
+        # add nconditions dim
+        training_100ms = bin_100ms(np.expand_dims(data["training_data"],0))
+        validation_100ms = bin_100ms(np.expand_dims(data["validation_data"],0))
+        logger.debug(f'training_100ms shape {training_100ms.shape}')
+        logger.debug(f'sizes {sizes}')
         for i, size in enumerate(sizes):
             print(f'SVC for size {size}')
-            training_100ms = bin100ms(data["training_data"][i])
-            validation_100ms = bin100ms(data["validation_data"][i])
+            # note: no expand dims, hardcoded 1 ncondition
             training_target = data["training_target"][i]
             validation_target = data["validation_target"][i]
-
+            logger.debug(np.size(training_target))
             svr = svm.SVC()
             parameters = {'C': [1, 10, 100, 1000],
                           'gamma': [0.001, 0.0001]},
             clf = GridSearchCV(svr, parameters, n_jobs=12)
             report, confusion = classifier_helper(clf,
-                (training_100ms, training_target),
-                (validation_100ms, validation_target))
+                (training_100ms[0,i], training_target),
+                (validation_100ms[0,i], validation_target))
             with open(f"{plot_directory}/letter-{size}.txt", "w") as f:
                 f.write(report+'\n')
                 f.write(str(confusion))

@@ -195,6 +195,29 @@ def find_notebook(directory):
         Using {notebooks[0]}. If wrong, try manually specifying""")
     return notebooks[0]
 
+def init_logging(name, data_directory, processes, verbose, debug):
+    #### LOGGING CONFIGURATION
+    fh = logging.FileHandler(os.path.join(data_directory,name + '.log'))
+    fh.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    if verbose:
+        ch.setLevel(logging.INFO)
+        # tracemalloc.start()
+    elif debug:
+        ch.setLevel(logging.DEBUG)
+
+    else:
+        ch.setLevel(logging.WARNING)
+    if processes!=None:
+        config.processes = processes
+    formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s', '%H:%M:%S')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    logger.info("Verbose logging on")
+
+
 @main.group(chain=True)
 @click.argument('filename', type=str)
 # @click.argument('filename', type=click.Path(exists=True))
@@ -255,26 +278,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     if not notebook:
         notebook = find_notebook(data_directory)
 
-    #### LOGGING CONFIGURATION
-    fh = logging.FileHandler(os.path.join(data_directory,name + '.log'))
-    fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    if verbose:
-        ch.setLevel(logging.INFO)
-        # tracemalloc.start()
-    elif debug:
-        ch.setLevel(logging.DEBUG)
-
-    else:
-        ch.setLevel(logging.WARNING)
-    if processes!=None:
-        config.processes = processes
-    formatter = logging.Formatter('%(asctime)s %(levelname)s - %(message)s', '%H:%M:%S')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    logger.info("Verbose logging on")
+    init_logging(name, data_directory, processes, verbose, debug)
 
     lab_notebook = glia.open_lab_notebook(notebook)
     logger.info(name)
@@ -505,14 +509,19 @@ def strip_generated(name, choices=generate_choices):
 # @click.option("--integrity", default=False, is_flag=True,
 #     help="")
 @click.option("--notebook", "-n", type=click.Path(exists=True))
+@click.option("--verbose", "-v", is_flag=True)
+@click.option("--debug", "-vv", is_flag=True)
+@click.option("--processes", "-p", type=int, help="Number of processors")
 @click.option('--skip', "-s", default=False, is_flag=True,
     help="Skip method assertion (for testing)")
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-def classify_cmd(filename, nsamples, notebook, skip, version=2):
+def classify_cmd(filename, nsamples, notebook, skip, debug=False,
+                 verbose=False, version=2, processes=None):
     "Classify using converted NPZ"
+
     if not os.path.isfile(filename):
         filename = match_filename(filename, 'npz')
 
@@ -525,8 +534,8 @@ def classify_cmd(filename, nsamples, notebook, skip, version=2):
 
     lab_notebook = glia.open_lab_notebook(notebook)
 
-    data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
+    init_logging(name, data_directory, processes, verbose, debug)
     stim_name = strip_generated(name)
     stimulus_file = os.path.join(data_directory, stim_name + ".stim")
     metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
