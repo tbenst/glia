@@ -12,7 +12,7 @@ from glia import logger
 
 from scipy.stats import binom
 
-def px_to_logmar(px,px_per_deg=7.5):
+def px_to_logmar(px,px_per_deg=12.524):
     minutes = px/px_per_deg*60
     return np.log10(minutes)
 
