@@ -209,13 +209,14 @@ def fill_missing_stimulus_times(stimulus_list, reverse=False):
         return ret
 
 def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
-        data_name, eyecandy_url, ignore_extra=False, calibration='auto',
+        data_name, eyecandy_url, analog_idx=1, ignore_extra=False, calibration='auto',
         within_threshold=None):
     """Uses stimulus index modulo 3 Strategy.
 
     calibration determines the mean in linear light space for each stimulus
     index"""
-    analog = read_raw_voltage(analog_file)[:,1]
+
+    analog = read_raw_voltage(analog_file)[:,analog_idx]
     if calibration=='auto':
         data_directory, name = os.path.split(stimulus_file)
         calibration = auto_calibration(analog, data_directory)

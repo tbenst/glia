@@ -213,6 +213,7 @@ def init_logging(name, data_directory, processes, verbose, debug):
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://localhost:3000")
 @click.option("--processes", "-p", type=int, help="Number of processors")
+@click.option("--analog-idx", "-i", type=int, help="Channel of light detector")
 # @click.option("--calibration", "-c", default="auto", help="""Sets the analog value
 #     for each stimulus index. Should be dimension (3,2)""")
 @click.option("--configuration", "-c", type=click.Path(exists=True), help="""Use
@@ -234,7 +235,7 @@ def init_logging(name, data_directory, processes, verbose, debug):
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, output=None, notebook=None,
         configuration=None, verbose=False, debug=False,processes=None,
-        by_channel=False, integrity_filter=0.0):
+        by_channel=False, integrity_filter=0.0, analog_idx=1):
     """Analyze data recorded with eyecandy.
     """
     #### FILEPATHS
@@ -285,7 +286,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         print("No .stim file found. Creating from .analog file.".format(trigger))
         if flicker_version==0.3:
             metadata, stimulus_list = glia.create_stimuli(
-                analog_file, stimulus_file, notebook, name, eyecandy, ignore_extra,
+                analog_file, stimulus_file, notebook, name, eyecandy, analog_idx, ignore_extra,
                 config.analog_calibration, threshold)
             ctx.obj["stimulus_list"] = stimulus_list
             ctx.obj["metadata"] = metadata
