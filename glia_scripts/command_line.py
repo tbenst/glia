@@ -118,20 +118,9 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
         notebook = find_notebook(data_directory)
 
     lab_notebook = glia.open_lab_notebook(notebook)
-    name=None
-    doc = None
-    for doc in lab_notebook:
-        n= doc['filename']
-        logger.warning(n)
-        if fnmatch(n , filename):
-            # exact match
-            name=n
-            break
-        elif fnmatch(n , filename+'*'):
-            name=n
-
-    if name is None:
-        raise(ValueError(f"could not match {filename} in lab notebook."))
+    if not os.path.isfile(filename):
+        filename = match_filename(filename,"txt")
+    name, ext = os.path.splitext(filename)
 
     ctx.obj = {'filename': method+"_"+name}
 
@@ -459,6 +448,9 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2):
     if name=='letters':
         convert.save_letter_npz(
             units, stimulus_list, filename)
+    elif name=='letters-tiled':
+        convert.save_letters_tiled_npz(
+            units, stimulus_list, filename)
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
             units, stimulus_list, filename,
@@ -543,6 +535,8 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False,
         assert method=='analog-flicker' # if failed, delete .stim
 
     data = np.load(filename)
+    shape = np.shape(data['training_data'])
+    logger.debug(f"Data dim: {shape}")
 
     plots_directory = os.path.join(data_directory, name+"-plots")
     os.makedirs(plots_directory, exist_ok=True)
@@ -563,6 +557,10 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False,
              nsamples)
     elif re.match('grating',name):
         svc.grating_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples)
+    elif 'letters-tiled'==name:
+        svc.tiled_letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples)
     elif re.match('letter',name):

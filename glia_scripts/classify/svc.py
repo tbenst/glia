@@ -23,6 +23,7 @@ def get_stimulus_parameters(stimulus_list, stimulus_type, parameter):
                 key=lambda x: x["stimulus"][parameter])
         )
     parameters = sorted(list(f(stimulus_list).keys()))
+    logger.debug(f"Parameters: {parameters}")
     assert len(parameters)>0
     return parameters
 
@@ -312,3 +313,32 @@ def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
 
     else:
         raise(ValueError(f'Unknown experiment {metadata["name"]}'))
+
+def tiled_letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
+                nsamples):
+    print("Classifying Letters")
+    sizes = get_stimulus_parameters(stimulus_list, "TILED_LETTER", 'size')
+    name = metadata["name"]
+    # n_sizes, n_training, n_steps, n_x, n_y, n_units = data["training_data"].shape
+    logger.debug(data["training_data"].shape)
+    # add nconditions dim
+    training_100ms = bin_100ms(np.expand_dims(data["training_data"],0))
+    validation_100ms = bin_100ms(np.expand_dims(data["validation_data"],0))
+    logger.debug(f'training_100ms shape {training_100ms.shape}')
+    logger.debug(f'sizes {sizes}')
+    for i, size in enumerate(sizes):
+        print(f'SVC for size {size}')
+        # note: no expand dims, hardcoded 1 ncondition
+        training_target = data["training_target"][i]
+        validation_target = data["validation_target"][i]
+        logger.debug(np.size(training_target))
+        svr = svm.SVC()
+        parameters = {'C': [1, 10, 100, 1000],
+                      'gamma': [0.001, 0.0001]},
+        clf = GridSearchCV(svr, parameters, n_jobs=12)
+        report, confusion = classifier_helper(clf,
+            (training_100ms[0,i], training_target),
+            (validation_100ms[0,i], validation_target))
+        with open(f"{plot_directory}/letter-{size}.txt", "w") as f:
+            f.write(report+'\n')
+            f.write(str(confusion))
