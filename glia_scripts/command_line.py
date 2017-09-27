@@ -354,7 +354,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, output=None, notebook=None,
         configuration=None, version=None, verbose=False, debug=False,processes=None,
-        by_channel=False, integrity_filter=0.0):
+        by_channel=False, integrity_filter=0.0, analog_idx=1):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
