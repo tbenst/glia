@@ -118,8 +118,6 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
         notebook = find_notebook(data_directory)
 
     lab_notebook = glia.open_lab_notebook(notebook)
-    if not os.path.isfile(filename):
-        filename = match_filename(filename,"txt")
     name, ext = os.path.splitext(filename)
 
     ctx.obj = {'filename': method+"_"+name}
