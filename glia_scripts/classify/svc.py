@@ -124,15 +124,14 @@ def plot_acuity(logmar, accuracy, yerror,
 
         ax.errorbar(logmar, accuracy[condition], marker='o', markersize=4, capsize=4,
             yerr=yerror[condition], label=label)
-    ax.plot(logmar, sig1, 'k--', label='1% significance')
+    ax.plot(logmar, sig1, 'k--')
+    # ax.plot(logmar, sig1, 'k--', label='p<0.01')
     ax.set_ylabel("Accuracy")
     ax.set_xlabel("logMAR")
 
-    x_major_ticks = np.arange(2, 3.6, 0.2)
-    y_major_ticks = np.arange(0, 101, 20)
-    x_minor_ticks = np.arange(0, 101, 5)
-    y_minor_ticks = np.arange(0, 101, 5)
+    x_major_ticks = np.arange(1.6, 3.2, 0.2)
     ax.set_xticks(x_major_ticks)
+    ax.set_xlim(1.5,3.25)
     # ax.set_xticks(minor_ticks, minor=True)
     # ax.set_yticks(major_ticks)
     # ax.set_yticks(minor_ticks, minor=True)
@@ -140,8 +139,7 @@ def plot_acuity(logmar, accuracy, yerror,
     ax.grid(which='both')
 
     ax.set_ylim(0.35,1.05)
-    ax.set_xlim(1.9,3.65)
-    ax.legend(loc=(0.5,0.1))
+    ax.legend(loc=(0.7,0.1))
     if condition_name is None:
         ax.set_title(f'{name} classification by binning technique')
         fig.savefig(os.path.join(plot_directory, f"{name}_acuity.png"))

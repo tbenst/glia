@@ -3,6 +3,7 @@
 import matplotlib
 matplotlib.use("agg")
 matplotlib.rcParams['figure.max_open_warning'] = 250
+matplotlib.rcParams['font.size'] = 16
 
 import glia
 from fnmatch import fnmatch
