@@ -96,7 +96,7 @@ generate_choices = ["random","hz"]
 @click.argument('filename', type=str)
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://localhost:3000")
-@click.option('method', "-m",
+@click.option('generate_method', "-m",
     type=click.Choice(generate_choices), default="random",
     help="Type of test data.")
 @click.option('number', "-n",
@@ -109,7 +109,7 @@ generate_choices = ["random","hz"]
     is_flag=True,
     help="Create .stim file without analog")
 @click.pass_context
-def generate(ctx, filename, eyecandy, method, notebook, number,
+def generate(ctx, filename, eyecandy, generate_method, notebook, number,
     nunits, stimulus):
     data_directory, data_name = os.path.split(filename)
     if data_directory=='':
@@ -121,7 +121,7 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
     lab_notebook = glia.open_lab_notebook(notebook)
     name, ext = os.path.splitext(filename)
 
-    ctx.obj = {'filename': method+"_"+name}
+    ctx.obj = {'filename': generate_method+"_"+name}
 
     stimulus_file = os.path.join(data_directory, name + ".stim")
     try:
@@ -138,20 +138,22 @@ def generate(ctx, filename, eyecandy, method, notebook, number,
     last_stim = stimulus_list[-1]
     total_time = last_stim['start_time']+last_stim['stimulus']['lifespan']
     units = {}
-    retina_id = f'{method}_{name}'
+    retina_id = f'{generate_method}_{name}'
     print('generating test data')
     for channel_x in range(number):
         for channel_y in range(number):
             # for unit_j in range(randint(1,5)):
             for unit_j in range(nunits):
-                if method=='random':
+                if generate_method=='random':
                     u = glia.random_unit(total_time, retina_id,
                         (channel_x, channel_y), unit_j)
-                elif method=="hz":
+                elif generate_method=="hz":
                     # hz = randint(1,90)
                     hz = 60
                     u = glia.hz_unit(total_time, hz, retina_id,
                         (channel_x, channel_y), unit_j)
+                else:
+                    raise(ValueError(f"Undefined generate_method: {generate_method}"))
 
                 units[u.id] = u
     ctx.obj["units"] = units

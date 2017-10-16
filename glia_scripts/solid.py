@@ -298,7 +298,7 @@ def plot_units_accuracy(units_accuracy):
     on_off_h_index = list(map(lambda x: min(x[0],x[1]), zip(on_dist,off_dist)))
     on_minus_off = list(map(lambda x: x[0]-x[1], zip(on_dist,off_dist)))
     bins = np.hstack([[0], np.linspace(0.5,1,11)])
-    fig, ax = plt.subplots(2,2)
+    fig, ax = plt.subplots(2,2, figsize=(9,9))
     ax[0,0].hist(on_dist, bins=bins)
     ax[0,0].set_title("ON response")
     ax[0,0].set_xlim(.4,1)
