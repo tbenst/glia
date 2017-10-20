@@ -276,15 +276,16 @@ def auto_calibration(analog, data_directory):
     try:
         assert(idx.size==6)
     except:
-        analog_histogram(analog, data_directory)
-
-        raise(ValueError("Autocalibration failed, but found candidate values" \
+        logger.warning("found candidate values " \
             f"{np.round(v[idx])}. See analog_histogram.png for guidance in" \
-            "manually setting the calibration such that it contains most values"))
+            "manually setting the calibration such that it contains most values")
+        analog_histogram(analog, data_directory)
+        raise(ValueError("Autocalibration failed"))
+
     calibration = np.array([
-        np.floor(v[idx[0]-5]), np.ceil(v[idx[1]+5]),
-        np.floor(v[idx[2]-5]), np.ceil(v[idx[3]+5]),
-        np.floor(v[idx[4]-5]), np.ceil(v[idx[5]+5])
+        np.floor(v[max(0, idx[0]-5)]), np.ceil(v[min(v.size-1, idx[1]+5)]),
+        np.floor(v[max(0, idx[2]-5)]), np.ceil(v[min(v.size-1, idx[3]+5)]),
+        np.floor(v[max(0, idx[4]-5)]), np.ceil(v[min(v.size-1, idx[5]+5)])
     ])
     print(f"analog autocalibration of {calibration}")
     return calibration

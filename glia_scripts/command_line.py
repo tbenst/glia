@@ -214,7 +214,7 @@ def init_logging(name, data_directory, processes, verbose, debug):
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--eyecandy", "-e", default="http://localhost:3000")
 @click.option("--processes", "-p", type=int, help="Number of processors")
-@click.option("--analog-idx", "-i", type=int, help="Channel of light detector")
+@click.option("--analog-idx", "-i", type=int, help="Channel of light detector", default=1)
 # @click.option("--calibration", "-c", default="auto", help="""Sets the analog value
 #     for each stimulus index. Should be dimension (3,2)""")
 @click.option("--configuration", "-c", type=click.Path(exists=True), help="""Use
