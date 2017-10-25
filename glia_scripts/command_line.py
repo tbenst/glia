@@ -174,6 +174,22 @@ def generate(ctx, filename, eyecandy, generate_method, notebook, number,
         name = unit_id
         os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
 
+
+@main.command()
+@click.argument('filename', type=str)
+@click.option("--analog-idx", "-i", type=int, help="Channel of light detector", default=1)
+def calibrate(filename, analog_idx):
+    """Find calibration for frame detection from analog channel of light flicker.
+    """
+    if not os.path.isfile(filename):
+        filename = match_filename(filename,"analog")
+    analog = glia.read_raw_voltage(filename)[:,analog_idx]
+    data_directory, fn = os.path.split(filename)
+    calibration = glia.auto_calibration(analog, data_directory)
+    glia.analog_histogram(analog, data_directory)
+    print(f"saving analog histogram to {data_directory}/analog_histogram.png")
+
+
 def find_notebook(directory):
     notebooks = glob(os.path.join(directory, 'lab*.yml')) + \
         glob(os.path.join(directory, 'lab*.yaml'))
@@ -233,6 +249,7 @@ def init_logging(name, data_directory, processes, verbose, debug):
     or ttl if there is a electrical impulse for each stimulus.
     """)
 @click.pass_context
+
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, output=None, notebook=None,
         configuration=None, verbose=False, debug=False,processes=None,
