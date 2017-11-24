@@ -69,6 +69,27 @@ def checker_discrimination_class(stimulus):
     else:
         raise ValueError
 
+def checker__quad_discrimination_class(stimulus):
+    checker = stimulus["metadata"]["target"]
+    # frame A or frame B
+    first_class = stimulus["metadata"]["class"]
+    if checker=='SAME':
+        if first_class=="A":
+            return 0
+        elif first_class=='B':
+            return 2
+        else:
+            raise(Error('bad class'))
+    elif checker=='DIFFERENT':
+        if first_class=="A":
+            return 1
+        elif first_class=='B':
+            return 3
+        else:
+            raise(Error('bad class'))
+    else:
+        raise ValueError
+
 def balance_blanks(cohort):
     """Remove 90% of blanks (all but first)."""
     new = []
@@ -305,7 +326,7 @@ def save_letters_tiled_npz(units, stimulus_list, name):
 
 
 
-def save_checkerboard_npz(units, stimulus_list, name, group_by):
+def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
     "Psychophysics discrimination checkerboard 0.2.0"
     print("Saving checkerboard NPZ file.")
 
@@ -362,6 +383,10 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
+    if quad:
+        get_class = checker__quad_discrimination_class
+    else:
+        get_class = checker_discrimination_class
     condition_map = {c: i for i,c in enumerate(conditions)}
     size_map = {s: i for i,s in enumerate(sizes)}
     for condition, sizes in checkers.items():
@@ -369,7 +394,7 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
             X = glia.f_split_dict(tvt)(cohorts)
 
             td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                        checker_discrimination_class)
+                        get_class)
             logger.info(td.shape)
             missing_duration = d - td.shape[1]
             pad_td = np.pad(td,
@@ -381,7 +406,7 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
             training_target[condition_index, size_index] = tt
 
             td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                        checker_discrimination_class)
+                        get_class)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')

@@ -70,13 +70,6 @@ def plot_path(directory,plot_name):
 def main():
     pass
 
-def match_filename(start,ext='txt'):
-    files = glob(start + "*." + ext)
-    if len(files)==1:
-        return files[0]
-    else:
-        raise(ValueError("Could not match file, try specifying full filename"))
-
 @main.command()
 @click.argument('filename', type=str)
 def header(filename):
@@ -85,7 +78,7 @@ def header(filename):
     Commonly used for import into spike sorting software"""
 
     if not os.path.isfile(filename):
-        filename = match_filename(filename,'voltages')
+        filename = glia.match_filename(filename,'voltages')
     try:
         print('header length: ', glia.get_header(filename)[1])
     except:
@@ -116,7 +109,7 @@ def generate(ctx, filename, eyecandy, generate_method, notebook, number,
         data_directory=os.getcwd()
 
     if not notebook:
-        notebook = find_notebook(data_directory)
+        notebook = glia.find_notebook(data_directory)
 
     lab_notebook = glia.open_lab_notebook(notebook)
     name, ext = os.path.splitext(filename)
@@ -182,24 +175,17 @@ def calibrate(filename, analog_idx):
     """Find calibration for frame detection from analog channel of light flicker.
     """
     if not os.path.isfile(filename):
-        filename = match_filename(filename,"analog")
+        filename = glia.match_filename(filename,"analog")
     analog = glia.read_raw_voltage(filename)[:,analog_idx]
     data_directory, fn = os.path.split(filename)
     calibration = glia.auto_calibration(analog, data_directory)
     glia.analog_histogram(analog, data_directory)
     print(f"saving analog histogram to {data_directory}/analog_histogram.png")
+    with open(os.path.join(data_directory,"config.yml"), 'w') as outfile:
+        yaml.dump({"analog_calibration": calibration.tolist()}, outfile)
+    print(f"saving suggested config to {data_directory}/config.yml")
 
 
-def find_notebook(directory):
-    notebooks = glob(os.path.join(directory, 'lab*.yml')) + \
-        glob(os.path.join(directory, 'lab*.yaml'))
-    if len(notebooks)==0:
-        raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
-            "or specify file path with -n.")
-    elif len(notebooks)>1:
-        logger.warning(f"""Found multiple possible lab notebooks.
-        Using {notebooks[0]}. If wrong, try manually specifying""")
-    return notebooks[0]
 
 def init_logging(name, data_directory, processes, verbose, debug):
     #### LOGGING CONFIGURATION
@@ -258,7 +244,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     """
     #### FILEPATHS
     if not os.path.isfile(filename):
-        filename = match_filename(filename,"txt")
+        filename = glia.match_filename(filename,"txt")
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
@@ -284,7 +270,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             by_channel = user_config["by_channel"]
 
     if not notebook:
-        notebook = find_notebook(data_directory)
+        notebook = glia.find_notebook(data_directory)
 
     init_logging(name, data_directory, processes, verbose, debug)
 
@@ -461,8 +447,10 @@ def debug_lambda(x,f):
 generate.add_command(bar_cmd)
 
 @analyze.command("convert")
+@click.option("--quad", "-q", is_flag=True,
+    help="use four classes for checkerboard")
 @analysis_function
-def convert_cmd(units, stimulus_list, metadata, filename, version=2):
+def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False):
     name = metadata['name']
     if name=='letters':
         convert.save_letter_npz(
@@ -473,16 +461,19 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2):
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
             units, stimulus_list, filename,
-            lambda x: 'ONE CONDITION')
+            lambda x: 'ONE CONDITION',
+            quad)
             # partial(debug_lambda, f=lambda x: 'ONE CONDITION'))
     elif name=='checkerboard-contrast':
         convert.save_checkerboard_npz(
             units, stimulus_list, filename,
-            lambda x: glia.checkerboard_contrast(x))
+            lambda x: glia.checkerboard_contrast(x),
+            quad)
     elif name=='checkerboard-durations':
         convert.save_checkerboard_npz(
             units, stimulus_list, filename,
-            lambda x: x["lifespan"])
+            lambda x: x["lifespan"],
+            quad)
     elif name=='grating':
         convert.save_grating_npz(
             units, stimulus_list, filename,
@@ -534,14 +525,14 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False,
     "Classify using converted NPZ"
 
     if not os.path.isfile(filename):
-        filename = match_filename(filename, 'npz')
+        filename = glia.match_filename(filename, 'npz')
 
     data_directory, data_name = os.path.split(filename)
     if data_directory=='':
         data_directory=os.getcwd()
 
     if not notebook:
-        notebook = find_notebook(data_directory)
+        notebook = glia.find_notebook(data_directory)
 
     lab_notebook = glia.open_lab_notebook(notebook)
 

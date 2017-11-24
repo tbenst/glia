@@ -2,7 +2,7 @@ import numpy as np
 import re
 from typing import List, Dict
 # import pytest
-import glob
+from glob import glob
 import warnings
 from warnings import warn
 import h5py
@@ -17,6 +17,25 @@ UnitSpikeTrains = List[Dict[str, np.ndarray]]
 
 # VOLTAGE DATA
 
+
+def match_filename(start,ext='txt'):
+    files = glob(start + "*." + ext)
+    if len(files)==1:
+        return files[0]
+    else:
+        raise(ValueError("Could not match file, try specifying full filename"))
+
+
+def find_notebook(directory):
+    notebooks = glob(os.path.join(directory, 'lab*.yml')) + \
+        glob(os.path.join(directory, 'lab*.yaml'))
+    if len(notebooks)==0:
+        raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
+            "or specify file path with -n.")
+    elif len(notebooks)>1:
+        logger.warning(f"""Found multiple possible lab notebooks.
+        Using {notebooks[0]}. If wrong, try manually specifying""")
+    return notebooks[0]
 
 def read_raw_voltage(raw_filename):
     """Read in a raw file exported from MCS datatool."""
@@ -276,7 +295,7 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
         if v in ignore_channels:
             channel_dict[k] = None
 
-    dat_files = glob.glob(my_path + '/*.dat')
+    dat_files = glob(my_path + '/*.dat')
 
     if not dat_files:
         raise ValueError("No .dat files found")

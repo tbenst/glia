@@ -27,6 +27,7 @@ Hz = int
 Seconds = float
 ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
+    
 
 # TODO thread with async/await
 
