@@ -176,20 +176,6 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     for i,array in enumerate(arrays):
         data[i] = array
 
-    # for idx in indices:
-        # data[idx] = 1
-    # for i,e in gen:
-    #     for unit_id, spikes in e['units'].items():
-    #         (row, column, unit_num) = key_map[unit_id]
-    #         for spike in spikes:
-    #             s = int(np.floor(spike*1000))
-    #             if s>1000:
-    #                 print('>1000',spikes, e)
-    #                 raise ValueError()
-    #             data[i,s,row,column,unit_num] = 1
-    #     classes[i] = get_class(e)
-
-
     return (data, classes)
 
 
@@ -250,6 +236,18 @@ def get_stimulus_parameters(stimulus_list, stimulus_type, parameter):
     logger.debug(f"Parameters: {parameters}")
     assert len(parameters)>0
     return parameters
+
+def get_image_parameters(stimulus_list):
+    f = compose(
+        f_filter(lambda x: x["stimulus"]['stimulusType']=='IMAGE'),
+        partial(group_by,
+                key=lambda x: x["stimulus"]["metadata"]["parameter"])
+        )
+    parameters = sorted(list(f(stimulus_list).keys()))
+    logger.debug(f"Parameters: {parameters}")
+    assert len(parameters)>0
+    return parameters
+
 
 def get_checkerboard_contrasts(stimulus_list):
     f = compose(

@@ -208,6 +208,7 @@ def init_logging(name, data_directory, processes, verbose, debug):
     logger.addHandler(fh)
     logger.addHandler(ch)
     logger.info("Verbose logging on")
+    logger.debug("Debug logging on")
 
 
 @main.group(chain=True)
@@ -456,7 +457,13 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False)
         convert.save_letter_npz(
             units, stimulus_list, filename)
     elif name=='letters-tiled':
-        convert.save_letters_tiled_npz(
+        print("Saving letters-tiled NPZ file.")
+        convert.save_letters_npz(
+            units, stimulus_list, filename,
+            partial(glia.group_contains, "TILED_LETTER"))
+    elif name=='eyechart-saccade':
+        print("Saving eyechart-saccade NPZ file.")
+        convert.save_image_npz(
             units, stimulus_list, filename)
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
@@ -571,6 +578,10 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False,
              nsamples)
     elif 'letters-tiled'==name:
         svc.tiled_letter_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples)
+    elif 'eyechart-saccade'==name:
+        svc.image_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples)
     elif re.match('letter',name):
