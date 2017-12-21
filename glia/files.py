@@ -86,7 +86,7 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
     unit_dictionary = {}
     assert os.path.splitext(filepath)[1]==".bxr"
     
-    with h5py.File(filepath, 'r') as file:
+    with h5py.File(filepath, 'r') as h5_3brain_spikes:
         # read into memory by using [()]
         spike_channel_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeChIDs"][()]
         spike_times = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeTimes"][()]

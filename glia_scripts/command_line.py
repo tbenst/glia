@@ -299,7 +299,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
         ctx.obj["stimulus_list"] = stimulus_list
         ctx.obj["metadata"] = metadata
-        assert method=='analog-flicker'
+        # assert method=='analog-flicker'
     except:
         print("No .stim file found. Creating from .analog file.".format(trigger))
         if flicker_version==0.3:
