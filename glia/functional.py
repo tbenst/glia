@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Any, Union
 from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from .config import processes
 from tqdm import tqdm
 
@@ -37,24 +38,19 @@ def _func(x,function=lambda x: x):
     k,v = x
     return (k,function(v))
 
-def pmap(function, data, progress=False):
+def pmap(function, data, progress=False, length=None, thread=False):
     """Parallel map that accepts lists or dictionaries.
     
     Use progress for interactive sessions."""
     
-    pool = Pool(processes)
-    length = len(data)
+    if thread:
+        pool = ThreadPool(processes)
+    else:
+        pool = Pool(processes)
+    if progress and length is None:
+        length = len(data)
     
-
-    if type(data)==list:
-        if progress:
-            gen = tqdm(iter(data), total=length)
-        else:
-            gen = iter(data)
-        result = list(pool.imap(function, gen))
-        pool.close()
-        pool.join()
-    elif type(data)==dict:
+    if type(data)==dict:
         if progress:
             gen = tqdm(data.items(), total=length)
         else:
@@ -67,6 +63,23 @@ def pmap(function, data, progress=False):
         pool.close()
         pool.join()
         result = {k: v for k,v in pre_result}
+    elif type(data)==list:
+        if progress:
+            gen = tqdm(iter(data), total=length)
+        else:
+            gen = iter(data)
+        result = list(pool.imap(function, gen))
+        pool.close()
+        pool.join()
+    else:
+        if progress:
+            gen = tqdm(data, total=length)
+        else:
+            gen = data
+        result = list(pool.imap(function, gen))
+        pool.close()
+        pool.join()
+
     return result
 
 def _group_by_helper(a,n,key,value):
