@@ -25,6 +25,18 @@ def match_filename(start,ext='txt'):
     else:
         raise(ValueError("Could not match file, try specifying full filename"))
 
+
+def find_notebook(directory):
+    notebooks = glob(os.path.join(directory, 'lab*.yml')) + \
+        glob(os.path.join(directory, 'lab*.yaml'))
+    if len(notebooks)==0:
+        raise ValueError("no lab notebooks (.yml) were found. Either add to directory," \
+            "or specify file path with -n.")
+    elif len(notebooks)>1:
+        logger.warning(f"""Found multiple possible lab notebooks.
+        Using {notebooks[0]}. If wrong, try manually specifying""")
+    return notebooks[0]
+
 def read_raw_voltage(raw_filename):
     """Read in a raw file exported from MCS datatool."""
     header, offset = get_header(raw_filename)
