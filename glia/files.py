@@ -2,7 +2,7 @@ import numpy as np
 import re
 from typing import List, Dict
 # import pytest
-import glob
+from glob import glob
 import warnings
 from warnings import warn
 import h5py
@@ -318,7 +318,7 @@ def read_mcs_dat(my_path: Dir, only_channels: List[int]=None,
         if v in ignore_channels:
             channel_dict[k] = None
 
-    dat_files = glob.glob(my_path + '/*.dat')
+    dat_files = glob(my_path + '/*.dat')
 
     if not dat_files:
         raise ValueError("No .dat files found")
