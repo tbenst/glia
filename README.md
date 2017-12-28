@@ -3,6 +3,9 @@
 
 A package to support neuroscientists in analyzing MEAs.
 
+## For Docker 1.17:
+`sudo docker run --network=eyecandy_default -v $(pwd):/data tbenst/glia analyze -e "http://eyecandy:3000" /data/R2_E1 convert`
+
 
 ## How to analyze data:
 1. Convert *.mcd files into *.voltages

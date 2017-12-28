@@ -27,6 +27,7 @@ Hz = int
 Seconds = float
 ms = float
 UnitSpikeTrains = List[Dict[str,np.ndarray]]
+    
 
 # TODO thread with async/await
 
@@ -96,11 +97,15 @@ def create_epl_gen_v2(program, epl, window_width, window_height, seed,
         raise
 
     stimuli = []
-    for json in response['stimulusList']:
-        value = json["value"]
-        value["stimulusIndex"] = json["stimulusIndex"]
+    for j in response['stimulusList']:
+        value = j["value"]
+        logger.debug(f"value in stimulusList: {str(j.keys())}")
+        value["stimulusIndex"] = j["stimulusIndex"]
         stimuli.append(value)
-    metadata = demjson.decode(response["metadata"])
+    logger.debug(f"metadata: {type(response['metadata'])}")
+    # logger.debug(f"stimuli: {stimuli}")
+    metadata = response["metadata"]
+    # metadata = demjson.decode(response["metadata"])
     assert type(metadata)==dict
     return (metadata,
         iter(sorted(stimuli, key=lambda x: x['stimulusIndex'])))
@@ -385,6 +390,7 @@ def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percent
     next_stimulus = next(stimulus_gen)
     stimulus_list = []
     for i,state in np.ndenumerate(filtered):
+        # logger.debug(f"# of stimuli: {len(stimulus_list)}")
         i = i[0]
 
         #

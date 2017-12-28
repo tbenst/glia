@@ -1,13 +1,16 @@
 from collections import namedtuple
 from .pipeline import get_unit
 from .types import Unit
-from .functional import f_map, pmap, flatten, compose
+from .functional import f_map, pmap, flatten, compose, f_filter, group_by
 from .pipeline import group_dict_to_list
+from .eyecandy import checkerboard_contrast
 import numpy as np
 from scipy.sparse import csr_matrix
 from tqdm import tqdm
 from functools import partial
 import logging
+from sklearn import datasets, svm, metrics, neighbors
+import pandas as pd
 logger = logging.getLogger('glia')
 
 
@@ -173,18 +176,95 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     for i,array in enumerate(arrays):
         data[i] = array
 
-    # for idx in indices:
-        # data[idx] = 1
-    # for i,e in gen:
-    #     for unit_id, spikes in e['units'].items():
-    #         (row, column, unit_num) = key_map[unit_id]
-    #         for spike in spikes:
-    #             s = int(np.floor(spike*1000))
-    #             if s>1000:
-    #                 print('>1000',spikes, e)
-    #                 raise ValueError()
-    #             data[i,s,row,column,unit_num] = 1
-    #     classes[i] = get_class(e)
-
-
     return (data, classes)
+
+
+def bin_100ms(data):
+    # turn the data in a (samples, feature) matrix from 100ms time bins:
+    (nconditions, nsizes, n_training, timesteps, n_x, n_y, n_units) = data.shape
+    new_steps = int(timesteps/100)
+    return np.sum(data.reshape(
+                        (nconditions, nsizes,
+                            n_training, new_steps, 100, n_x,n_y,n_units)),
+                    axis=4).reshape(
+                        (nconditions, nsizes, \
+                            n_training, new_steps*n_x*n_y*n_units))
+
+
+
+def bin_sum(data):
+    (nconditions, nsizes, n_training, timesteps, n_x, n_y, n_units) = data.shape
+    return np.sum(data,axis=3).reshape(
+        (nconditions, nsizes, n_training, n_x*n_y*n_units))
+
+letter_map = {'K': 4, 'C': 1, 'V': 9, 'N': 5, 'R': 7, 'H': 3, 'O': 6, 'Z': 10, 'D': 2, 'S': 8, 'BLANK': 0}
+letter_classes = list(map(lambda x: x[0],
+                   sorted(list(letter_map.items()),
+                          key=lambda x: x[1])))
+
+def classifier_helper(classifier, training, validation, classes=letter_classes):
+    training_data, training_target = training
+    validation_data, validation_target = validation
+
+    classifier.fit(training_data, training_target)
+    predicted = classifier.predict(validation_data)
+    expected = validation_target
+
+    report = metrics.classification_report(expected, predicted)
+    confusion = confusion_matrix(expected, predicted, classes)
+    return (report, confusion)
+
+
+def confusion_matrix(expected, predicted, classes=letter_classes):
+    m = metrics.confusion_matrix(expected, predicted)
+
+    return pd.DataFrame(data=m, index=classes,
+                              columns=classes)
+
+
+def px_to_logmar(px,px_per_deg=12.524):
+    minutes = px/px_per_deg*60
+    return np.log10(minutes)
+
+def get_stimulus_parameters(stimulus_list, stimulus_type, parameter):
+    f = compose(
+        f_filter(lambda x: x["stimulus"]['stimulusType']==stimulus_type),
+        partial(group_by,
+                key=lambda x: x["stimulus"][parameter])
+        )
+    parameters = sorted(list(f(stimulus_list).keys()))
+    logger.debug(f"Parameters: {parameters}")
+    assert len(parameters)>0
+    return parameters
+
+def get_image_parameters(stimulus_list):
+    f = compose(
+        f_filter(lambda x: x["stimulus"]['stimulusType']=='IMAGE'),
+        partial(group_by,
+                key=lambda x: x["stimulus"]["metadata"]["parameter"])
+        )
+    parameters = sorted(list(f(stimulus_list).keys()))
+    logger.debug(f"Parameters: {parameters}")
+    assert len(parameters)>0
+    return parameters
+
+
+def get_checkerboard_contrasts(stimulus_list):
+    f = compose(
+        f_filter(lambda x: x["stimulus"]['stimulusType']=='CHECKERBOARD'),
+        partial(group_by,
+                key=lambda x: checkerboard_contrast(x["stimulus"]))
+        )
+    contrasts = [float(x) for x in sorted(list(f(stimulus_list).keys()))]
+    assert len(contrasts)>0
+    return contrasts
+
+def svm_helper(training_data, training_target, validation_data, validation_target):
+    # Create a classifier: a support vector classifier
+    classifier = svm.SVC()
+    classifier.fit(training_data, training_target)
+
+    predicted = classifier.predict(validation_data)
+    expected = validation_target
+
+    return metrics.accuracy_score(expected, predicted)
