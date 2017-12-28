@@ -6,6 +6,7 @@ matplotlib.rcParams['figure.max_open_warning'] = 250
 matplotlib.rcParams['font.size'] = 16
 
 import glia
+from glia import match_filename
 from fnmatch import fnmatch
 import click
 import os
@@ -69,6 +70,7 @@ def plot_path(directory,plot_name):
 @click.group()
 def main():
     pass
+
 
 @main.command()
 @click.argument('filename', type=str)
@@ -286,7 +288,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
         ctx.obj["stimulus_list"] = stimulus_list
         ctx.obj["metadata"] = metadata
-        assert method=='analog-flicker'
+        # assert method=='analog-flicker'
     except:
         print("No .stim file found. Creating from .analog file.".format(trigger))
         if flicker_version==0.3:
@@ -311,6 +313,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     retina_id = date+'_R'+eye+'_E'+experiment_n
     if extension == ".txt":
         ctx.obj["units"] = glia.read_plexon_txt_file(filename,retina_id, channel_map)
+    elif extension == ".bxr":
+        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id, channel_map)
     elif re.match(spyking_regex, filename):
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
