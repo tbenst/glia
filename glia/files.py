@@ -18,6 +18,13 @@ UnitSpikeTrains = List[Dict[str, np.ndarray]]
 # VOLTAGE DATA
 
 
+def match_filename(start,ext='txt'):
+    files = glob(start + "*." + ext)
+    if len(files)==1:
+        return files[0]
+    else:
+        raise(ValueError("Could not match file, try specifying full filename"))
+
 def read_raw_voltage(raw_filename):
     """Read in a raw file exported from MCS datatool."""
     header, offset = get_header(raw_filename)

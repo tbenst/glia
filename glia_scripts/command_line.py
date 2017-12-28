@@ -6,6 +6,7 @@ matplotlib.rcParams['figure.max_open_warning'] = 250
 matplotlib.rcParams['font.size'] = 16
 
 import glia
+from glia import match_filename
 from fnmatch import fnmatch
 import click
 import os
@@ -70,12 +71,6 @@ def plot_path(directory,plot_name):
 def main():
     pass
 
-def match_filename(start,ext='txt'):
-    files = glob(start + "*." + ext)
-    if len(files)==1:
-        return files[0]
-    else:
-        raise(ValueError("Could not match file, try specifying full filename"))
 
 @main.command()
 @click.argument('filename', type=str)
