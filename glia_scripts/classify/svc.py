@@ -225,14 +225,14 @@ def tiled_letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
     logger.debug(data["training_data"].shape)
     # add nconditions dim
     training_100ms = glia.glia.bin_100ms(np.expand_dims(data["training_data"],0))
-    validation_100ms = glia.glia.bin_100ms(np.expand_dims(data["validation_data"],0))
+    test_100ms = glia.glia.bin_100ms(np.expand_dims(data["test_data"],0))
     logger.debug(f'training_100ms shape {training_100ms.shape}')
     logger.debug(f'sizes {sizes}')
     for i, size in enumerate(sizes):
         print(f'SVC for size {size}')
         # note: no expand dims, hardcoded 1 ncondition
         training_target = data["training_target"][i]
-        validation_target = data["validation_target"][i]
+        test_target = data["test_target"][i]
         logger.debug(np.size(training_target))
         svr = svm.SVC()
         parameters = {'C': [1, 10, 100, 1000],
@@ -240,7 +240,7 @@ def tiled_letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
         clf = GridSearchCV(svr, parameters, n_jobs=12)
         report, confusion = glia.classifier_helper(clf,
             (training_100ms[0,i], training_target),
-            (validation_100ms[0,i], validation_target))
+            (test_100ms[0,i], test_target))
         with open(f"{plot_directory}/letter-{size}.txt", "w") as f:
             f.write(report+'\n')
             f.write(str(confusion))

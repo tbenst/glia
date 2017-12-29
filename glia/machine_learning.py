@@ -202,13 +202,13 @@ letter_classes = list(map(lambda x: x[0],
                    sorted(list(letter_map.items()),
                           key=lambda x: x[1])))
 
-def classifier_helper(classifier, training, validation, classes=letter_classes):
+def classifier_helper(classifier, training, test, classes=letter_classes):
     training_data, training_target = training
-    validation_data, validation_target = validation
+    test_data, test_target = test
 
     classifier.fit(training_data, training_target)
-    predicted = classifier.predict(validation_data)
-    expected = validation_target
+    predicted = classifier.predict(test_data)
+    expected = test_target
 
     report = metrics.classification_report(expected, predicted)
     confusion = confusion_matrix(expected, predicted, classes)
@@ -259,12 +259,12 @@ def get_checkerboard_contrasts(stimulus_list):
     assert len(contrasts)>0
     return contrasts
 
-def svm_helper(training_data, training_target, validation_data, validation_target):
+def svm_helper(training_data, training_target, test_data, test_target):
     # Create a classifier: a support vector classifier
     classifier = svm.SVC()
     classifier.fit(training_data, training_target)
 
-    predicted = classifier.predict(validation_data)
-    expected = validation_target
+    predicted = classifier.predict(test_data)
+    expected = test_target
 
     return metrics.accuracy_score(expected, predicted)
