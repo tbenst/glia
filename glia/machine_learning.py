@@ -16,7 +16,7 @@ logger = logging.getLogger('glia')
 
 TVT = namedtuple("TVT", ['training', "test", "validation"])
 
-def tvt_by_percentage(n, training=60, validation=20,testing=20):
+def tvt_by_percentage(n, training=60,testing=20, validation=20):
     summed = training+validation+testing
     assert summed==100
     train = int(np.floor(n*training/100))
