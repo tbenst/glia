@@ -148,8 +148,8 @@ def save_eyechart_npz(units, stimulus_list, name):
         test_target[size_index] = tt
 
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target)
-          # test_data=test_data, test_target=test_target)
+          test_data=test_data, test_target=test_target)
+         # validation_data=validation_data, validation_target=validation_target)
 
 def save_letter_npz(units, stimulus_list, name):
     print("Saving letter NPZ file.")
@@ -190,10 +190,10 @@ def save_letter_npz(units, stimulus_list, name):
         tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
     training_target = np.full((nsizes,
         tvt.training*experiments_per_cohort),0,dtype='int8')
-    validation_data = np.full((nsizes,
-        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
-    validation_target = np.full((nsizes,
-        tvt.validation*experiments_per_cohort),0,dtype='int8')
+    test_data = np.full((nsizes,
+        tvt.test*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+    test_target = np.full((nsizes,
+        tvt.test*experiments_per_cohort),0,dtype='int8')
 
     size_map = {s: i for i,s in enumerate(sizes)}
     for size, cohorts in letters.items():
@@ -210,17 +210,17 @@ def save_letter_npz(units, stimulus_list, name):
         training_data[size_index] = pad_td
         training_target[size_index] = tt
 
-        td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+        td, tt = glia.experiments_to_ndarrays(glia.test_cohorts(X),
                     letter_class)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
-        validation_data[size_index] = pad_td
-        validation_target[size_index] = tt
+        test_data[size_index] = pad_td
+        test_target[size_index] = tt
 
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target)
-    #   test_data=test_data, test_target=test_target)
+            test_data=test_data, test_target=test_target)
+         # validation_data=validation_data, validation_target=validation_target)
 
 def save_letters_tiled_npz(units, stimulus_list, name):
     print("Saving letters-tiled NPZ file.")
@@ -270,10 +270,10 @@ def save_letters_tiled_npz(units, stimulus_list, name):
         tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
     training_target = np.full((nsizes,
         tvt.training*experiments_per_cohort),0,dtype='int8')
-    validation_data = np.full((nsizes,
-        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
-    validation_target = np.full((nsizes,
-        tvt.validation*experiments_per_cohort),0,dtype='int8')
+    test_data = np.full((nsizes,
+        tvt.test*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+    test_target = np.full((nsizes,
+        tvt.test*experiments_per_cohort),0,dtype='int8')
 
     size_map = {s: i for i,s in enumerate(sizes)}
     for size, cohorts in letters.items():
@@ -290,17 +290,17 @@ def save_letters_tiled_npz(units, stimulus_list, name):
         training_data[size_index] = pad_td
         training_target[size_index] = tt
 
-        td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+        td, tt = glia.experiments_to_ndarrays(glia.test_cohorts(X),
                     letter_class)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
-        validation_data[size_index] = pad_td
-        validation_target[size_index] = tt
+        test_data[size_index] = pad_td
+        test_target[size_index] = tt
 
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target)
-    #   test_data=test_data, test_target=test_target)
+             test_data=test_data, test_target=test_target)
+         # validation_data=validation_data, validation_target=validation_target)
 
 
 
@@ -355,10 +355,10 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
         tvt.training*4,d,8,8,10),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
         tvt.training*4),0,dtype='int8')
-    validation_data = np.full((nconditions,nsizes,
-        tvt.validation*4,d,8,8,10),0,dtype='int8')
-    validation_target = np.full((nconditions,nsizes,
-        tvt.validation*4),0,dtype='int8')
+    test_data = np.full((nconditions,nsizes,
+        tvt.test*4,d,8,8,10),0,dtype='int8')
+    test_target = np.full((nconditions,nsizes,
+        tvt.test*4),0,dtype='int8')
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
@@ -380,18 +380,18 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by):
             training_data[condition_index, size_index] = pad_td
             training_target[condition_index, size_index] = tt
 
-            td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+            td, tt = glia.experiments_to_ndarrays(glia.test_cohorts(X),
                         checker_discrimination_class)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')
-            validation_data[condition_index, size_index] = pad_td
-            validation_target[condition_index, size_index] = tt
+            test_data[condition_index, size_index] = pad_td
+            test_target[condition_index, size_index] = tt
 
     print('saving to ',name)
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target)
-          # test_data=test_data, test_target=test_target)
+          test_data=test_data, test_target=test_target)
+         # validation_data=validation_data, validation_target=validation_target)
 
 
 
@@ -436,10 +436,10 @@ def save_grating_npz(units, stimulus_list, name, group_by):
         tvt.training*2,d,8,8,10),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
         tvt.training*2),0,dtype='int8')
-    validation_data = np.full((nconditions,nsizes,
-        tvt.validation*2,d,8,8,10),0,dtype='int8')
-    validation_target = np.full((nconditions,nsizes,
-        tvt.validation*2),0,dtype='int8')
+    test_data = np.full((nconditions,nsizes,
+        tvt.test*2,d,8,8,10),0,dtype='int8')
+    test_target = np.full((nconditions,nsizes,
+        tvt.test*2),0,dtype='int8')
 
     condition_map = {c: i for i,c in enumerate(conditions)}
     size_map = {s: i for i,s in enumerate(sizes)}
@@ -458,15 +458,15 @@ def save_grating_npz(units, stimulus_list, name, group_by):
             training_data[condition_index, size_index] = pad_td
             training_target[condition_index, size_index] = tt
 
-            td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+            td, tt = glia.experiments_to_ndarrays(glia.test_cohorts(X),
                         grating_class)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')
-            validation_data[condition_index, size_index] = pad_td
-            validation_target[condition_index, size_index] = tt
+            test_data[condition_index, size_index] = pad_td
+            test_target[condition_index, size_index] = tt
 
     print('saving to ',name)
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target)
-          # test_data=test_data, test_target=test_target)
+            test_data=test_data, test_target=test_target)
+         # validation_data=validation_data, validation_target=validation_target)

@@ -239,7 +239,7 @@ def unit_classification_accuracy(tvt):
 
     for dark vs on and dark vs off"""
     dark_training, on_training, off_training = integrity_spike_counts(tvt.training)
-    dark_test, on_test, off_test = integrity_spike_counts(tvt.validation)
+    dark_test, on_test, off_test = integrity_spike_counts(tvt.test)
 
     X_on_train = np.array(dark_training + on_training).reshape((-1,1))
     Y_on_train = np.hstack([np.full(len(dark_training), 0,dtype='int8'),
