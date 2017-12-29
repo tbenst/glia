@@ -14,15 +14,15 @@ import pandas as pd
 logger = logging.getLogger('glia')
 
 
-TVT = namedtuple("TVT", ['training', "validation", "test"])
+TVT = namedtuple("TVT", ['training', "test", "validation"])
 
-def tvt_by_percentage(n, training=60, validation=20,testing=20):
+def tvt_by_percentage(n, training=60,testing=20, validation=20):
     summed = training+validation+testing
     assert summed==100
     train = int(np.floor(n*training/100))
     valid = int(np.ceil(n*validation/100))
     test = n - valid - train
-    return TVT(train, valid, test)
+    return TVT(train, test, valid)
 
 def f_split_dict(tvt):
     """Subset dict into training, validation, & test."""
@@ -34,14 +34,14 @@ def f_split_dict(tvt):
             v = dictionary[k]
             if i < tvt.training:
                 split.training[k] = v
-            elif i < tvt.validation + tvt.training:
-                split.validation[k] = v
-            elif i < tvt.test + tvt.validation + tvt.training:
+            elif i < tvt.test + tvt.training:
                 split.test[k] = v
+            elif i < tvt.validation + tvt.test + tvt.training:
+                split.validation[k] = v
             else:
-                raise(ValueError, 'bad training, validation & test split.')
+                raise(ValueError, 'bad training, test & validation split.')
             i += 1
-        assert i == tvt.training+tvt.validation+tvt.test
+        assert i == tvt.training+tvt.test+tvt.validation
         return split
 
     return anonymous
@@ -65,7 +65,7 @@ test_cohorts = compose(
     )
 
 def tvt_map(tvt, f):
-    return TVT(f(tvt.training), f(tvt.validation), f(tvt.test))
+    return TVT(f(tvt.training), f(tvt.test), f(tvt.validation))
 
 def f_split_list(tvt, get_list=lambda x: x):
     """Subset list into training, validation, & test."""
@@ -75,16 +75,16 @@ def f_split_list(tvt, get_list=lambda x: x):
         for i,v in enumerate(my_list):
             if i < tvt.training:
                 split.training.append(v)
-            elif i < tvt.validation + tvt.training:
-                split.validation.append(v)
-            elif i < tvt.test + tvt.validation + tvt.training:
+            elif i < tvt.test + tvt.training:
                 split.test.append(v)
+            elif i < tvt.validation + tvt.test + tvt.training:
+                split.validation.append(v)
             else:
-                raise(ValueError, 'bad training, validation & test split.')
+                raise(ValueError, 'bad training, test & validation split.')
         try:
-            assert len(my_list) == tvt.training+tvt.validation+tvt.test
+            assert len(my_list) == tvt.training+tvt.test+tvt.validation
         except Exception as e:
-            print(len(my_list), tvt.training+tvt.validation+tvt.test)
+            print(len(my_list), tvt.training+tvt.test+tvt.validation)
             raise e
         return split
 
@@ -202,13 +202,13 @@ letter_classes = list(map(lambda x: x[0],
                    sorted(list(letter_map.items()),
                           key=lambda x: x[1])))
 
-def classifier_helper(classifier, training, validation, classes=letter_classes):
+def classifier_helper(classifier, training, test, classes=letter_classes):
     training_data, training_target = training
-    validation_data, validation_target = validation
+    test_data, test_target = test
 
     classifier.fit(training_data, training_target)
-    predicted = classifier.predict(validation_data)
-    expected = validation_target
+    predicted = classifier.predict(test_data)
+    expected = test_target
 
     report = metrics.classification_report(expected, predicted)
     confusion = confusion_matrix(expected, predicted, classes)
@@ -259,12 +259,12 @@ def get_checkerboard_contrasts(stimulus_list):
     assert len(contrasts)>0
     return contrasts
 
-def svm_helper(training_data, training_target, validation_data, validation_target):
+def svm_helper(training_data, training_target, test_data, test_target):
     # Create a classifier: a support vector classifier
     classifier = svm.SVC()
     classifier.fit(training_data, training_target)
 
-    predicted = classifier.predict(validation_data)
-    expected = validation_target
+    predicted = classifier.predict(test_data)
+    expected = test_target
 
     return metrics.accuracy_score(expected, predicted)

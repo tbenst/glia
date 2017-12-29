@@ -498,19 +498,19 @@ def raster_group(fig, axis_gen, data):
 def error_bars(data, target, ndraws=20):
     n = data.shape[0]
     accuracy = np.full((ndraws,), 0)
-    (ntrain, nvalid, _) = tvt_by_percentage(n,60,40,0)
+    (ntrain, ntest, _) = tvt_by_percentage(n,60,40,0)
     indices = np.arange(n)
     for i in range(ndraws):
         np.random.shuffle(indices)
         training_ind = indices[0:ntrain]
-        validation_ind = indices[ntrain:]
+        test_ind = indices[ntrain:]
 
         training_data = data[training_ind]
         training_target = target[training_ind]
-        validation_data = data[validation_ind]
-        validation_target = target[validation_ind]
+        test_data = data[test_ind]
+        test_target = target[test_ind]
 
         accuracy[i] = svm_helper(training_data, training_target,
-            validation_data, validation_target)
+            test_data, test_target)
     std = np.std(accuracy)
     return (np.mean(accuracy),std,std)
