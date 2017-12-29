@@ -376,10 +376,10 @@ def save_image_npz(units, stimulus_list, name):
         tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
     training_target = np.full((nsizes,
         tvt.training*experiments_per_cohort),0,dtype='int8')
-    validation_data = np.full((nsizes,
-        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
-    validation_target = np.full((nsizes,
-        tvt.validation*experiments_per_cohort),0,dtype='int8')
+    test_data = np.full((nsizes,
+        tvt.test*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+    test_target = np.full((nsizes,
+        tvt.test*experiments_per_cohort),0,dtype='int8')
 
     size_map = {s: i for i,s in enumerate(sizes)}
     for size, cohorts in letters.items():
@@ -396,17 +396,17 @@ def save_image_npz(units, stimulus_list, name):
         training_data[size_index] = pad_td
         training_target[size_index] = tt
 
-        td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+        td, tt = glia.experiments_to_ndarrays(glia.test_cohorts(X),
                     image_class)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
-        validation_data[size_index] = pad_td
-        validation_target[size_index] = tt
+        test_data[size_index] = pad_td
+        test_target[size_index] = tt
 
     np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target)
-    #   test_data=test_data, test_target=test_target)
+          test_data=test_data, test_target=test_target)
+         # validation_data=validation_data, validation_target=validation_target)
 
 
 
