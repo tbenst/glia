@@ -18,6 +18,7 @@ from .analysis import last_spike_time
 from .pipeline import get_unit
 from .functional import zip_dictionaries
 from .types import Unit
+from .machine_learning import tvt_by_percentage, svm_helper
 from glia.config import logger
 
 Seconds = float
@@ -492,3 +493,24 @@ def raster_group(fig, axis_gen, data):
     ax.set_ylabel("trials")
     ax.set_xlim((0,longest_group))
     ax.set_ylim((0,trial))
+
+
+def error_bars(data, target, ndraws=20):
+    n = data.shape[0]
+    accuracy = np.full((ndraws,), 0)
+    (ntrain, nvalid, _) = tvt_by_percentage(n,60,40,0)
+    indices = np.arange(n)
+    for i in range(ndraws):
+        np.random.shuffle(indices)
+        training_ind = indices[0:ntrain]
+        validation_ind = indices[ntrain:]
+
+        training_data = data[training_ind]
+        training_target = target[training_ind]
+        validation_data = data[validation_ind]
+        validation_target = target[validation_ind]
+
+        accuracy[i] = svm_helper(training_data, training_target,
+            validation_data, validation_target)
+    std = np.std(accuracy)
+    return (np.mean(accuracy),std,std)
