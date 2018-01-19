@@ -8,9 +8,23 @@ from sklearn.neighbors import KNeighborsClassifier
 import sklearn
 import os
 from functools import reduce, partial
-from glia import logger
+from glia import logger, config
+from scipy import stats
 
 from scipy.stats import binom
+
+def svm_grid(training_data, training_target, test_data, test_target, n_jobs=config.processes):
+    svr = svm.SVC()
+    parameters = {'C': [1, 10, 100, 1000],
+                  'gamma': [0.001, 0.0001]},
+    clf = GridSearchCV(svr, parameters, n_jobs=12)
+    clf.fit(training_data, training_target)
+
+    predicted = clf.predict(test_data)
+    expected = test_target
+
+    return metrics.accuracy_score(expected, predicted)
+
 
 def plot_acuity(logmar, accuracy, yerror,
                 n_validation, name, conditions, condition_name, plot_directory):
@@ -67,17 +81,18 @@ def acuity(training_data, training_target, validation_data, validation_target,
     n_validation = validation_data[0].shape[1]
 
     nclasses = 2
-    accuracy_100 = np.full((nconditions, nsizes), 0, dtype=np.float)
-    yerror = np.full((nconditions,2,nsizes),0, dtype=np.float)
+    accuracy = np.full((nconditions, nsizes), 0, dtype=np.float)
+    yerror = np.full((nconditions,nsizes),0, dtype=np.float)
+    ntrain = np.shape(training_data)[2]
     for condition in range(nconditions):
         for size in range(nsizes):
             data = np.concatenate(
                 [training_data[condition][size],validation_data[condition][size]])
             target = np.concatenate(
                 [training_target[condition][size],validation_target[condition][size]])
-            (mean,below,above) = glia.error_bars(data,target)
-            accuracy_100[condition, size] = mean
-            yerror[condition, :, size] = [below,above]
+            acc = glia.mvcc(svm_grid, data,target,30,ntrain)
+            accuracy[condition, size] = np.mean(acc)
+            yerror[condition, size] = stats.sem(acc)
 
     logmar = list(map(glia.px_to_logmar,sizes))
 
@@ -185,7 +200,8 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
 
 def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
                 nsamples):
-    print("Classifying Letters")
+    print("Classifying Letters - warning not using latest acuity function")
+    # TODO
     sizes = glia.get_stimulus_parameters(stimulus_list, "LETTER", 'size')
     name = metadata["name"]
     if name=="letters":
@@ -218,7 +234,8 @@ def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
 
 def tiled_letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
                 nsamples):
-    print("Classifying Letters")
+    print("Classifying Letters - warning not using latest acuity function")
+    # TODO
     sizes = glia.get_stimulus_parameters(stimulus_list, "TILED_LETTER", 'size')
     name = metadata["name"]
     # n_sizes, n_training, n_steps, n_x, n_y, n_units = data["training_data"].shape
@@ -247,7 +264,8 @@ def tiled_letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
 
 def image_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
                 nsamples):
-    print("Classifying Letters")
+    print("Classifying Letters - warning not using latest acuity function")
+    # TODO
     sizes = glia.get_image_parameters(stimulus_list)
     name = metadata["name"]
     # n_sizes, n_training, n_steps, n_x, n_y, n_units = data["training_data"].shape
