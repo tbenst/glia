@@ -527,12 +527,12 @@ def strip_generated(name, choices=generate_choices):
 @click.option("--processes", "-p", type=int, help="Number of processors")
 @click.option('--skip', "-s", default=False, is_flag=True,
     help="Skip method assertion (for testing)")
+@click.option("--n_draws", "-d", type=int, help="Number of draws for Monte Carlo Cross-validation", default=30)
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-def classify_cmd(filename, nsamples, notebook, skip, debug=False,
-                 verbose=False, version=2, processes=None):
+def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False, version=2, processes=None, n_draws=30):
     "Classify using converted NPZ"
 
     if not os.path.isfile(filename):
@@ -575,11 +575,11 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False,
     if re.match('checkerboard',name):
         svc.checkerboard_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, n_draws)
     elif re.match('grating',name):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, n_draws)
     elif 'letters-tiled'==name:
         svc.tiled_letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,

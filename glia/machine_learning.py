@@ -282,7 +282,7 @@ def class_split(target, x,nA):
     return a, b
 
 
-def mccv(f_accuracy, X, Y, n_draws=20, n_train=60):
+def mccv(f_accuracy, X, Y, n_draws=25, n_train=60):
     """
     Monte Carlo Cross Validation.
 

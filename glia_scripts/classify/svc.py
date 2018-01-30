@@ -67,7 +67,7 @@ def plot_acuity(logmar, accuracy, yerror,
 
 def acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, name,
-            sizes, conditions, condition_name):
+            sizes, conditions, condition_name, n_draws=30):
     print(f"training classifiers.")
     # polymorphic over ndarray or list for conditions
     nconditions = len(training_data)
@@ -90,7 +90,7 @@ def acuity(training_data, training_target, validation_data, validation_target,
                 [training_data[condition][size],validation_data[condition][size]])
             target = np.concatenate(
                 [training_target[condition][size],validation_target[condition][size]])
-            acc = glia.mccv(svm_grid, data,target,30,ntrain)
+            acc = glia.mccv(svm_grid, data,target,n_draws,ntrain)
             accuracy[condition, size] = np.mean(acc)
             yerror[condition, size] = stats.sem(acc)
 
@@ -101,7 +101,7 @@ def acuity(training_data, training_target, validation_data, validation_target,
 
 
 def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-                nsamples):
+                nsamples, n_draws=30):
     sizes = glia.get_stimulus_parameters(stimulus_list, "CHECKERBOARD", 'size')
     name = metadata["name"]
     if name=='checkerboard-contrast':
@@ -143,11 +143,11 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
     else:
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, "checkerboard",
-            sizes, conditions, condition_name)
+            sizes, conditions, condition_name, n_draws)
 
 
 def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-                nsamples):
+                nsamples,n_draws=30):
     sizes = glia.get_stimulus_parameters(stimulus_list, "GRATING", "width")
     if metadata["name"]=='grating-contrast':
         training_data = glia.bin_100ms(data["training_data"])
@@ -195,7 +195,7 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
     else:
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, "grating",
-            sizes, conditions, condition_name)
+            sizes, conditions, condition_name, n_draws)
 
 
 def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
