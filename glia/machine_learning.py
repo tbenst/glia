@@ -268,3 +268,47 @@ def svm_helper(training_data, training_target, validation_data, validation_targe
     expected = validation_target
 
     return metrics.accuracy_score(expected, predicted)
+
+
+def class_split(target, x,nA):
+    """Split x into two groups where condition(x)==true and len(group 1)==nA.
+
+    python> class_split(1, np.array([2,1,1,1,2,2,1,2]),2)
+    (array([2, 6]), array([0, 1, 3, 4, 5, 7]))"""
+
+    idx = np.where(x==target)[0]
+    a = np.random.choice(idx, nA,replace=False)
+    b = np.setdiff1d(idx,a)
+    return a, b
+
+
+def mccv(f_accuracy, X, Y, n_draws=25, n_train=60):
+    """
+    Monte Carlo Cross Validation.
+
+    accuracy = f_accuracy(x_train, y_train, x_test, y_test)
+    """
+    n_samples, nfeatures = X.shape
+    n_classes = int(np.max(Y))+1
+    n_test = n_samples - n_train
+    assert n_train % n_classes == 0
+    assert n_test % n_classes == 0
+    train_per_class = int(n_train/n_classes)
+
+    accuracies = []
+    acc = []
+    error = []
+    for n in range(n_draws):
+        training_idx = []
+        test_idx = []
+        for target in range(n_classes):
+            train, test = class_split(target,Y,train_per_class)
+            training_idx += list(train)
+            test_idx += list(test)
+        assert np.array_equal(np.array( sorted(training_idx+test_idx)),
+            np.arange(n_samples))
+        a = f_accuracy(
+            X[training_idx], Y[training_idx],
+            X[test_idx], Y[test_idx])
+        accuracies.append(a)
+    return accuracies

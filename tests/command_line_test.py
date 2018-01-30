@@ -39,7 +39,7 @@ def checkerboard_test(programs_notebook):
                     partial(assert_isfile,
                         f"random_{p}-plots/00-all/{p}_acuity.png"),
                     glia_scripts.classify_cmd,
-                    ["-s",f"random_{p}.npz"])
+                    ["-s","-d 2", f"random_{p}.npz"])
                 ran = True
     assert ran
 
@@ -58,7 +58,7 @@ def grating_test(programs_notebook):
                     partial(assert_isfile,
                         f"random_{p}-plots/00-all/{p}_acuity.png"),
                     glia_scripts.classify_cmd,
-                    ["-s", f"random_{p}.npz"])
+                    ["-s", "-d 2", f"random_{p}.npz"])
                 ran = True
     assert ran
 
