@@ -270,6 +270,18 @@ def svm_helper(training_data, training_target, validation_data, validation_targe
     return metrics.accuracy_score(expected, predicted)
 
 
+def class_split(target, x,nA):
+    """Split x into two groups where condition(x)==true and len(group 1)==nA.
+
+    python> class_split(1, np.array([2,1,1,1,2,2,1,2]),2)
+    (array([2, 6]), array([0, 1, 3, 4, 5, 7]))"""
+
+    idx = np.where(x==target)[0]
+    a = np.random.choice(idx, nA,replace=False)
+    b = np.setdiff1d(idx,a)
+    return a, b
+
+
 def mccv(f_accuracy, X, Y, n_draws=20, n_train=60):
     """
     Monte Carlo Cross Validation.

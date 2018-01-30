@@ -83,20 +83,20 @@ def acuity(training_data, training_target, validation_data, validation_target,
     nclasses = 2
     accuracy = np.full((nconditions, nsizes), 0, dtype=np.float)
     yerror = np.full((nconditions,nsizes),0, dtype=np.float)
-    ntrain = np.shape(training_data)[2]
+    ntrain = training_data[0].shape[1]
     for condition in range(nconditions):
         for size in range(nsizes):
             data = np.concatenate(
                 [training_data[condition][size],validation_data[condition][size]])
             target = np.concatenate(
                 [training_target[condition][size],validation_target[condition][size]])
-            acc = glia.mvcc(svm_grid, data,target,30,ntrain)
+            acc = glia.mccv(svm_grid, data,target,30,ntrain)
             accuracy[condition, size] = np.mean(acc)
             yerror[condition, size] = stats.sem(acc)
 
     logmar = list(map(glia.px_to_logmar,sizes))
 
-    plot_acuity(logmar, accuracy_100, yerror, n_validation,
+    plot_acuity(logmar, accuracy, yerror, n_validation,
                 name, conditions, condition_name, plot_directory)
 
 
