@@ -9,6 +9,7 @@ import h5py
 import os
 import csv
 from .types import Unit
+from .io.mdaio import readmda
 
 file = str
 Dir = str
@@ -100,11 +101,42 @@ def read_plexon_txt_file(filepath, retina_id, channel_map=None):
 
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
+def read_mda_file(filepath, retina_id, channel_map=None):
+    """Read MountainSort file.
+
+    Assume export format of (channel,time,unit) x #events
+    """
+    unit_dictionary = {}
+    mda = readmda(filepath)
+    for col in mda.T:
+        c = col[0]
+        spike_time = col[1]
+        unit_num = col[2]
+
+        if channel_map:
+            c = channel_map[channel]
+        else:
+            c = channel
+
+        if (c, unit_num) not in unit_dictionary:
+            # initialize key for both dictionaries
+            unit = Unit(retina_id, c, unit_num)
+            unit_dictionary[(c, unit_num)] = unit
+
+        unit_dictionary[(c, unit_num)].spike_train.append(spike_time)
+
+
+    for uid in unit_dictionary.keys():
+        unit_dictionary[uid] = unit_dictionary[uid]
+        unit_dictionary[uid].spike_train = np.array(unit_dictionary[uid].spike_train)
+
+    return {unit.id: unit for k,unit in unit_dictionary.items()}
+
 def read_3brain_spikes(filepath, retina_id, channel_map=None):
     """Read spikes detected by 3brain in a .bxr file."""
     unit_dictionary = {}
     assert os.path.splitext(filepath)[1]==".bxr"
-    
+
     with h5py.File(filepath, 'r') as h5_3brain_spikes:
         # read into memory by using [()]
         spike_channel_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeChIDs"][()]
@@ -118,7 +150,7 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
             # convert to tuple
             c = (c[0],c[1])
             t = spike_time / sampling_rate
-        
+
             # hardcoded 0 as no spike sorting
             unit_num = 0
             if (c, unit_num) not in unit_dictionary:
