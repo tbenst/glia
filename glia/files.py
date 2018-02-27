@@ -10,7 +10,7 @@ import os
 import csv
 from .types import Unit
 from .io.mdaio import readmda
-
+from tqdm import tqdm
 file = str
 Dir = str
 dat = str
@@ -101,17 +101,17 @@ def read_plexon_txt_file(filepath, retina_id, channel_map=None):
 
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
-def read_mda_file(filepath, retina_id, channel_map=None):
+def read_mda_file(filepath, retina_id, channel_map=None, sampling_rate=20000):
     """Read MountainSort file.
 
     Assume export format of (channel,time,unit) x #events
     """
     unit_dictionary = {}
     mda = readmda(filepath)
-    for col in mda.T:
-        c = col[0]
-        spike_time = col[1]
-        unit_num = col[2]
+    for col in tqdm(mda.T):
+        channel = int(col[0])
+        spike_time = col[1]/sampling_rate
+        unit_num = int(col[2])
 
         if channel_map:
             c = channel_map[channel]
