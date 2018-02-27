@@ -65,6 +65,46 @@ def plot_acuity(logmar, accuracy, yerror,
         ax.set_title(f'{name} classification by {condition_name}')
         fig.savefig(os.path.join(plot_directory, f"{name}-{condition_name}_acuity.png"))
 
+def plot_sensitivity(logmar, accuracy, yerror,
+                n_validation, name, conditions, condition_name, plot_directory):
+    raise "Not implemented"
+    print(f"plotting {name} {condition_name} classification accuracy.")
+    sig5 = np.repeat(binom.ppf(0.95, n_validation, 0.5)/n_validation, len(logmar))
+    sig1 = np.repeat(binom.ppf(0.99, n_validation, 0.5)/n_validation, len(logmar))
+
+    fig, ax = plt.subplots()
+    nconditions = len(conditions)
+    for condition in range(nconditions):
+        if type(conditions[condition]) is float:
+            label = f'{conditions[condition]:.2f}'
+        else:
+            label = f'{conditions[condition]}'
+
+        ax.errorbar(logmar, accuracy[condition], marker='o', markersize=4, capsize=4,
+            yerr=yerror[condition], label=label)
+    ax.plot(logmar, sig1, 'k--')
+    # ax.plot(logmar, sig1, 'k--', label='p<0.01')
+    ax.set_ylabel("Accuracy")
+    ax.set_xlabel("logMAR")
+
+    x_major_ticks = np.arange(1.6, 3.2, 0.2)
+    ax.set_xticks(x_major_ticks)
+    ax.set_xlim(1.5,3.25)
+    # ax.set_xticks(minor_ticks, minor=True)
+    # ax.set_yticks(major_ticks)
+    # ax.set_yticks(minor_ticks, minor=True)
+
+    ax.grid(which='both')
+
+    ax.set_ylim(0.35,1.05)
+    ax.legend(loc=(0.7,0.1))
+    if condition_name is None:
+        ax.set_title(f'{name} classification by binning technique')
+        fig.savefig(os.path.join(plot_directory, f"{name}_acuity.png"))
+    else:
+        ax.set_title(f'{name} classification by {condition_name}')
+        fig.savefig(os.path.join(plot_directory, f"{name}-{condition_name}_acuity.png"))
+
 def acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, name,
             sizes, conditions, condition_name, n_draws=30):
@@ -98,6 +138,8 @@ def acuity(training_data, training_target, validation_data, validation_target,
 
     plot_acuity(logmar, accuracy, yerror, n_validation,
                 name, conditions, condition_name, plot_directory)
+    # plot_sensitivity(logmar, accuracy, yerror, n_validation,
+    #             name, conditions, condition_name, plot_directory)
 
 
 def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,

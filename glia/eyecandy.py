@@ -516,7 +516,7 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True,
 def hex_to_linear(i):
     # i in [0,255]
     # account for gamma compression
-    linear = (i/255)**2.4
+    linear = (i/255)**2.2
     return linear
 
 def color_to_linear(color):
