@@ -503,6 +503,103 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
          validation_data=validation_data, validation_target=validation_target)
           # test_data=test_data, test_target=test_target)
 
+# TODO refactor all of these functions. DRY!!
+def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=False):
+    "Psychophysics discrimination checkerboard 0.2.0"
+    print("Saving checkerboard NPZ file.")
+
+    get_checkers = glia.compose(
+        partial(glia.create_experiments, progress=True,
+            # stimulus_list=stimulus_list,append_lifespan=0.5),
+            stimulus_list=stimulus_list),
+        partial(glia.group_by,
+                key=lambda x: x["metadata"]["group"]),
+        glia.group_dict_to_list,
+        glia.f_filter(group_contains_checkerboard),
+        glia.f_map(glia.f_filter(lambda x: x['stimulusType']=='CHECKERBOARD')),
+        glia.f_map(glia.merge_experiments),
+        partial(glia.group_by,
+                key=group_by),
+        glia.f_map(partial(glia.group_by,
+                key=lambda x: x["size"])),
+        glia.f_map(glia.f_map(partial(glia.group_by,
+                key=lambda x: x["metadata"]["cohort"])))
+    )
+    checkers = get_checkers(units)
+
+    max_duration = 0.0
+    for condition, sizes in checkers.items():
+        for size, cohorts in sizes.items():
+            for cohort, experiments in cohorts.items():
+                max_duration = max(max_duration,
+                    experiments[0]['lifespan'])
+    print(f"max_duration: {max_duration}")
+
+    conditions = sorted(list(checkers.keys()))
+    print("Conditions:", name, conditions)
+    nconditions = len(conditions)
+    example_condition = glia.get_value(checkers)
+    sizes = sorted(list(example_condition.keys()))
+    nsizes = len(sizes)
+    # TODO remove
+    if max_duration<9:
+        print(example_condition)
+
+    example_size = glia.get_value(example_condition)
+    ncohorts = len(example_size)
+    # print(list(checkers.values()))
+    d = int(np.ceil(max_duration*1000)) # 1ms bins
+
+    tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
+    logger.info(f"{tvt}, {ncohorts}")
+    # (TODO?) 2 dims for first checkerboard and second checkerboard
+    # 4 per cohort
+    training_data = np.full((nconditions,nsizes,
+        tvt.training*4,d,8,8,10),0,dtype='int8')
+    training_target = np.full((nconditions,nsizes,
+        tvt.training*4),0,dtype='int8')
+    validation_data = np.full((nconditions,nsizes,
+        tvt.validation*4,d,8,8,10),0,dtype='int8')
+    validation_target = np.full((nconditions,nsizes,
+        tvt.validation*4),0,dtype='int8')
+    # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
+    # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
+
+    if quad:
+        get_class = checker_quad_discrimination_class
+    else:
+        get_class = checker_discrimination_class
+    condition_map = {c: i for i,c in enumerate(conditions)}
+    size_map = {s: i for i,s in enumerate(sizes)}
+    for condition, sizes in checkers.items():
+        for size, cohorts in sizes.items():
+            X = glia.f_split_dict(tvt)(cohorts)
+
+            td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
+                        get_class)
+            logger.info(td.shape)
+            missing_duration = d - td.shape[1]
+            pad_td = np.pad(td,
+                ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
+                mode='constant')
+            condition_index = condition_map[condition]
+            size_index = size_map[size]
+            training_data[condition_index, size_index] = pad_td
+            training_target[condition_index, size_index] = tt
+
+            td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
+                        get_class)
+            pad_td = np.pad(td,
+                ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
+                mode='constant')
+            validation_data[condition_index, size_index] = pad_td
+            validation_target[condition_index, size_index] = tt
+
+    print('saving to ',name)
+    np.savez(name, training_data=training_data, training_target=training_target,
+         validation_data=validation_data, validation_target=validation_target)
+          # test_data=test_data, test_target=test_target)
+
 
 
 def save_grating_npz(units, stimulus_list, name, group_by):

@@ -245,6 +245,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         by_channel=False, integrity_filter=0.0, analog_idx=1):
     """Analyze data recorded with eyecandy.
     """
+    print("version 0.5.1")
     #### FILEPATHS
     if not os.path.isfile(filename):
         filename = glia.match_filename(filename,"txt")
@@ -477,6 +478,11 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False)
             # partial(debug_lambda, f=lambda x: 'ONE CONDITION'))
     elif name=='checkerboard-contrast':
         convert.save_checkerboard_npz(
+            units, stimulus_list, filename,
+            lambda x: glia.checkerboard_contrast(x),
+            quad)
+    elif name=='checkerboard-flicker':
+        convert.save_checkerboard_flicker_npz(
             units, stimulus_list, filename,
             lambda x: glia.checkerboard_contrast(x),
             quad)
