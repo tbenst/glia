@@ -457,14 +457,21 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
     logger.info(f"{tvt}, {ncohorts}")
     # (TODO?) 2 dims for first checkerboard and second checkerboard
     # 4 per cohort
+    if quad:
+        ntraining = tvt.training*4
+        nvalid = tvt.valid*4
+    else:
+        ntraining = tvt.training*2
+        nvalid = tvt.valid*2
+        
     training_data = np.full((nconditions,nsizes,
-        tvt.training*4,d,8,8,10),0,dtype='int8')
+        ntraining,d,8,8,10),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
-        tvt.training*4),0,dtype='int8')
+        ntraining),0,dtype='int8')
     validation_data = np.full((nconditions,nsizes,
-        tvt.validation*4,d,8,8,10),0,dtype='int8')
+        nvalid,d,8,8,10),0,dtype='int8')
     validation_target = np.full((nconditions,nsizes,
-        tvt.validation*4),0,dtype='int8')
+        nvalid),0,dtype='int8')
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
@@ -554,14 +561,21 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
     logger.info(f"{tvt}, {ncohorts}")
     # (TODO?) 2 dims for first checkerboard and second checkerboard
     # 4 per cohort
+    if quad:
+        ntraining = tvt.training*4
+        nvalid = tvt.valid*4
+    else:
+        ntraining = tvt.training*2
+        nvalid = tvt.valid*2
+
     training_data = np.full((nconditions,nsizes,
-        tvt.training*4,d,8,8,10),0,dtype='int8')
+        ntraining,d,8,8,10),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
-        tvt.training*4),0,dtype='int8')
+        ntraining),0,dtype='int8')
     validation_data = np.full((nconditions,nsizes,
-        tvt.validation*4,d,8,8,10),0,dtype='int8')
+        nvalid,d,8,8,10),0,dtype='int8')
     validation_target = np.full((nconditions,nsizes,
-        tvt.validation*4),0,dtype='int8')
+        nvalid),0,dtype='int8')
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
