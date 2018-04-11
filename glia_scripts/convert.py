@@ -459,11 +459,11 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
     # 4 per cohort
     if quad:
         ntraining = tvt.training*4
-        nvalid = tvt.valid*4
+        nvalid = tvt.validation*4
     else:
         ntraining = tvt.training*2
-        nvalid = tvt.valid*2
-        
+        nvalid = tvt.validation*2
+
     training_data = np.full((nconditions,nsizes,
         ntraining,d,8,8,10),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
@@ -563,10 +563,10 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
     # 4 per cohort
     if quad:
         ntraining = tvt.training*4
-        nvalid = tvt.valid*4
+        nvalid = tvt.validation*4
     else:
         ntraining = tvt.training*2
-        nvalid = tvt.valid*2
+        nvalid = tvt.validation*2
 
     training_data = np.full((nconditions,nsizes,
         ntraining,d,8,8,10),0,dtype='int8')
