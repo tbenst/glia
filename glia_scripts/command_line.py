@@ -55,15 +55,6 @@ def analysis_function(f):
     return update_wrapper(new_func, f)
 
 
-
-def safe_run(function, args):
-    try:
-        function(*args)
-    except Exception as exception:
-        # traceback.print_tb(exception.__traceback__)
-        # traceback.print_exception(exception)
-        logger.exception("Error running {}. Skipping".format(str(function)))
-
 def plot_path(directory,plot_name):
     return os.path.join(directory,plot_name+".png")
 
@@ -470,6 +461,10 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False)
         print("Saving eyechart-saccade NPZ file.")
         convert.save_image_npz(
             units, stimulus_list, filename)
+    elif name=='letters-saccade':
+        print("Saving letters-saccade NPZ file.")
+        convert.save_image_npz(
+            units, stimulus_list, filename)
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
             units, stimulus_list, filename,
@@ -591,6 +586,10 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples)
     elif 'eyechart-saccade'==name:
+        svc.image_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples)
+    elif 'letters-saccade'==name:
         svc.image_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples)

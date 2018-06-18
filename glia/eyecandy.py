@@ -17,7 +17,6 @@ from warnings import warn
 from webcolors import html5_parse_legacy_color
 from .files import sampling_rate, read_raw_voltage
 from .config import logger
-import json
 import matplotlib.pyplot as plt
 
 file = str
@@ -60,26 +59,6 @@ async def get_stimulus(url):
     return iter(sorted(stimuli, key=lambda x: x['stimulusIndex']))
 
 
-
-
-def create_epl_gen(program, epl, window_width, window_height, seed,
-        eyecandy_url):
-    # Create program from eyecandy YAML.
-    r = requests.post(eyecandy_url + '/analysis/start-program',
-                      data={'program': program,
-                           "epl": epl,
-                           'windowHeight': window_height,
-                           'windowWidth': window_width,
-                           "seed": seed})
-    sid = r.text
-    metadata = demjson.decode(
-        requests.get(f'{eyecandy_url}/analysis/metadata/{sid}').text)
-    loop = asyncio.get_event_loop()
-    generator = get_stimulus(f'{eyecandy_url}/analysis/program/{sid}')
-    a = loop.run_until_complete(generator)
-    return (metadata, a)
-
-
 def create_epl_gen_v2(program, epl, window_width, window_height, seed,
         eyecandy_url):
     # Create program from eyecandy YAML.
@@ -100,7 +79,8 @@ def create_epl_gen_v2(program, epl, window_width, window_height, seed,
         value = json["value"]
         value["stimulusIndex"] = json["stimulusIndex"]
         stimuli.append(value)
-    metadata = demjson.decode(response["metadata"])
+
+    metadata = response["metadata"]
     assert type(metadata)==dict
     return (metadata,
         iter(sorted(stimuli, key=lambda x: x['stimulusIndex'])))

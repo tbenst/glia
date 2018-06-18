@@ -9,6 +9,7 @@ from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 from .config import processes
 from tqdm import tqdm
+import traceback
 
 file = str
 Dir = str
@@ -40,16 +41,16 @@ def _func(x,function=lambda x: x):
 
 def pmap(function, data, progress=False, length=None, thread=False):
     """Parallel map that accepts lists or dictionaries.
-    
+
     Use progress for interactive sessions."""
-    
+
     if thread:
         pool = ThreadPool(processes)
     else:
         pool = Pool(processes)
     if progress and length is None:
         length = len(data)
-    
+
     if type(data)==dict:
         if progress:
             gen = tqdm(data.items(), total=length)
@@ -110,7 +111,7 @@ def f_filter(function):
             return list(filter(function, x))
         elif type(x) is dict:
             return {k:v for (k,v) in filter_dict(function,x)}
-    
+
     return anonymous
 
 def f_map(function):
@@ -119,7 +120,7 @@ def f_map(function):
             return list(map(function, x))
         elif type(x) is dict:
             return {key: function(val) for key, val in x.items()}
-    
+
     return anonymous
 
 def f_reduce(function, initial_value=None) -> Callable[[List[Experiment],Any], Any]:
@@ -154,3 +155,12 @@ def scanl(f, initial_value, mylist):
 
 def get_value(x,i=0):
     return list(x.values())[i]
+
+
+def safe_run(function, args):
+    try:
+        return function(*args)
+    except Exception as exception:
+        logger.exception("Error running {}. Skipping".format(str(function)))
+        traceback.print_tb(exception.__traceback__)
+        traceback.print_exception(exception)
