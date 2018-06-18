@@ -5,7 +5,6 @@ import requests
 import json
 import pickle
 import yaml
-import demjson
 import concurrent.futures
 from typing import List, Dict
 from functools import reduce

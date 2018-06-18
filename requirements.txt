@@ -13,4 +13,3 @@ pandas==0.19.2
 beautifulsoup4==4.5.3
 websockets==3.3
 webcolors==1.7
-demjson==2.2.4
