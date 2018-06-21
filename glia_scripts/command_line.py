@@ -494,6 +494,10 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False)
         convert.save_grating_npz(
             units, stimulus_list, filename,
             lambda x: x["speed"])
+    elif name=='grating-contrast':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: glia.bar_contrast(x))
     elif name=='grating-durations':
         convert.save_grating_npz(
             units, stimulus_list, filename,

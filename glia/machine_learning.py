@@ -3,7 +3,7 @@ from .pipeline import get_unit
 from .types import Unit
 from .functional import f_map, pmap, flatten, compose, f_filter, group_by
 from .pipeline import group_dict_to_list
-from .eyecandy import checkerboard_contrast
+from .eyecandy import checkerboard_contrast, grating_contrast
 import numpy as np
 from scipy.sparse import csr_matrix
 from tqdm import tqdm
@@ -254,6 +254,16 @@ def get_checkerboard_contrasts(stimulus_list):
         f_filter(lambda x: x["stimulus"]['stimulusType']=='CHECKERBOARD'),
         partial(group_by,
                 key=lambda x: checkerboard_contrast(x["stimulus"]))
+        )
+    contrasts = [float(x) for x in sorted(list(f(stimulus_list).keys()))]
+    assert len(contrasts)>0
+    return contrasts
+
+def get_grating_contrasts(stimulus_list):
+    f = compose(
+        f_filter(lambda x: x["stimulus"]['stimulusType']=='GRATING'),
+        partial(group_by,
+                key=lambda x: grating_contrast(x["stimulus"]))
         )
     contrasts = [float(x) for x in sorted(list(f(stimulus_list).keys()))]
     assert len(contrasts)>0

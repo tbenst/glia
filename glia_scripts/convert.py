@@ -645,6 +645,7 @@ def save_grating_npz(units, stimulus_list, name, group_by):
     nconditions = len(conditions)
     example_condition = glia.get_value(gratings)
     sizes = sorted(list(example_condition.keys()))
+    print("Sizes:", sizes)
     nsizes = len(sizes)
 
     example_size = glia.get_value(example_condition)

@@ -197,7 +197,7 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
         training_target = data["training_target"]
         validation_target = data["validation_target"]
 
-        conditions = get_grating_contrasts(stimulus_list)
+        conditions = glia.get_grating_contrasts(stimulus_list)
         condition_name = "contrast"
     elif metadata["name"]=="grating-durations":
         training_data = glia.bin_100ms(data["training_data"])
