@@ -502,6 +502,26 @@ def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False)
         convert.save_grating_npz(
             units, stimulus_list, filename,
             lambda x: x["lifespan"])
+    elif name=='grating-sinusoidal':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: 'ONE CONDITION',
+            sinusoid=True)
+    elif name=='grating-sinusoidal-speeds':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: x["speed"],
+            sinusoid=True)
+    elif name=='grating-sinusoidal-contrast':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: glia.bar_contrast(x),
+            sinusoid=True)
+    elif name=='grating-sinusoidal-durations':
+        convert.save_grating_npz(
+            units, stimulus_list, filename,
+            lambda x: x["lifespan"],
+            sinusoid=True)
     elif name=='eyechart':
         convert.save_eyechart_npz(
             units, stimulus_list, filename)
@@ -581,6 +601,10 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
         svc.checkerboard_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples, n_draws)
+    elif re.match('grating-sinusoidal',name):
+        svc.grating_svc(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples, n_draws, sinusoid=True)
     elif re.match('grating',name):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,

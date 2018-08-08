@@ -616,14 +616,17 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
 
 
 
-def save_grating_npz(units, stimulus_list, name, group_by):
+def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
     "Psychophysics discrimination grating 0.2.0"
     print("Saving grating NPZ file.")
-
+    if sinusoid:
+        stimulus_type = "SINUSOIDAL_GRATING"
+    else:
+        stimulus_type = 'GRATING'
     get_gratings = glia.compose(
             partial(glia.create_experiments,
                 stimulus_list=stimulus_list),
-            glia.f_filter(lambda x: x['stimulusType']=='GRATING'),
+            glia.f_filter(lambda x: x['stimulusType']==stimulus_type),
             partial(glia.group_by,
                     key=group_by),
             glia.f_map(partial(glia.group_by,

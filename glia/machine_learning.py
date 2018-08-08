@@ -259,9 +259,9 @@ def get_checkerboard_contrasts(stimulus_list):
     assert len(contrasts)>0
     return contrasts
 
-def get_grating_contrasts(stimulus_list):
+def get_grating_contrasts(stimulus_list, stimulus_type="GRATING"):
     f = compose(
-        f_filter(lambda x: x["stimulus"]['stimulusType']=='GRATING'),
+        f_filter(lambda x: x["stimulus"]['stimulusType']==stimulus_type),
         partial(group_by,
                 key=lambda x: grating_contrast(x["stimulus"]))
         )

@@ -189,33 +189,44 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
 
 
 def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-                nsamples,n_draws=30):
-    sizes = glia.get_stimulus_parameters(stimulus_list, "GRATING", "width")
-    if metadata["name"]=='grating-contrast':
+    nsamples,n_draws=30, sinusoid=False):
+    if sinusoid:
+        stimulus_type = "SINUSOIDAL_GRATING"
+        plot_name = "Sinusoidal grating"
+    else:
+        stimulus_type = 'GRATING'
+        plot_name = "grating"
+
+    sizes = glia.get_stimulus_parameters(stimulus_list, stimulus_type, "width")
+    if metadata["name"] in \
+        ['grating-contrast', 'grating-sinusoidal-contrast']:
         training_data = glia.bin_100ms(data["training_data"])
         validation_data = glia.bin_100ms(data["validation_data"])
         training_target = data["training_target"]
         validation_target = data["validation_target"]
 
-        conditions = glia.get_grating_contrasts(stimulus_list)
+        conditions = glia.get_grating_contrasts(stimulus_list, stimulus_type)
         condition_name = "contrast"
-    elif metadata["name"]=="grating-durations":
+    elif metadata["name"] in \
+        ["grating-durations", "grating-sinusoidal-durations"]:
         training_data = glia.bin_100ms(data["training_data"])
         validation_data = glia.bin_100ms(data["validation_data"])
         training_target = data["training_target"]
         validation_target = data["validation_target"]
 
-        conditions = glia.get_stimulus_parameters(stimulus_list, "GRATING", 'lifespan')
+        conditions = glia.get_stimulus_parameters(stimulus_list, stimulus_type, 'lifespan')
         condition_name = "durations"
-    elif metadata["name"]=="grating-speeds":
+    elif metadata["name"] in \
+        ["grating-speeds", "grating-sinusoidal-speeds"]:
         training_data = glia.bin_100ms(data["training_data"])
         validation_data = glia.bin_100ms(data["validation_data"])
         training_target = data["training_target"]
         validation_target = data["validation_target"]
 
-        conditions = glia.get_stimulus_parameters(stimulus_list, "GRATING", 'speed')
+        conditions = glia.get_stimulus_parameters(stimulus_list, stimulus_type, 'speed')
         condition_name = "speeds"
-    elif metadata["name"]=="grating":
+    elif metadata["name"] in \
+        ["grating", "grating-sinusoidal"]:
         training_100ms = glia.bin_100ms(data["training_data"])[0]
         training_sum = glia.bin_sum(data["training_data"])[0]
         training_data = [training_100ms, training_sum]
@@ -233,10 +244,10 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
         raise(ValueError(f'Unknown experiment {metadata["name"]}'))
     if nsamples>0:
         plot_diff_nsamples(data, stimulus_list, plot_directory,
-            "grating", sizes, conditions, condition_name)
+            plot_name, sizes, conditions, condition_name)
     else:
         acuity(training_data, training_target, validation_data, validation_target,
-            stimulus_list, plot_directory, "grating",
+            stimulus_list, plot_directory, plot_name,
             sizes, conditions, condition_name, n_draws)
 
 
