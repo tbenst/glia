@@ -8,6 +8,8 @@ from copy import deepcopy
 import logging
 logger = logging.getLogger('glia')
 
+from glia.types import Unit
+
 letter_map = {'K': 4, 'C': 1, 'V': 9, 'N': 5, 'R': 7, 'H': 3, 'O': 6, 'Z': 10, 'D': 2, 'S': 8, 'BLANK': 0}
 
 
@@ -215,11 +217,11 @@ def save_letter_npz(units, stimulus_list, name):
 
     experiments_per_cohort = 11
     training_data = np.full((nsizes,
-        tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+        tvt.training*experiments_per_cohort,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     training_target = np.full((nsizes,
         tvt.training*experiments_per_cohort),0,dtype='int8')
     validation_data = np.full((nsizes,
-        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+        tvt.validation*experiments_per_cohort,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     validation_target = np.full((nsizes,
         tvt.validation*experiments_per_cohort),0,dtype='int8')
 
@@ -294,11 +296,11 @@ def save_letters_npz(units, stimulus_list, name, contains=group_contains_tiled_l
 
     experiments_per_cohort = 11
     training_data = np.full((nsizes,
-        tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+        tvt.training*experiments_per_cohort,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     training_target = np.full((nsizes,
         tvt.training*experiments_per_cohort),0,dtype='int8')
     validation_data = np.full((nsizes,
-        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+        tvt.validation*experiments_per_cohort,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     validation_target = np.full((nsizes,
         tvt.validation*experiments_per_cohort),0,dtype='int8')
 
@@ -373,11 +375,11 @@ def save_image_npz(units, stimulus_list, name):
 
     experiments_per_cohort = 11
     training_data = np.full((nsizes,
-        tvt.training*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+        tvt.training*experiments_per_cohort,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     training_target = np.full((nsizes,
         tvt.training*experiments_per_cohort),0,dtype='int8')
     validation_data = np.full((nsizes,
-        tvt.validation*experiments_per_cohort,d,8,8,10),0,dtype='int8')
+        tvt.validation*experiments_per_cohort,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     validation_target = np.full((nsizes,
         tvt.validation*experiments_per_cohort),0,dtype='int8')
 
@@ -465,11 +467,11 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
         nvalid = tvt.validation*2
 
     training_data = np.full((nconditions,nsizes,
-        ntraining,d,8,8,10),0,dtype='int8')
+        ntraining,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
         ntraining),0,dtype='int8')
     validation_data = np.full((nconditions,nsizes,
-        nvalid,d,8,8,10),0,dtype='int8')
+        nvalid,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     validation_target = np.full((nconditions,nsizes,
         nvalid),0,dtype='int8')
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
@@ -569,11 +571,11 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
         nvalid = tvt.validation*2
 
     training_data = np.full((nconditions,nsizes,
-        ntraining,d,8,8,10),0,dtype='int8')
+        ntraining,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
         ntraining),0,dtype='int8')
     validation_data = np.full((nconditions,nsizes,
-        nvalid,d,8,8,10),0,dtype='int8')
+        nvalid,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     validation_target = np.full((nconditions,nsizes,
         nvalid),0,dtype='int8')
     # test_data = np.full((nsizes,tvt.test,d,nunits),0,dtype='int8')
@@ -658,11 +660,11 @@ def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
     tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
     # 2 per cohort
     training_data = np.full((nconditions,nsizes,
-        tvt.training*2,d,8,8,10),0,dtype='int8')
+        tvt.training*2,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     training_target = np.full((nconditions,nsizes,
         tvt.training*2),0,dtype='int8')
     validation_data = np.full((nconditions,nsizes,
-        tvt.validation*2,d,8,8,10),0,dtype='int8')
+        tvt.validation*2,d,Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
     validation_target = np.full((nconditions,nsizes,
         tvt.validation*2),0,dtype='int8')
 
