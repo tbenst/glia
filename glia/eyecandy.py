@@ -14,7 +14,7 @@ from scipy.ndimage import filters
 from scipy import signal
 from warnings import warn
 from webcolors import html5_parse_legacy_color
-from .files import sampling_rate, read_raw_voltage
+from .files import sampling_rate, read_raw_voltage, read_3brain_analog
 from .config import logger
 import matplotlib.pyplot as plt
 
@@ -194,8 +194,11 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
 
     calibration determines the mean in linear light space for each stimulus
     index"""
-
-    analog = read_raw_voltage(analog_file)[:,analog_idx]
+    logger.debug(f"create_stimuli analog_file: {analog_file}")
+    if analog_file[-4:]==".brw":
+        analog = read_3brain_analog(analog_file)
+    else:
+        analog = read_raw_voltage(analog_file)[:,analog_idx]
     if calibration=='auto':
         data_directory, name = os.path.split(stimulus_file)
         calibration = auto_calibration(analog, data_directory)
@@ -463,7 +466,8 @@ def validate_stimulus_list(stimulus_list,stimulus_gen,ignore_extra=True,
             f"previous start time: {stimulus_list[-1]['start_time']}")
         if not ignore_extra:
             raise ValueError("More stimuli than start times detected." \
-                "Use --ignore-extra to ignore.")
+                "Perhaps experiment ended early?" \
+                "Use --ignore-extra to ignore (At your own risk!)")
     except StopIteration as e:
         pass
 

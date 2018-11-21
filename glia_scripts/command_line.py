@@ -180,9 +180,9 @@ def calibrate(filename, analog_idx):
 
 
 
-def init_logging(name, data_directory, processes, verbose, debug):
+def init_logging(name, processes, verbose, debug):
     #### LOGGING CONFIGURATION
-    fh = logging.FileHandler(os.path.join(data_directory,name + '.log'))
+    fh = logging.FileHandler(name + '.log')
     fh.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     if verbose:
@@ -237,12 +237,18 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     """Analyze data recorded with eyecandy.
     """
     print("version 0.5.1")
+    init_logging(filename, processes, verbose, debug)
     #### FILEPATHS
+    logger.debug(str(filename) + "   " + str(os.path.curdir))
     if not os.path.isfile(filename):
         filename = glia.match_filename(filename,"txt")
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
+    if not os.path.isfile(analog_file):
+        # use 3brain analog file
+        analog_file = os.path.join(data_directory, name +'.analog.brw')
+
     stimulus_file = os.path.join(data_directory, name + ".stim")
     ctx.obj = {"filename": os.path.join(data_directory,name)}
     print(f"Analyzing {name}")
@@ -267,7 +273,6 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     if not notebook:
         notebook = glia.find_notebook(data_directory)
 
-    init_logging(name, data_directory, processes, verbose, debug)
 
     lab_notebook = glia.open_lab_notebook(notebook)
     logger.info(name)
@@ -573,7 +578,7 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
     lab_notebook = glia.open_lab_notebook(notebook)
 
     name, extension = os.path.splitext(data_name)
-    init_logging(name, data_directory, processes, verbose, debug)
+    init_logging(name, processes, verbose, debug)
     stim_name = strip_generated(name)
     stimulus_file = os.path.join(data_directory, stim_name + ".stim")
     metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)

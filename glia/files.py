@@ -132,6 +132,11 @@ def read_mda_file(filepath, retina_id, channel_map=None, sampling_rate=20000):
 
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
+def read_3brain_analog(analog_file):
+    with h5py.File(analog_file, 'r') as file:
+        analog = np.array(file["3BData"]["Raw"])
+    return analog
+
 def read_3brain_spikes(filepath, retina_id, channel_map=None):
     """Read spikes detected by 3brain in a .bxr file."""
     unit_dictionary = {}
@@ -214,7 +219,11 @@ def get_result_path(filename: file) -> (file):
 
 
 def sampling_rate(filename: file) -> (int):
-    """Read the sampling rate from a MCS raw file."""
+    """Read the sampling rate from a MCS raw file or 3brain .brw"""
+    if filename[-4:]==".brw":
+        with h5py.File(filename, 'r') as file:
+            return file["3BRecInfo"]["3BRecVars"]["SamplingRate"][0]
+
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
 
