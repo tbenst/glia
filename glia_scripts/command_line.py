@@ -567,6 +567,11 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
 
     if not os.path.isfile(filename):
         filename = glia.match_filename(filename, 'npz')
+    try:
+        assert filename[-4:]==".npz"
+    except:
+        print("Please specify a npz file.")
+        raise
 
     data_directory, data_name = os.path.split(filename)
     if data_directory=='':
