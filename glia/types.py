@@ -43,12 +43,17 @@ class Unit:
 
     # store humanized names as value with unit_id as key
     lookup = {}
+    # store max row, col, and unit
+    nrow = 0
+    ncol = 0
+    nunit = 0
 
     def __init__(self, retina_id, channel, unit_num, spike_train=None):
         # id will be URL safe MD5 hash of spike_train
         my_id =  retina_id + '_' + str(channel) + "_"+str(unit_num)
         self.id = my_id
         self.retina_id = retina_id
+        # channel should be (row, col)
         self.channel = channel
         self.unit_num = unit_num
         if spike_train is None:
@@ -57,5 +62,10 @@ class Unit:
             self.spike_train = spike_train
 
         Unit.lookup[my_id] = self
+        row, col = channel
+        # account for 0-indexing
+        Unit.nrow = max(row+1, Unit.nrow)
+        Unit.ncol = max(col+1, Unit.ncol)
+        Unit.nunit = max(unit_num+1, Unit.nunit)
 
 get_lifespan = lambda e: e["stimulus"]["lifespan"]

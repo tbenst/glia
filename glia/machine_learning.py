@@ -158,7 +158,7 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
             raise
     d = int(np.ceil(duration*1000)) # 1ms bins
     # TODO hardcoded 64 channel x 10 unit
-    shape = (nE,d,8,8,10)
+    shape = (nE,d,Unit.nrow,Unit.ncol,Unit.nunit)
     data = np.full(shape, 0, dtype=np.int8)
     classes = np.full(nE, np.nan, dtype=np.int8)
 
