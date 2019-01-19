@@ -190,6 +190,17 @@ def bin_100ms(data):
                         (nconditions, nsizes, \
                             n_training, new_steps*n_x*n_y*n_units))
 
+def bin_100ms_no_conditions(data):
+    # turn the data in a (samples, feature) matrix from 100ms time bins:
+    (nsizes, n_training, timesteps, n_x, n_y, n_units) = data.shape
+    new_steps = int(timesteps/100)
+    return np.sum(data.reshape(
+                        (nsizes,
+                            n_training, new_steps, 100, n_x,n_y,n_units)),
+                    axis=3).reshape(
+                        (nsizes, \
+                            n_training, new_steps*n_x*n_y*n_units))
+
 
 
 def bin_sum(data):
