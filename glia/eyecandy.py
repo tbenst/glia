@@ -365,6 +365,7 @@ def state_lasts_full_frame(state,index,filtered, sampling_rate, percentage_thres
 # good optimization candidate..
 def get_stimulus_index_start_times(filtered,sampling_rate, stimulus_gen, percentage_threshold):
     # TODO urgent: this function has a bug for 3brain files
+    # first stim has no start time, second stim has start time of 0, and third stim is 5.7s or so which seems legit..?
     m = filtered.size
     previous_state = -1
     next_stimulus = next(stimulus_gen)
