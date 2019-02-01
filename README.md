@@ -3,6 +3,14 @@
 
 A package to support neuroscientists in analyzing MEAs.
 
+## Installation
+```
+> conda env create -f environment.yml
+> pip install -r requirements.txt
+> pip install -e .
+```
+We install in development mode so can update with a simple `git pull`
+
 ## For Docker 1.17:
 `sudo docker run --network=eyecandy_default -v $(pwd):/data tbenst/glia analyze -e "http://eyecandy:3000" /data/R2_E1 convert`
 
