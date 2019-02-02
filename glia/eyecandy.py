@@ -218,7 +218,6 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     print('getting start times')
     start_times = get_stimulus_index_start_times(filtered,sampling,stimulus_gen,0.8)
     # logger.debug(f"first start time: {start_times[0]}")
-    import pdb; pdb.set_trace()
     total = len(start_times)
     number_missing = len(list(filter(lambda x: x['start_time'] is None,
         start_times)))
