@@ -241,7 +241,10 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     #### FILEPATHS
     logger.debug(str(filename) + "   " + str(os.path.curdir))
     if not os.path.isfile(filename):
-        filename = glia.match_filename(filename,"txt")
+        try:
+            filename = glia.match_filename(filename,"txt")
+        except:
+            filename = glia.match_filename(filename,"bxr")
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
@@ -339,7 +342,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         logger.debug("Outputting pdf")
         ctx.obj["retina_pdf"] = PdfPages(glia.plot_pdf_path(plot_directory, "retina"))
         ctx.obj["unit_pdfs"] = glia.open_pdfs(plot_directory, list(ctx.obj["units"].keys()), Unit.name_lookup())
-        # c connotes 'continuation'
+        # c connotes 'continuation' for continuation passing style
         ctx.obj["c_unit_fig"] = partial(glia.add_to_unit_pdfs,
             unit_pdfs=ctx.obj["unit_pdfs"])
         ctx.obj["c_retina_fig"] = lambda x: ctx.obj["retina_pdf"].savefig(x)

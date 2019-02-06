@@ -7,6 +7,8 @@ import logging
 from copy import deepcopy
 from math import isclose
 from sklearn import svm, metrics
+import os
+import glia.config as config
 
 logger = logging.getLogger('glia')
 
@@ -264,7 +266,6 @@ def unit_classification_accuracy(tvt):
     off.fit(X_off_train, Y_off_train)
     off_predicted = on.predict(X_off_test)
 
-
     return {"on": float(metrics.accuracy_score(Y_on_test, on_predicted)),
                          "off": float(metrics.accuracy_score(Y_off_test, off_predicted))}
 
@@ -364,6 +365,14 @@ def save_integrity_chart_v2(units, stimulus_list, c_unit_fig, c_add_retina_figur
         response)
 
     units_accuracy = glia.pmap(unit_classification_accuracy,classification_data)
+    plot_directory = os.path.join(config.plot_directory,"00-all")
+    os.makedirs(plot_directory, exist_ok=True)
+    with open(plot_directory + "/best_units.txt", "w") as f:
+        sorted_units = sorted(units_accuracy.items(),
+            key=lambda z: max(z[1]["off"],z[1]["on"]),
+            reverse=True)
+        for u in sorted_units:
+            f.write(str(u)+"\n")
     c_add_retina_figure("integrity_accuracy",plot_units_accuracy(units_accuracy))
 
 def save_unit_wedges(units, stimulus_list, c_unit_fig, c_add_retina_figure, prepend, append):
