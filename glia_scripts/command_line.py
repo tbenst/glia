@@ -454,85 +454,89 @@ generate.add_command(bar_cmd)
 @analyze.command("convert")
 @click.option("--quad", "-q", is_flag=True,
     help="use four classes for checkerboard")
+@click.option("--append", "-a", type=float, default=0,
+    help="add time (seconds) after stimulus end time")
 @analysis_function
-def convert_cmd(units, stimulus_list, metadata, filename, version=2, quad=False):
+def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, quad=False):
     name = metadata['name']
     if name=='letters':
         convert.save_letter_npz(
-            units, stimulus_list, filename)
+            units, stimulus_list, filename, append)
     elif name=='letters-tiled':
         print("Saving letters-tiled NPZ file.")
         convert.save_letters_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             partial(glia.group_contains, "TILED_LETTER"))
     elif name=='eyechart-saccade':
         print("Saving eyechart-saccade NPZ file.")
         convert.save_image_npz(
-            units, stimulus_list, filename)
+            units, stimulus_list, filename, append)
     elif name=='letters-saccade':
         print("Saving letters-saccade NPZ file.")
         convert.save_image_npz(
-            units, stimulus_list, filename)
+            units, stimulus_list, filename, append)
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: 'ONE CONDITION',
             quad)
             # partial(debug_lambda, f=lambda x: 'ONE CONDITION'))
     elif name=='checkerboard-contrast':
         convert.save_checkerboard_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: glia.checkerboard_contrast(x),
             quad)
     elif name=='checkerboard-flicker':
         convert.save_checkerboard_flicker_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: glia.checkerboard_contrast(x),
             quad)
     elif name=='checkerboard-durations':
         convert.save_checkerboard_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: x["lifespan"],
             quad)
     elif name=='grating':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: 'ONE CONDITION')
     elif name=='grating-speeds':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: x["speed"])
     elif name=='grating-contrast':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: glia.bar_contrast(x))
     elif name=='grating-durations':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: x["lifespan"])
     elif name=='grating-sinusoidal':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: 'ONE CONDITION',
             sinusoid=True)
     elif name=='grating-sinusoidal-speeds':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: x["speed"],
             sinusoid=True)
     elif name=='grating-sinusoidal-contrast':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: glia.bar_contrast(x),
             sinusoid=True)
     elif name=='grating-sinusoidal-durations':
         convert.save_grating_npz(
-            units, stimulus_list, filename,
+            units, stimulus_list, filename, append,
             lambda x: x["lifespan"],
             sinusoid=True)
     elif name=='eyechart':
+        if append==0:
+            append = 0.5
         convert.save_eyechart_npz(
-            units, stimulus_list, filename)
+            units, stimulus_list, filename, append)
     else:
         raise(ValueError(f'Unknown name {name}'))
 

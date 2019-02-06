@@ -134,7 +134,7 @@ def spike_train_to_sparse(experiment, key_map, shape):
     return array
 
 
-def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'],
+def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'], append=0,
     progress=False):
     """
 
@@ -149,10 +149,10 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
         (row,column) = u.channel
         unit_num = u.unit_num
         key_map[k] = (row,column,unit_num)
-    duration = experiments[0]['lifespan']
+    duration = experiments[0]['lifespan']+append
     for l in experiments:
         try:
-            assert duration==l['lifespan']
+            assert duration==l['lifespan']+append
         except:
             logger.info(f"duration: {duration} != {l['lifespan']}, for {l}" )
             raise

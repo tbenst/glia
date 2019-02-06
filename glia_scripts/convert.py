@@ -118,13 +118,13 @@ def balance_blanks(cohort, key='letter'):
     return new
 
 
-def save_eyechart_npz(units, stimulus_list, name):
+def save_eyechart_npz(units, stimulus_list, name, append=0.5):
     print("Saving eyechart NPZ file.")
 
     # TODO add blanks
     get_letters = glia.compose(
         partial(glia.create_experiments,
-            stimulus_list=stimulus_list,append_lifespan=0.5),
+            stimulus_list=stimulus_list,append_lifespan=append),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -164,16 +164,16 @@ def save_eyechart_npz(units, stimulus_list, name):
         )
         X = glia.tvt_map(split(experiments), flatten_cohort)
 
-        td, tt = glia.experiments_to_ndarrays(X.training, letter_class)
+        td, tt = glia.experiments_to_ndarrays(X.training, letter_class, append)
         size_index = size_map[size]
         training_data[size_index] = td
         training_target[size_index] = tt
 
-        td, tt = glia.experiments_to_ndarrays(X.validation, letter_class)
+        td, tt = glia.experiments_to_ndarrays(X.validation, letter_class, append)
         validation_data[size_index] = td
         validation_target[size_index] = tt
 
-        td, tt = glia.experiments_to_ndarrays(X.test, letter_class)
+        td, tt = glia.experiments_to_ndarrays(X.test, letter_class, append)
         test_data[size_index] = td
         test_target[size_index] = tt
 
@@ -181,13 +181,13 @@ def save_eyechart_npz(units, stimulus_list, name):
          validation_data=validation_data, validation_target=validation_target)
           # test_data=test_data, test_target=test_target)
 
-def save_letter_npz(units, stimulus_list, name):
+def save_letter_npz(units, stimulus_list, name, append):
     print("Saving letter NPZ file.")
 
     # TODO add TEST!!!
     get_letters = glia.compose(
         partial(glia.create_experiments,
-            stimulus_list=stimulus_list,progress=True),
+            stimulus_list=stimulus_list,progress=True,append_lifespan=append),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -230,7 +230,7 @@ def save_letter_npz(units, stimulus_list, name):
         X = glia.f_split_dict(tvt)(cohorts)
         logger.info(f"ncohorts: {len(cohorts)}")
         td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                    letter_class)
+                    letter_class, append)
         logger.info(td.shape)
         missing_duration = d - td.shape[1]
         pad_td = np.pad(td,
@@ -241,7 +241,7 @@ def save_letter_npz(units, stimulus_list, name):
         training_target[size_index] = tt
 
         td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                    letter_class)
+                    letter_class, append)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
@@ -252,11 +252,11 @@ def save_letter_npz(units, stimulus_list, name):
          validation_data=validation_data, validation_target=validation_target)
     #   test_data=test_data, test_target=test_target)
 
-def save_letters_npz(units, stimulus_list, name, contains=group_contains_tiled_letter):
+def save_letters_npz(units, stimulus_list, append, name, contains=group_contains_tiled_letter):
 
     get_letters = glia.compose(
         partial(glia.create_experiments,
-            stimulus_list=stimulus_list,progress=True),
+            stimulus_list=stimulus_list,progress=True, append_lifespan=append),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -309,7 +309,7 @@ def save_letters_npz(units, stimulus_list, name, contains=group_contains_tiled_l
         X = glia.f_split_dict(tvt)(cohorts)
         logger.info(f"ncohorts: {len(cohorts)}")
         td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                    letter_class)
+                    letter_class, append)
         logger.info(td.shape)
         missing_duration = d - td.shape[1]
         pad_td = np.pad(td,
@@ -320,7 +320,7 @@ def save_letters_npz(units, stimulus_list, name, contains=group_contains_tiled_l
         training_target[size_index] = tt
 
         td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                    letter_class)
+                    letter_class, append)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
@@ -331,11 +331,11 @@ def save_letters_npz(units, stimulus_list, name, contains=group_contains_tiled_l
          validation_data=validation_data, validation_target=validation_target)
     #   test_data=test_data, test_target=test_target)
 
-def save_image_npz(units, stimulus_list, name):
+def save_image_npz(units, stimulus_list, name, append):
 
     get_letters = glia.compose(
         partial(glia.create_experiments,
-            stimulus_list=stimulus_list,progress=True),
+            stimulus_list=stimulus_list,progress=True, append_lifespan=append),
         partial(glia.group_by,
                 key=lambda x: x["metadata"]["group"]),
         glia.group_dict_to_list,
@@ -388,7 +388,7 @@ def save_image_npz(units, stimulus_list, name):
         X = glia.f_split_dict(tvt)(cohorts)
         logger.info(f"ncohorts: {len(cohorts)}")
         td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                    image_class)
+                    image_class, append)
         logger.info(td.shape)
         missing_duration = d - td.shape[1]
         pad_td = np.pad(td,
@@ -399,7 +399,7 @@ def save_image_npz(units, stimulus_list, name):
         training_target[size_index] = tt
 
         td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                    image_class)
+                    image_class, append)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
@@ -413,12 +413,12 @@ def save_image_npz(units, stimulus_list, name):
 
 
 
-def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
+def save_checkerboard_npz(units, stimulus_list, name, append, group_by, quad=False):
     "Psychophysics discrimination checkerboard 0.2.0"
     print("Saving checkerboard NPZ file.")
 
     get_checkers = glia.compose(
-        partial(glia.create_experiments, progress=True,
+        partial(glia.create_experiments, progress=True,append_lifespan=append,
             # stimulus_list=stimulus_list,append_lifespan=0.5),
             stimulus_list=stimulus_list),
         partial(glia.group_by,
@@ -442,6 +442,7 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
             for cohort, experiments in cohorts.items():
                 max_duration = max(max_duration,
                     experiments[0]['lifespan'])
+    max_duration += append
 
     conditions = sorted(list(checkers.keys()))
     print("Conditions:", name, conditions)
@@ -488,7 +489,7 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
             X = glia.f_split_dict(tvt)(cohorts)
 
             td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                        get_class)
+                        get_class, append)
             logger.info(td.shape)
             missing_duration = d - td.shape[1]
             pad_td = np.pad(td,
@@ -500,7 +501,7 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
             training_target[condition_index, size_index] = tt
 
             td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                        get_class)
+                        get_class, append)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')
@@ -513,12 +514,12 @@ def save_checkerboard_npz(units, stimulus_list, name, group_by, quad=False):
           # test_data=test_data, test_target=test_target)
 
 # TODO refactor all of these functions. DRY!!
-def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=False):
+def save_checkerboard_flicker_npz(units, stimulus_list, name, append, group_by, quad=False):
     "Psychophysics discrimination checkerboard 0.2.0"
     print("Saving checkerboard NPZ file.")
 
     get_checkers = glia.compose(
-        partial(glia.create_experiments, progress=True,
+        partial(glia.create_experiments, progress=True, append_lifespan=append,
             # stimulus_list=stimulus_list,append_lifespan=0.5),
             stimulus_list=stimulus_list),
         partial(glia.group_by,
@@ -542,6 +543,7 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
             for cohort, experiments in cohorts.items():
                 max_duration = max(max_duration,
                     experiments[0]['lifespan'])
+    max_duration += append
     print(f"max_duration: {max_duration}")
 
     conditions = sorted(list(checkers.keys()))
@@ -592,7 +594,7 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
             X = glia.f_split_dict(tvt)(cohorts)
 
             td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                        get_class)
+                        get_class, append)
             logger.info(td.shape)
             missing_duration = d - td.shape[1]
             pad_td = np.pad(td,
@@ -604,7 +606,7 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
             training_target[condition_index, size_index] = tt
 
             td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                        get_class)
+                        get_class, append)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')
@@ -618,7 +620,7 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, group_by, quad=Fal
 
 
 
-def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
+def save_grating_npz(units, stimulus_list, name, append, group_by, sinusoid=False):
     "Psychophysics discrimination grating 0.2.0"
     print("Saving grating NPZ file.")
     if sinusoid:
@@ -627,7 +629,7 @@ def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
         stimulus_type = 'GRATING'
     get_gratings = glia.compose(
             partial(glia.create_experiments,
-                stimulus_list=stimulus_list),
+                stimulus_list=stimulus_list, append_lifespan=append),
             glia.f_filter(lambda x: x['stimulusType']==stimulus_type),
             partial(glia.group_by,
                     key=group_by),
@@ -644,6 +646,7 @@ def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
             for cohort, experiments in cohorts.items():
                 max_duration = max(max_duration,
                     experiments[0]['lifespan'])
+    max_duration += append
 
     conditions = sorted(list(gratings.keys()))
     print("Conditions:", name, conditions)
@@ -675,7 +678,7 @@ def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
             X = glia.f_split_dict(tvt)(cohorts)
 
             td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                        grating_class)
+                        grating_class, append)
             missing_duration = d - td.shape[1]
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
@@ -686,7 +689,7 @@ def save_grating_npz(units, stimulus_list, name, group_by, sinusoid=False):
             training_target[condition_index, size_index] = tt
 
             td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                        grating_class)
+                        grating_class, append)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')
