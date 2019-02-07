@@ -319,26 +319,26 @@ def create_stimuli_without_analog(stimulus_file, lab_notebook_fp,
 #     return (stimulus_0, stimulus_1, stimulus_2)
 
 def assign_stimulus_index_to_analog(analog,calibration):
-    # eyecandy flicker start in the middle, then bottom, then top, repeat
-    # not logical, but there for legacy reasons
-    stimulus_1 = np.where(
-        np.logical_and(
-            analog>calibration[0],
-            analog<calibration[1]
-        )
-    )[0]
+    # eyecandy flicker goes top, middle, bottom, repeat
 
     stimulus_0 = np.where(
         np.logical_and(
-            analog>calibration[2],
-            analog<calibration[3]
+            analog>calibration[4],
+            analog<calibration[5]
         )
+    )[0]
+
+    stimulus_1 = np.where(
+    np.logical_and(
+    analog>calibration[2],
+    analog<calibration[3]
+    )
     )[0]
 
     stimulus_2 = np.where(
         np.logical_and(
-            analog>calibration[4],
-            analog<calibration[5]
+            analog>calibration[0],
+            analog<calibration[1]
         )
     )[0]
     filtered = np.full(analog.shape,-1,dtype="int8")
