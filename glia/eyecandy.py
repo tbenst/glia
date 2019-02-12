@@ -230,7 +230,8 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     except:
         data_directory, name = os.path.split(analog_file)
         analog_histogram(analog, data_directory)
-        save_stimulus(start_times, stimulus_file+'.debug')
+        save_stimulus(stimulus_list, stimulus_file+'.debug')
+        # save_stimulus(start_times, stimulus_file+'.debug')
         raise
     # create the.stimulus file
     stimuli = {"metadata": metadata, "stimulus_list": stimulus_list,
