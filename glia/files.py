@@ -11,6 +11,8 @@ import csv
 from .types import Unit
 from .io.mdaio import readmda
 from tqdm import tqdm
+import pkg_resources
+
 file = str
 Dir = str
 dat = str
@@ -137,7 +139,7 @@ def read_3brain_analog(analog_file):
         analog = np.array(file["3BData"]["Raw"])
     return analog
 
-def read_3brain_spikes(filepath, retina_id, channel_map=None):
+def read_3brain_spikes(filepath, retina_id):
     """Read spikes detected by 3brain in a .bxr file."""
     unit_dictionary = {}
     assert os.path.splitext(filepath)[1]==".bxr"
@@ -147,7 +149,15 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
         spike_channel_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeChIDs"][()]
         spike_times = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeTimes"][()]
         spikes = zip(spike_channel_ids, spike_times)
-        channel_map = h5_3brain_spikes["3BRecInfo"]["3BMeaStreams"]["Raw"]["Chs"][()]
+
+        # see https://stackoverflow.com/questions/6028000/how-to-read-a-static-file-from-inside-a-python-package
+        resource_package = __name__  # Could be any module/package name
+        resource_path = '/'.join(('..', 'resources', '3brain_channel_map.npy'))  # Do not use os.path.join()
+        # or for a file-like stream:
+        channel_map_file = pkg_resources.resource_stream(resource_package, resource_path)
+        channel_map = np.load(channel_map_file)
+        # channel_map = h5_3brain_spikes["3BRecInfo"]["3BMeaStreams"]["Raw"]["Chs"][()]
+
         sampling_rate = float(h5_3brain_spikes["3BRecInfo"]["3BRecVars"]["SamplingRate"][0])
 
         for channel, spike_time in spikes:
