@@ -314,7 +314,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     if extension == ".txt":
         ctx.obj["units"] = glia.read_plexon_txt_file(filename,retina_id, channel_map)
     elif extension == ".bxr":
-        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id, channel_map)
+        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id)
     elif re.match(spyking_regex, filename):
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
