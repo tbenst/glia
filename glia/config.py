@@ -1,5 +1,7 @@
 import multiprocessing
 import logging
+import pkg_resources
+import numpy as np
 
 logger = logging.getLogger('glia')
 logger.setLevel(logging.DEBUG)
@@ -22,6 +24,14 @@ plot_directory = None
 
 analog_calibration = 'auto'
 user_config = None
+
+# see https://stackoverflow.com/questions/6028000/how-to-read-a-static-file-from-inside-a-python-package
+resource_package = __name__  # Could be any module/package name
+resource_path = '/'.join(('..', 'resources', '3brain_channel_map.npy'))  # Do not use os.path.join()
+# or for a file-like stream:
+channel_map_file = pkg_resources.resource_stream(resource_package, resource_path)
+
+channel_map_3brain = np.load(channel_map_file)
 
 # (x,y)
 channel_map = {
