@@ -223,6 +223,7 @@ def init_logging(name, processes, verbose, debug):
     help="Only include units where classification percentage exceeds the specified amount.")
 @click.option("--verbose", "-v", is_flag=True)
 @click.option("--by-channel", "-C", is_flag=True, help="Combine units by channel")
+@click.option("--default-channel-map", "-m", is_flag=True, help="Use default channel map instead of reading from 3brain file")
 @click.option("--debug", "-vv", is_flag=True)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
@@ -233,7 +234,8 @@ def init_logging(name, processes, verbose, debug):
 def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, output=None, notebook=None,
         configuration=None, verbose=False, debug=False,processes=None,
-        by_channel=False, integrity_filter=0.0, analog_idx=1):
+        by_channel=False, integrity_filter=0.0, analog_idx=1,
+        default_channel_map=False):
     """Analyze data recorded with eyecandy.
     """
     print("version 0.5.1")
@@ -314,7 +316,11 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     if extension == ".txt":
         ctx.obj["units"] = glia.read_plexon_txt_file(filename,retina_id, channel_map)
     elif extension == ".bxr":
-        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id)
+        if default_channel_map:
+            channel_map_3brain = config.channel_map_3brain
+        else:
+            channel_map_3brain = None
+        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id, channel_map_3brain)
     elif re.match(spyking_regex, filename):
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
