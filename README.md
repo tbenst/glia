@@ -11,6 +11,9 @@ A package to support neuroscientists in analyzing MEAs.
 ```
 We install in development mode so can update with a simple `git pull`
 
+## Documentation
+Access the glia command line tool documentation with "glia -h." All sub commands also have documentation, eg "glia analyze -h".
+
 ## For Docker 1.17:
 `sudo docker run --network=eyecandy_default -v $(pwd):/data tbenst/glia analyze -e "http://eyecandy:3000" /data/R2_E1 convert`
 
