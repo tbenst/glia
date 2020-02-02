@@ -11,8 +11,7 @@ from functools import partial
 import logging
 from sklearn import datasets, svm, metrics, neighbors
 import pandas as pd
-logger = logging.getLogger('glia')
-
+from glia.config import logger
 
 TVT = namedtuple("TVT", ['training', "validation", "test"])
 
@@ -134,8 +133,8 @@ def spike_train_to_sparse(experiment, key_map, shape):
     return array
 
 
-def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'], append=0,
-    progress=False):
+def experiments_to_ndarrays(experiments,
+    get_class=lambda x: x['metadata']['class'], append=0, progress=False):
     """
 
     get_class is a function"""
@@ -282,7 +281,8 @@ def get_grating_contrasts(stimulus_list, stimulus_type="GRATING"):
 
 def svm_helper(training_data, training_target, validation_data, validation_target):
     # Create a classifier: a support vector classifier
-    classifier = svm.SVC()
+    classifier = svm.SVC(gamma="auto")
+    # classifier = svm.SVC(gamma="scale")
     classifier.fit(training_data, training_target)
 
     predicted = classifier.predict(validation_data)
