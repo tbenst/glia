@@ -62,3 +62,6 @@ target/
 # Cookiecutter
 output/
 boilerplate/
+
+.mypy_cache/
+.vscode/

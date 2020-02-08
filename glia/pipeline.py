@@ -137,13 +137,20 @@ def create_experiments(units: Dict[str,np.ndarray], stimulus_list: List[Dict],
     return experiments
 
 
-def merge_experiments(experiments, stimulus=None):
-    "Merge a list of experiments, using stimulus info from first unless given."
+def merge_experiments(experiments:list, stimulus:dict=None,
+                      use_index_for_stimulus:int=None):
+    """Merge a list of experiments.
+    
+    Use stimulus info from first unless given a dict (stimulus) or an index."""
     if stimulus is None:
-        new = deepcopy(experiments[0])
+        # units will be overwritten
+        if use_index_for_stimulus is not None:
+            new = deepcopy(experiments[use_index_for_stimulus])
+        else:
+            new = deepcopy(experiments[0])
     else:
         new = deepcopy(stimulus)
-        new["units"] = {k: None for k in experiments[0]["units"].keys()}
+    new["units"] = {k: None for k in experiments[0]["units"].keys()}
 
     time_offsets = np.array(scanl(
         lambda a,n: a+n['lifespan'],0,experiments))

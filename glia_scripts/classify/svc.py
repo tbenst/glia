@@ -13,17 +13,36 @@ from scipy import stats
 
 from scipy.stats import binom
 
-def svm_grid(training_data, training_target, test_data, test_target, n_jobs=config.processes):
+def _svm_grid(training_data, training_target, test_data, test_target, n_jobs=config.processes):
     svr = svm.SVC()
     parameters = {'C': [1, 10, 100, 1000],
                   'gamma': [0.001, 0.0001]},
-    clf = GridSearchCV(svr, parameters, n_jobs=12)
+    clf = GridSearchCV(svr, parameters, n_jobs=12, cv=5, iid=False)
     clf.fit(training_data, training_target)
 
     predicted = clf.predict(test_data)
+    
+    return clf, predicted
+
+
+def svm_grid(training_data, training_target, test_data, test_target, n_jobs=config.processes):
+    clf, predicted = _svm_grid(training_data, training_target, test_data,
+                               test_target, n_jobs)
     expected = test_target
 
     return metrics.accuracy_score(expected, predicted)
+
+def svm_grid_with_report(training_data, training_target, test_data, test_target, classes, n_jobs=config.processes):
+    clf, predicted = _svm_grid(training_data, training_target, test_data,
+                               test_target, n_jobs)
+
+    expected = test_target
+    
+    report, confusion = glia.classifier_helper(clf,
+        (training_data, training_target),
+        (test_data, test_target), classes=classes)
+
+    return report, confusion, predicted
 
 
 def plot_acuity(logmar, accuracy, yerror,
@@ -344,3 +363,42 @@ def image_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
         with open(f"{plot_directory}/letter-{size}.txt", "w") as f:
             f.write(report+'\n')
             f.write(str(confusion))
+
+
+def generic_image_classify(data, metadata, stimulus_list, lab_notebook,
+                           plot_directory, nsamples, target_mappers,
+                           mapper_classes, mapper_names):
+    '''
+    
+    target_mappers is a list of dictionaries that map classes. For example,
+    suppose you have classes=np.arange(4), but 0,1 are images of the same person
+    not smiling and smiling. Then, you could have {0:0,1:0,2:1,3:1} as a mapper
+    to classify by person rather than by image.'''
+    # n_sizes, n_training, n_steps, n_x, n_y, n_units = data["training_data"].shape
+    logger.debug(data["training_data"].shape)
+    # hack for dimension assumptions in bin_100ms
+    training_100ms = glia.bin_100ms(data["training_data"][None,None])[0,0]
+    validation_100ms = glia.bin_100ms(data["validation_data"][None,None])[0,0]   
+    logger.debug(f'training_100ms shape {training_100ms.shape}')
+    
+    training_target = data["training_target"]
+    validation_target = data["validation_target"]
+    logger.debug(np.size(training_target))
+
+    mappers_iter = zip(target_mappers, mapper_classes, mapper_names)
+    for target_map, map_classes, map_name in mappers_iter:
+        print(f"classifying {map_name}")
+        mapped_train_target = np.array([target_map[n] for n in training_target])
+        mapped_valid_target = np.array([target_map[n] for n in validation_target])
+        # for each training target split
+        report, confusion, predicted = svm_grid_with_report(
+            training_100ms, mapped_train_target, validation_100ms,
+            mapped_valid_target, map_classes)
+        with open(f"{plot_directory}/{map_name}_report.txt", "w") as f:
+            f.write(report+'\n')
+            f.write(str(confusion))
+        confusion.columns = confusion.columns.astype(str)
+        confusion.to_parquet(
+            f"{plot_directory}/{map_name}_confusion.parquet")
+        np.save(
+            f"{plot_directory}/{map_name}_predictions.npy", predicted)

@@ -11,6 +11,10 @@ from .config import processes
 from tqdm import tqdm
 import traceback
 
+import logging
+logger = logging.getLogger('glia')
+
+
 file = str
 Dir = str
 dat = str

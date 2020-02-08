@@ -20,7 +20,7 @@ import glia_scripts.raster as raster
 import glia_scripts.convert as convert
 import errno
 from glia_scripts.classify import svc
-import traceback
+import traceback, pdb
 import glia.config as config
 from glia.config import logger, logging, channel_map
 from functools import update_wrapper, partial
@@ -366,10 +366,11 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
 @analyze.resultcallback()
 @click.pass_context
-def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, output=None, notebook=None,
-        configuration=None, version=None, verbose=False, debug=False,processes=None,
-        by_channel=False, integrity_filter=0.0, analog_idx=1):
+def cleanup(ctx, results, filename, trigger, threshold, eyecandy,
+        ignore_extra=False, fix_missing=False, output=None, notebook=None,
+        configuration=None, version=None, verbose=False, debug=False,
+        processes=None, by_channel=False, integrity_filter=0.0, analog_idx=1,
+        default_channel_map=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -473,13 +474,26 @@ def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, qua
         convert.save_letters_npz(
             units, stimulus_list, filename, append,
             partial(glia.group_contains, "TILED_LETTER"))
+    elif name=='10faces':
+        # there's a bug in this program and a single WAIT is missing metadata
+        oldLen = len(stimulus_list)
+        stimulus_list = [s for s in stimulus_list if 'metadata' in s['stimulus']]
+        assert len(stimulus_list)+1 == oldLen # bug fix for 0.1.0 10faces
+        
+        print("Saving 10faces NPZ file.")
+        convert.save_images_npz(
+            units, stimulus_list, filename, append)
+    elif name=='20faces':
+        print("Saving 20faces NPZ file.")
+        convert.save_images_npz(
+            units, stimulus_list, filename, append)
     elif name=='eyechart-saccade':
         print("Saving eyechart-saccade NPZ file.")
-        convert.save_image_npz(
+        convert.save_acuity_image_npz(
             units, stimulus_list, filename, append)
     elif name=='letters-saccade':
         print("Saving letters-saccade NPZ file.")
-        convert.save_image_npz(
+        convert.save_acuity_image_npz(
             units, stimulus_list, filename, append)
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
@@ -632,6 +646,33 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples, n_draws)
+    elif '10faces'==name or '20faces'==name:
+        # 10faces was a misnomer..actually 20faces
+
+        # dict with entries like '[37, False, True]': 0
+        class_resolver = data['class_resolver'].item()
+        nclasses = np.array(list(class_resolver.values())).max()+1
+        id_map = {i: i for i in np.arange(nclasses)}
+        num2gender = {}
+        num2smiling = {}
+        num2person = {}
+        for class_str, num in class_resolver.items():
+            temp = class_str[1:-1].split(", ")
+        #     print(temp)
+            image_class = [int(temp[0]), temp[1]=="True", temp[2]=="True"]
+            num2gender[num] = image_class[1]
+            num2smiling[num] = image_class[2]
+            num2person[num] = image_class[0]
+        target_mappers = [id_map, num2gender, num2person, num2smiling]
+        mapper_classes = [np.arange(nclasses),
+                         ["Female", "Male"],
+                         np.arange(20),
+                         ["Not smiling", "Smiling"]]
+        mapper_names = ["by_image", "is_male", "by_person",
+                        "is_smiling"]
+        svc.generic_image_classify(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples, target_mappers, mapper_classes, mapper_names)
     elif 'letters-tiled'==name:
         svc.tiled_letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
@@ -710,4 +751,9 @@ def acuity_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
 generate.add_command(acuity_cmd)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(tb)

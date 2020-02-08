@@ -68,4 +68,10 @@ class Unit:
         Unit.ncol = max(col+1, Unit.ncol)
         Unit.nunit = max(unit_num+1, Unit.nunit)
 
+def unit_key_to_tuple(unit_id):
+    channel = Unit.lookup[unit_id].channel
+    unit_num = Unit.lookup[unit_id].unit_num
+    return (*channel,unit_num)
+
+
 get_lifespan = lambda e: e["stimulus"]["lifespan"]
