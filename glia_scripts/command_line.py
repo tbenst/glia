@@ -406,6 +406,27 @@ def all(ctx):
     ctx.forward(grating_cmd)
 
 
+
+@analyze.command("frame_log")
+def frame_log_cmd(stimulus_list):
+    "Create PTSH and raster of spikes in response to solid."
+    # safe_run(solid.save_unit_psth,
+    #     (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
+    name = metadata['name']
+    if chronological:
+        solid.save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append)
+    elif name=="wedge":
+        solid.save_unit_wedges_v2(
+            units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig)
+    elif name=="kinetics":
+        solid.save_unit_kinetics(
+            units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig)
+    else:
+        raise(ValueError(f"No match for {name}"))
+
+generate.add_command(frame_log_cmd)
+
+
 @analyze.command("solid")
 @click.option("--prepend", "-p", type=float, default=1,
     help="plot (seconds) before SOLID start time")
