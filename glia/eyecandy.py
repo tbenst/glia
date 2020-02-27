@@ -84,10 +84,13 @@ def create_epl_gen_v2(program, epl, window_width, window_height, seed,
     return (metadata,
         iter(sorted(stimuli, key=lambda x: x['stimulusIndex'])))
 
-def open_lab_notebook(filepath):
+def open_lab_notebook(filepath, convert_types=True):
     """Take a filepath for YAML lab notebook and return dictionary."""
     with open( filepath, 'r') as f:
-        y = list(yaml.safe_load_all(f))
+        if not convert_types:
+            y = list(yaml.load_all(f, Loader=yaml.BaseLoader))
+        else:
+            y = list(yaml.safe_load_all(f))
     try:
         assert "epl" in y[0]
     except:
@@ -195,6 +198,7 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     calibration determines the mean in linear light space for each stimulus
     index"""
     logger.debug(f"create_stimuli analog_file: {analog_file}")
+    logger.debug(f"params!!!: {(analog_file, stimulus_file, lab_notebook_fp, data_name, eyecandy_url, analog_idx, ignore_extra, calibration, within_threshold)}")
     if analog_file[-4:]==".brw":
         analog = read_3brain_analog(analog_file)
     else:

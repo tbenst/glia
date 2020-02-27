@@ -9,7 +9,9 @@ import glia
 from glia import match_filename
 from fnmatch import fnmatch
 import click
-import os
+import os, av, pandas as pd
+from functools import reduce
+from pathlib import Path
 import sys
 import re
 import glia_scripts.solid as solid
@@ -237,6 +239,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         by_channel=False, integrity_filter=0.0, analog_idx=1,
         default_channel_map=False):
     """Analyze data recorded with eyecandy.
+    
+    This command/function preprocesses the data & aligns stimuli to ephys
+    recording.
     """
     print("version 0.5.1")
     init_logging(filename, processes, verbose, debug)
@@ -277,7 +282,6 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
     if not notebook:
         notebook = glia.find_notebook(data_directory)
-
 
     lab_notebook = glia.open_lab_notebook(notebook)
     logger.info(name)
@@ -404,27 +408,6 @@ def all(ctx):
     ctx.forward(solid_cmd)
     ctx.forward(bar_cmd)
     ctx.forward(grating_cmd)
-
-
-
-@analyze.command("frame_log")
-def frame_log_cmd(stimulus_list):
-    "Create PTSH and raster of spikes in response to solid."
-    # safe_run(solid.save_unit_psth,
-    #     (units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append))
-    name = metadata['name']
-    if chronological:
-        solid.save_unit_spike_trains(units, stimulus_list, c_unit_fig, c_retina_fig, prepend, append)
-    elif name=="wedge":
-        solid.save_unit_wedges_v2(
-            units, stimulus_list, partial(c_unit_fig,"wedge"), c_retina_fig)
-    elif name=="kinetics":
-        solid.save_unit_kinetics(
-            units, stimulus_list, partial(c_unit_fig,"kinetics"), c_retina_fig)
-    else:
-        raise(ValueError(f"No match for {name}"))
-
-generate.add_command(frame_log_cmd)
 
 
 @analyze.command("solid")
@@ -590,6 +573,102 @@ def strip_generated(name, choices=generate_choices):
             # strip `prefix_`
             return name[length+1:]
     return name
+
+
+@main.command("process")
+@click.argument('filename', type=str, default=None)
+@click.option("--notebook", "-n", type=click.Path(exists=True))
+@click.option("--verbose", "-v", is_flag=True)
+@click.option("--debug", "-vv", is_flag=True)
+def preprocess_cmd(filename, notebook, debug=False, verbose=False):
+    "Process analog + frames log to align stim/ephys in .frames file."
+
+    init_logging(filename, processes=None, verbose=verbose, debug=debug)
+    #### FILEPATHS
+    logger.debug(str(filename) + "   " + str(os.path.curdir))
+    if not os.path.isfile(filename):
+        try:
+            filename = glia.match_filename(filename,"txt")
+        except:
+            filename = glia.match_filename(filename,"bxr")
+    data_directory, data_name = os.path.split(filename)
+    name, extension = os.path.splitext(data_name)
+    analog_file = os.path.join(data_directory, name +'.analog')
+    if not os.path.isfile(analog_file):
+        # use 3brain analog file
+        analog_file = os.path.join(data_directory, name +'.analog.brw')
+
+    stimulus_file = os.path.join(data_directory, name + ".stim")
+    if not notebook:
+        notebook = glia.find_notebook(data_directory)
+    lab_notebook = glia.open_lab_notebook(notebook, convert_types=False)
+    experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
+    
+    date_prefix = (data_directory + experiment_protocol['date']).replace(':','_')
+    frame_log_file = date_prefix + "_eyecandy_frames.log"
+    video_file = date_prefix + "_eyecandy.mkv"
+
+    
+    container = av.open(str(video_file))
+    n_video_frames = 0
+    for _ in container.decode(video=0):
+        n_video_frames += 1
+    
+    stimulus_list = glia.read_stimulus(stimulus_file)
+    nstimuli_list = len(stimulus_list[1])
+    analog = glia.read_raw_voltage(analog_file)
+    sampling_rate = glia.sampling_rate(analog_file)
+    
+    analog_std = 0.5*analog[:,1].std() + analog[:,1].min()
+    # beginning of experiment
+    # TODO: after clustering, should subtract known / estimated latency for better frame time..?
+    # for maximum temporal accuracy, frame should begin at start of slope
+    approximate_start_idx = np.where(analog[:,1] > analog_std)[0][0]
+    baseline_offset = int(sampling_rate/10) # rise started before experiment_start_idx
+    # we add 3sigma of baseline to baseline.max() to create threshold for end of experiment
+    baseline_thresh = np.max(analog[:approximate_start_idx-baseline_offset,1]) \
+                    + np.std(analog[:approximate_start_idx-baseline_offset,1])*3
+    experiment_start_idx = np.where(analog[:,1] > baseline_thresh)[0][0]
+    
+    frame_log = pd.read_csv(frame_log_file)
+    
+    nframes_in_log = len(frame_log)
+    assert np.abs(n_video_frames - nframes_in_log) < 2
+    assert n_video_frames == nframes_in_log or n_video_frames + 1 == nframes_in_log 
+    # gross adjustment for start time
+    frame_log.time = (frame_log.time - frame_log.time[0])/1000 + experiment_start_idx/sampling_rate
+
+    # finer piecewise linear adjustments for each stimulus start frame
+    # I've seen this off by 50ms after a 4.4s bar stimulus!
+    newStimFrames = np.where(frame_log.stimulusIndex.diff())[0]
+    stim_start_diff = np.abs(frame_log.iloc[newStimFrames].time.diff()[1:] - np.diff(np.array(list(map(lambda s: s["start_time"], stimulus_list[1])))))
+    max_time_diff = stim_start_diff.max()
+    print("stimulus start sum_time_diff", max_time_diff)
+    print("stimulus start mean_time_diff", stim_start_diff.mean())
+    assert len(newStimFrames) == len(stimulus_list[1])
+    for n,stim in enumerate(stimulus_list[1]):
+        flickerTime = stim["start_time"]
+        frameNum = newStimFrames[n]
+        if n +1 < len(stimulus_list[1]):
+            nextFrameNum = newStimFrames[n+1]
+            # we adjust all frames in a stimulus
+            loc = (frame_log.framenum >= frameNum) & (frame_log.framenum < nextFrameNum)
+        else:
+            loc = (frame_log.framenum >= frameNum)
+        frame_log_time = frame_log.loc[frameNum].time
+        time_delta = flickerTime - frame_log_time
+        frame_log.loc[loc, 'time'] += time_delta
+
+    stim_start_diff = np.abs(frame_log.iloc[newStimFrames].time.diff()[1:] - np.diff(np.array(list(map(lambda s: s["start_time"], stimulus_list[1])))))
+    max_time_diff = stim_start_diff.max()
+    print("post alignment stimulus start sum_time_diff", max_time_diff)
+    assert max_time_diff < 0.001
+    # frame_log.head()
+    
+    name, _ = os.path.splitext(frame_log_file)
+    frame_log.to_csv(name + ".frames", index=False)
+    print(f"Saved to {name + '.frames'}")
+    
 
 @main.command("classify")
 @click.argument('filename', type=str, default=None)

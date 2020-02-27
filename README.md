@@ -1,7 +1,7 @@
 # Glia
 [![Build Status](https://travis-ci.org/tbenst/glia.svg?branch=master)](https://travis-ci.org/tbenst/glia)
 
-A package to support neuroscientists in analyzing MEAs.
+A package to support neuroscientists in analyzing multi-electrode array recordings. Designed with the retina in mind.
 
 ## Installation
 ```
@@ -14,7 +14,19 @@ We install in development mode so can update with a simple `git pull`
 ## Documentation
 Access the glia command line tool documentation with "glia -h." All sub commands also have documentation, eg "glia analyze -h".
 
-## For Docker 1.17:
+### Typical command order:
+```
+# create .stim file & make plots for "integrity" check
+> glia analyze R1_E1_AMES_120min_celltyping integrity
+# create .frames file
+> glia process R1_E1_AMES_120min_celltyping
+# create .npz file for machine learning
+> glia analyze R1_E1_AMES_120min_celltyping convert
+# run classification & plot results
+> glia classify R1_E1_AMES_120min_celltyping
+```
+
+## For Docker 1.17 (or later):
 `sudo docker run --network=eyecandy_default -v $(pwd):/data tbenst/glia analyze -e "http://eyecandy:3000" /data/R2_E1 convert`
 
 
