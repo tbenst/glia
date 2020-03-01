@@ -20,6 +20,8 @@ Access the glia command line tool documentation with "glia -h." All sub commands
 > glia analyze R1_E1_AMES_120min_celltyping integrity
 # create .frames file
 > glia process R1_E1_AMES_120min_celltyping
+# plot receptive fields
+> glia analyze R1_E1_AMES_120min_celltyping sta
 # create .npz file for machine learning
 > glia analyze R1_E1_AMES_120min_celltyping convert
 # run classification & plot results
