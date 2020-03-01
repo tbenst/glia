@@ -20,6 +20,7 @@ import glia_scripts.acuity as acuity
 import glia_scripts.grating as grating
 import glia_scripts.raster as raster
 import glia_scripts.convert as convert
+import glia_scripts.video as video
 import errno
 from glia_scripts.classify import svc
 import traceback, pdb
@@ -53,6 +54,16 @@ def analysis_function(f):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
             ctx.obj["metadata"], ctx.obj['filename'],
+            *args[2:], **kwargs)
+    return update_wrapper(new_func, f)
+
+def video_function(f):
+    @click.pass_context
+    def new_func(ctx, *args, **kwargs):
+        context_object = ctx.obj
+        return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
+            ctx.obj["metadata"], ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
+            ctx.obj['frame_log'], ctx.obj['video_file'],
             *args[2:], **kwargs)
     return update_wrapper(new_func, f)
 
@@ -252,6 +263,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             filename = glia.match_filename(filename,"txt")
         except:
             filename = glia.match_filename(filename,"bxr")
+            
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
@@ -308,7 +320,24 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             raise ValueError('not implemented')
         else:
             raise ValueError("invalid trigger: {}".format(trigger))
-
+    
+    # look for .frames file
+    try:
+        lab_notebook_notype = glia.open_lab_notebook(notebook, convert_types=False)
+        protocol_notype = glia.get_experiment_protocol(lab_notebook_notype,
+                                                                  name)
+        date_prefix = (data_directory + protocol_notype['date']).replace(':','_')
+        frames_file = date_prefix + "_eyecandy_frames.frames"
+        video_file = date_prefix + "_eyecandy.mkv"
+        frame_log = pd.read_csv(frames_file)
+        frame_log = frame_log[:-1] # last frame is not encoded for some reason
+        ctx.obj["frame_log"] = frame_log
+        ctx.obj["video_file"] = video_file
+        print("found mkv & frames file")
+    except Exception as e:
+        raise(e)
+        pass
+    
     #### LOAD SPIKES
     spyking_regex = re.compile('.*\.result.hdf5$')
     eye = experiment_protocol['eye']
@@ -399,8 +428,6 @@ def cover(units, stimulus_list, metadata, c_unit_fig, c_retina_fig):
     c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
-
-
 @analyze.command()
 @click.pass_context
 def all(ctx):
@@ -409,6 +436,31 @@ def all(ctx):
     ctx.forward(bar_cmd)
     ctx.forward(grating_cmd)
 
+@analyze.command("sta")
+@video_function
+def sta_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
+        frame_log, video_file):
+    binary_noise_frame_idx = video.get_binary_noise_frame_idx(stimulus_list,
+                                                        frame_log)
+    # # single unit
+    # row_to_id = {}
+    # for i,key in enumerate(units.keys()):
+    #     row_to_id[i] = key
+    #     # spikes = units[key].spike_train[units[key].spike_train<9]
+    # unit_id = row_to_id[37]
+    # print("unit_id", unit_id)
+    # spike_train = units[unit_id].spike_train
+    
+    # sta = video.calc_sta(spike_train,  binary_noise_frame_idx, frame_log,
+    #                    video_file)
+    # fig = video.plot_sta(sta)
+    plot_func = partial(video.sta_unit_plot_function,
+                        frame_indices=binary_noise_frame_idx,
+                        frame_log=frame_log,
+                        video_file=video_file,
+                        nsamples_before=25)
+    glia.plot_units(plot_func, partial(c_unit_fig,"spatial_filter"), units)
+    
 
 @analyze.command("solid")
 @click.option("--prepend", "-p", type=float, default=1,
