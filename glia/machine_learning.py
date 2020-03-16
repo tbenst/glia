@@ -236,6 +236,10 @@ def px_to_logmar(px,px_per_deg=12.524):
     minutes = px/px_per_deg*60
     return np.log10(minutes)
 
+def px_to_cpd(px,px_per_deg=12.524):
+    cycle_per_px = 1/(px*2)
+    return cycle_per_px*px_per_deg
+
 def get_stimulus_parameters(stimulus_list, stimulus_type, parameter):
     f = compose(
         f_filter(lambda x: x["stimulus"]['stimulusType']==stimulus_type),

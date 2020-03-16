@@ -46,7 +46,8 @@ def svm_grid_with_report(training_data, training_target, test_data, test_target,
 
 
 def plot_acuity(logmar, accuracy, yerror,
-                n_validation, name, conditions, condition_name, plot_directory):
+                n_validation, name, conditions, condition_name, plot_directory,
+                unit_label="logMAR"):
     print(f"plotting {name} {condition_name} classification accuracy.")
     sig5 = np.repeat(binom.ppf(0.95, n_validation, 0.5)/n_validation, len(logmar))
     sig1 = np.repeat(binom.ppf(0.99, n_validation, 0.5)/n_validation, len(logmar))
@@ -64,11 +65,13 @@ def plot_acuity(logmar, accuracy, yerror,
     ax.plot(logmar, sig1, 'k--')
     # ax.plot(logmar, sig1, 'k--', label='p<0.01')
     ax.set_ylabel("Accuracy")
-    ax.set_xlabel("logMAR")
-
-    x_major_ticks = np.arange(1.6, 3.2, 0.2)
-    ax.set_xticks(x_major_ticks)
-    ax.set_xlim(1.5,3.25)
+    ax.set_xlabel(unit_label)
+    if unit_label=="logMAR":
+        x_major_ticks = np.arange(1.6, 3.2, 0.2)
+        ax.set_xticks(x_major_ticks)
+        ax.set_xlim(1.5,3.25)
+    elif unit_label=="cpd":
+        pass
     # ax.set_xticks(minor_ticks, minor=True)
     # ax.set_yticks(major_ticks)
     # ax.set_yticks(minor_ticks, minor=True)
@@ -76,12 +79,14 @@ def plot_acuity(logmar, accuracy, yerror,
     ax.grid(which='both')
 
     ax.set_ylim(0.35,1.05)
-    ax.legend(loc=(0.7,0.1))
+    ax.legend(loc=(1,0.1))
     if condition_name is None:
         ax.set_title(f'{name} classification by binning technique')
+        fig.tight_layout()
         fig.savefig(os.path.join(plot_directory, f"{name}_acuity.png"))
     else:
         ax.set_title(f'{name} classification by {condition_name}')
+        fig.tight_layout()
         fig.savefig(os.path.join(plot_directory, f"{name}-{condition_name}_acuity.png"))
 
 def plot_sensitivity(logmar, accuracy, yerror,
@@ -126,7 +131,9 @@ def plot_sensitivity(logmar, accuracy, yerror,
 
 def acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, name,
-            sizes, conditions, condition_name, n_draws=30):
+            sizes, conditions, condition_name, n_draws=30, units="logmar"):
+    """
+    Units is in ['logmar', 'cpd']"""
     print(f"training classifiers.")
     # polymorphic over ndarray or list for conditions
     nconditions = len(training_data)
@@ -153,10 +160,17 @@ def acuity(training_data, training_target, validation_data, validation_target,
             accuracy[condition, size] = np.mean(acc)
             yerror[condition, size] = stats.sem(acc)
 
-    logmar = list(map(glia.px_to_logmar,sizes))
+    if units=="logmar":
+        unit_func = glia.px_to_logmar
+        unit_label = "logMAR"
+    elif units=="cpd":
+        unit_func = glia.px_to_cpd
+        unit_label = "cycles per degree (cpd)"
+    logmar = list(map(unit_func,sizes))
 
     plot_acuity(logmar, accuracy, yerror, n_validation,
-                name, conditions, condition_name, plot_directory)
+                name, conditions, condition_name, plot_directory,
+                unit_label=unit_label)
     # plot_sensitivity(logmar, accuracy, yerror, n_validation,
     #             name, conditions, condition_name, plot_directory)
 
@@ -204,7 +218,7 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
     else:
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, "checkerboard",
-            sizes, conditions, condition_name, n_draws)
+            sizes, conditions, condition_name, n_draws, units="cpd")
 
 
 def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
@@ -267,7 +281,7 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
     else:
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, plot_name,
-            sizes, conditions, condition_name, n_draws)
+            sizes, conditions, condition_name, n_draws, units="cpd")
 
 
 def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
