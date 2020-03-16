@@ -27,6 +27,7 @@ import traceback, pdb
 import glia.config as config
 from glia.config import logger, logging, channel_map
 from functools import update_wrapper, partial
+from matplotlib import animation, cm, gridspec
 # from tests.conftest import display_top, tracemalloc
 
 
@@ -335,8 +336,10 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         ctx.obj["video_file"] = video_file
         print("found mkv & frames file")
     except Exception as e:
-        raise(e)
-        pass
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        print(e)
+        print("Attempting to continue...")
     
     #### LOAD SPIKES
     spyking_regex = re.compile('.*\.result.hdf5$')
@@ -459,7 +462,8 @@ def sta_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
                         frame_log=frame_log,
                         video_file=video_file,
                         nsamples_before=25)
-    glia.plot_units(plot_func, partial(c_unit_fig,"spatial_filter"), units)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
+    glia.plot_units(plot_func, partial(c_unit_fig,"spatial_filter"), units, nplots=2, ncols = 1, GridSpec = gs)
     
 
 @analyze.command("solid")
