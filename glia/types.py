@@ -50,7 +50,7 @@ class Unit:
 
     def __init__(self, retina_id, channel, unit_num, spike_train=None):
         # id will be URL safe MD5 hash of spike_train
-        my_id =  retina_id + '_' + str(channel) + "_"+str(unit_num)
+        my_id =  retina_id + '_' + str(channel) + "_" + str(unit_num)
         self.id = my_id
         self.retina_id = retina_id
         # channel should be (row, col)
