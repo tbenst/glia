@@ -742,7 +742,7 @@ def preprocess_cmd(filename, notebook, debug=False, verbose=False):
     help="Skip method assertion (for testing)")
 @click.option("--n-draws", "-d", type=int, help="Number of draws for Monte Carlo Cross-validation", default=30)
 @click.option("--px-per-deg", "-p", type=float, default=10.453,
-              help="Measured pixels per degree", default=)
+              help="Measured pixels per degree")
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
