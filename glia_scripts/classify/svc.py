@@ -223,7 +223,7 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
 
 
 def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-    nsamples,n_draws=30, sinusoid=False, px_per_deg=10.453):
+    nsamples, n_draws=30, sinusoid=False, px_per_deg=10.453):
     if sinusoid:
         stimulus_type = "SINUSOIDAL_GRATING"
         plot_name = "Sinusoidal grating"
@@ -287,7 +287,7 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
 
 
 def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-                nsamples):
+                nsamples, px_per_deg=10.453):
     print("Classifying Letters - warning not using latest acuity function")
     # TODO
     sizes = glia.get_stimulus_parameters(stimulus_list, "LETTER", 'size')
