@@ -739,12 +739,15 @@ def preprocess_cmd(filename, notebook, debug=False, verbose=False):
 @click.option("--processes", "-p", type=int, help="Number of processors")
 @click.option('--skip', "-s", default=False, is_flag=True,
     help="Skip method assertion (for testing)")
-@click.option("--n_draws", "-d", type=int, help="Number of draws for Monte Carlo Cross-validation", default=30)
+@click.option("--n-draws", "-d", type=int, help="Number of draws for Monte Carlo Cross-validation", default=30)
+@click.option("--px-per-deg", "-p", type=float, default=10.453,
+              help="Measured pixels per degree")
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False, version=2, processes=None, n_draws=30):
+def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
+                 version=2, processes=None, n_draws=30, px_per_deg=10.453):
     "Classify using converted NPZ"
 
     if not os.path.isfile(filename):
@@ -792,17 +795,16 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
     if re.match('checkerboard',name):
         svc.checkerboard_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples, n_draws)
+             nsamples, n_draws, px_per_deg=px_per_deg)
     elif re.match('grating-sinusoidal',name):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples, n_draws, sinusoid=True)
+             nsamples, n_draws, sinusoid=True, px_per_deg=px_per_deg)
     elif re.match('grating',name):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples, n_draws)
+            nsamples, n_draws, px_per_deg=px_per_deg)
     elif 'faces' in name:
-
         # dict with entries like '[37, False, True]': 0
         class_resolver = data['class_resolver'].item()
         nclasses = np.array(list(class_resolver.values())).max()+1
@@ -830,19 +832,19 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
     elif 'letters-tiled'==name:
         svc.tiled_letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     elif 'eyechart-saccade'==name:
         svc.image_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     elif 'letters-saccade'==name:
         svc.image_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     elif re.match('letter',name):
         svc.letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     else:
         raise(ValueError(f"unknown name: {name}"))
     # elif eyechart:

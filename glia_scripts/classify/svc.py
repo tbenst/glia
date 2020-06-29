@@ -130,8 +130,8 @@ def plot_sensitivity(logmar, accuracy, yerror,
         fig.savefig(os.path.join(plot_directory, f"{name}-{condition_name}_acuity.png"))
 
 def acuity(training_data, training_target, validation_data, validation_target,
-            stimulus_list, plot_directory, name,
-            sizes, conditions, condition_name, n_draws=30, units="logmar"):
+            stimulus_list, plot_directory, name, sizes, conditions,
+            condition_name, n_draws=30, units="logmar", px_per_deg=12.524):
     """
     Units is in ['logmar', 'cpd']"""
     print(f"training classifiers.")
@@ -161,10 +161,10 @@ def acuity(training_data, training_target, validation_data, validation_target,
             yerror[condition, size] = stats.sem(acc)
 
     if units=="logmar":
-        unit_func = glia.px_to_logmar
+        unit_func = partial(glia.px_to_logmar, px_per_deg=px_per_deg)
         unit_label = "logMAR"
     elif units=="cpd":
-        unit_func = glia.px_to_cpd
+        unit_func = partial(glia.px_to_cpd, px_per_deg=px_per_deg)
         unit_label = "cycles per degree (cpd)"
     logmar = list(map(unit_func,sizes))
 
@@ -176,7 +176,7 @@ def acuity(training_data, training_target, validation_data, validation_target,
 
 
 def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-                nsamples, n_draws=30):
+                nsamples, n_draws=30, px_per_deg=10.453):
     sizes = glia.get_stimulus_parameters(stimulus_list, "CHECKERBOARD", 'size')
     name = metadata["name"]
     if name=='checkerboard-contrast':
@@ -218,11 +218,12 @@ def checkerboard_svc(data, metadata, stimulus_list, lab_notebook, plot_directory
     else:
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, "checkerboard",
-            sizes, conditions, condition_name, n_draws, units="cpd")
+            sizes, conditions, condition_name, n_draws, units="cpd",
+            px_per_deg=px_per_deg)
 
 
 def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
-    nsamples,n_draws=30, sinusoid=False):
+    nsamples,n_draws=30, sinusoid=False, px_per_deg=10.453):
     if sinusoid:
         stimulus_type = "SINUSOIDAL_GRATING"
         plot_name = "Sinusoidal grating"
@@ -281,7 +282,8 @@ def grating_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
     else:
         acuity(training_data, training_target, validation_data, validation_target,
             stimulus_list, plot_directory, plot_name,
-            sizes, conditions, condition_name, n_draws, units="cpd")
+            sizes, conditions, condition_name, n_draws, units="cpd",
+            px_per_deg=px_per_deg)
 
 
 def letter_svc(data, metadata, stimulus_list, lab_notebook, plot_directory,
