@@ -45,6 +45,11 @@ def f_split_dict(tvt):
 
     return anonymous
 
+flatten_group_dict = compose(
+    group_dict_to_list,
+    flatten
+)
+
 training_cohorts = compose(
         lambda x: x.training,
         group_dict_to_list,
@@ -134,7 +139,8 @@ def spike_train_to_sparse(experiment, key_map, shape):
 
 
 def experiments_to_ndarrays(experiments,
-    get_class=lambda x: x['metadata']['class'], append=0, progress=False):
+    get_class=lambda x: x['metadata']['class'], append=0, progress=False,
+    class_dtype=np.uint16):
     """
 
     get_class is a function"""
@@ -158,14 +164,13 @@ def experiments_to_ndarrays(experiments,
     d = int(np.ceil(duration*1000)) # 1ms bins
     # TODO hardcoded 64 channel x 10 unit
     shape = (nE,d,Unit.nrow,Unit.ncol,Unit.nunit)
-    data = np.full(shape, 0, dtype=np.int8)
-    classes = np.full(nE, np.nan, dtype=np.int8)
+    data = np.full(shape, 0, dtype=np.uint8)
 
     # accumulate indices for value 1
     # easy to parallelize accumulation & then single-threaded mutation
     sparse = []
 
-    classes = np.array(f_map(get_class)(experiments), dtype=np.int8)
+    classes = np.array(f_map(get_class)(experiments), dtype=class_dtype)
     assert classes.shape==(nE,)
 
     to_sparse = partial(spike_train_to_sparse, shape=shape[1:], key_map=key_map)

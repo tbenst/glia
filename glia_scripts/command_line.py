@@ -328,13 +328,12 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         protocol_notype = glia.get_experiment_protocol(lab_notebook_notype,
                                                                   name)
         date_prefix = (data_directory + protocol_notype['date']).replace(':','_')
-        frames_file = date_prefix + "_eyecandy_frames.frames"
+        frames_file = date_prefix + "_eyecandy_frames.log"
         video_file = date_prefix + "_eyecandy.mkv"
         frame_log = pd.read_csv(frames_file)
         frame_log = frame_log[:-1] # last frame is not encoded for some reason
         ctx.obj["frame_log"] = frame_log
         ctx.obj["video_file"] = video_file
-        print("found mkv & frames file")
     except Exception as e:
         extype, value, tb = sys.exc_info()
         traceback.print_exc()
@@ -540,11 +539,11 @@ def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, qua
         stimulus_list = [s for s in stimulus_list if 'metadata' in s['stimulus']]
         assert len(stimulus_list)+1 == oldLen # bug fix for 0.1.0 10faces
         
-        print("Saving 10faces NPZ file.")
+        print("Saving faces NPZ file.")
         convert.save_images_npz(
             units, stimulus_list, filename, append)
-    elif name=='20faces':
-        print("Saving 20faces NPZ file.")
+    elif 'faces' in name:
+        print("Saving faces NPZ file.")
         convert.save_images_npz(
             units, stimulus_list, filename, append)
     elif name=='eyechart-saccade':
@@ -802,8 +801,7 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
              nsamples, n_draws)
-    elif '10faces'==name or '20faces'==name:
-        # 10faces was a misnomer..actually 20faces
+    elif 'faces' in name:
 
         # dict with entries like '[37, False, True]': 0
         class_resolver = data['class_resolver'].item()

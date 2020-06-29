@@ -460,50 +460,34 @@ def save_images_npz(units, stimulus_list, name, append):
     print("images_per_cohort",images_per_cohort)
     duration = ex_cohort[0]["lifespan"]
 
-
     d = int(np.ceil(duration*1000)) # 1ms bins
-    tvt = glia.tvt_by_percentage(ncohorts,60,40,0)
-    logger.info(f"{tvt}, ncohorts: {ncohorts}")
+    logger.info(f"ncohorts: {ncohorts}")
     # import pdb; pdb.set_trace()
     
     class_resolver = get_classes_from_stimulus_list(stimulus_list)
     nclasses = len(class_resolver)
+    logger.info(f"nclasses: {nclasses}")
     if nclasses < 256:
-        dtype = 'int8'
+        class_dtype = 'int8'
     else: 
-        dtype = 'int16'
-
-
-    training_data = np.full((tvt.training*images_per_cohort,d,
-        Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
-    training_target = np.full((tvt.training*images_per_cohort),0,dtype=dtype)
-    validation_data = np.full((tvt.validation*images_per_cohort,d,
-        Unit.nrow,Unit.ncol,Unit.nunit),0,dtype='int8')
-    validation_target = np.full((tvt.validation*images_per_cohort),0,dtype=dtype)
-
-    X = glia.f_split_dict(tvt)(image_responses)
+        class_dtype = 'int16'
+        
     class_resolver_func = lambda c: class_resolver[str(c)]
-    td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                partial(image_class, class_resolver=class_resolver_func), append)
+
+    td, tt = glia.experiments_to_ndarrays(glia.flatten_group_dict(image_responses),
+                partial(image_class, class_resolver=class_resolver_func), append,
+                class_dtype=class_dtype)
+
     logger.info(td.shape)
     missing_duration = d - td.shape[1]
     print(f"missing_duration of {missing_duration}")
     pad_td = np.pad(td,
         ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
         mode='constant')
-    training_data = pad_td
-    training_target = tt
+    data = pad_td
+    target = tt
 
-    td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                partial(image_class, class_resolver=class_resolver_func), append)
-    pad_td = np.pad(td,
-        ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
-        mode='constant')
-    validation_data = pad_td
-    validation_target = tt
-
-    np.savez(name, training_data=training_data, training_target=training_target,
-         validation_data=validation_data, validation_target=validation_target,
+    np.savez(name, data=data, target=target,
         class_resolver=class_resolver)
 
 

@@ -99,6 +99,7 @@ def open_lab_notebook(filepath, convert_types=True):
 
 def get_experiment_protocol(lab_notebook_yaml, name):
     """Given lab notebook, return protocol matching name."""
+    # logger.info("lab_notebook_yaml", lab_notebook_yaml)
     for experiment in lab_notebook_yaml:
         logger.info(f"inside get_experiment_protocol: {experiment['filename']},"
         f" {name}")
