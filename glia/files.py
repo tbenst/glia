@@ -41,7 +41,7 @@ def find_notebook(directory):
 
 def read_raw_voltage(raw_filename):
     """Read in a raw file exported from MCS datatool."""
-    header, offset = get_header(raw_filename)
+    header, offset, adc_zero, El = get_header(raw_filename)
     channel_start = re.search('\nStreams = ', header).span()[1]
     channel_str = header[channel_start:-7] + ';'
     channels = re.findall('(.._..);', channel_str)
@@ -49,9 +49,9 @@ def read_raw_voltage(raw_filename):
     num_rows = int(np.memmap(raw_filename, offset=offset,
                              dtype='int16').shape[0] / num_cols)
 
-    return np.memmap(raw_filename, shape=(num_rows, num_cols),
+    return (np.memmap(raw_filename, shape=(num_rows, num_cols),
                      offset=offset,
-                     dtype='int16')
+                     dtype='int16') - 0) * El
 
 
 def read_plexon_txt_file(filepath, retina_id, channel_map=None):
@@ -205,15 +205,24 @@ def get_header(filename: file) -> (str):
     header = ""
     header_end = b'EOH\r\n'
     num_bytes = 0
+    adc_zero = None
+    El = None
     with open(filename, mode='rb') as file:
         for line in file:
             num_bytes += len(line)
-            header += line.decode("Windows-1252", errors='ignore')
+            decoded_line = line.decode("Windows-1252", errors='ignore')
+            header += decoded_line
+            if decoded_line[:11]=="ADC zero = ":
+                adc_zero = int(decoded_line[11:])
+                print(f"ADC zero: {adc_zero}")
+            if decoded_line[:5]=="El = ":
+                El = float(decoded_line[5:11])
+                print(f"El: {El}")
             if line == header_end:
                 break
             if num_bytes > 2000:
                 raise Exception('error reading header')
-    return header, num_bytes
+    return header, num_bytes, adc_zero, El
 
 
 def get_result_path(filename: file) -> (file):
