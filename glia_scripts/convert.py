@@ -44,12 +44,32 @@ def letter_class(stimulus):
     else:
         return letter_map["BLANK"]
 
-def image_class(stimulus):
+def acuity_image_class(stimulus):
     metadata = stimulus["metadata"]
     if "target" in metadata:
         return letter_map[metadata["target"]]
     else:
         return letter_map["BLANK"]
+    
+def get_classes_from_stimulus_list(stimulus_list):
+    "use `stimulus.metadata.class` as (string) key, and resolve to a number"
+    class_resolver = dict()
+    for s in stimulus_list:
+        metadata = s['stimulus']['metadata']
+        if "class" in metadata:
+            class_resolver[str(metadata['class'])] = str(metadata['classLabels'])
+            
+    label = glia.get_value(class_resolver)
+    for i,k in enumerate(class_resolver.keys()):
+        assert class_resolver[k] == label # we only support one classLabel type
+        class_resolver[k] = i
+    return class_resolver
+
+def image_class(stimulus, class_resolver):
+    "Based on precedent in 20faces.js"
+    metadata = stimulus["metadata"]
+    return class_resolver(metadata["class"])
+        
 
 def checker_class(stimulus):
     checker = stimulus["metadata"]["class"]
@@ -182,8 +202,8 @@ def save_eyechart_npz(units, stimulus_list, name, append=0.5):
           # test_data=test_data, test_target=test_target)
 
 def save_letter_npz(units, stimulus_list, name, append):
-    print("Saving letter NPZ file.")
-
+    print("Saving letter NPZ file. Warning: not including Off response--performance can be improved!")
+    # TODO use merge_experiment
     # TODO add TEST!!!
     get_letters = glia.compose(
         partial(glia.create_experiments,
@@ -331,7 +351,8 @@ def save_letters_npz(units, stimulus_list, append, name, contains=group_contains
          validation_data=validation_data, validation_target=validation_target)
     #   test_data=test_data, test_target=test_target)
 
-def save_image_npz(units, stimulus_list, name, append):
+def save_acuity_image_npz(units, stimulus_list, name, append):
+    "Assumes metadata includes a parameter to group by, as well as a blank image"
 
     get_letters = glia.compose(
         partial(glia.create_experiments,
@@ -388,7 +409,7 @@ def save_image_npz(units, stimulus_list, name, append):
         X = glia.f_split_dict(tvt)(cohorts)
         logger.info(f"ncohorts: {len(cohorts)}")
         td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                    image_class, append)
+                    acuity_image_class, append)
         logger.info(td.shape)
         missing_duration = d - td.shape[1]
         pad_td = np.pad(td,
@@ -399,7 +420,7 @@ def save_image_npz(units, stimulus_list, name, append):
         training_target[size_index] = tt
 
         td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                    image_class, append)
+                    acuity_image_class, append)
         pad_td = np.pad(td,
             ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
             mode='constant')
@@ -409,6 +430,65 @@ def save_image_npz(units, stimulus_list, name, append):
     np.savez(name, training_data=training_data, training_target=training_target,
          validation_data=validation_data, validation_target=validation_target)
     #   test_data=test_data, test_target=test_target)
+
+
+def save_images_npz(units, stimulus_list, name, append):
+    """Assumes each group is three stimuli with image in second position.
+    
+    Concatenate second stimuli with first 0.5s of third stimuli"""
+
+    get_image_responses = glia.compose(
+        # returns a list
+        partial(glia.create_experiments,
+            stimulus_list=stimulus_list,progress=True, append_lifespan=append),
+        partial(glia.group_by,
+            key=lambda x: x["metadata"]["group"]),
+        glia.group_dict_to_list,
+        glia.f_filter(partial(glia.group_contains, "IMAGE")),
+        # truncate to 0.5s
+        glia.f_map(lambda x: [x[1], truncate(x[2],0.5)]),
+        glia.f_map(glia.merge_experiments),
+        partial(glia.group_by,
+                key=lambda x: x["metadata"]["cohort"]),
+        # glia.f_map(f_flatten)
+    )
+    
+    image_responses = get_image_responses(units)
+    ncohorts = len(image_responses)
+    ex_cohort = glia.get_value(image_responses)
+    images_per_cohort = len(ex_cohort)
+    print("images_per_cohort",images_per_cohort)
+    duration = ex_cohort[0]["lifespan"]
+
+    d = int(np.ceil(duration*1000)) # 1ms bins
+    logger.info(f"ncohorts: {ncohorts}")
+    # import pdb; pdb.set_trace()
+    
+    class_resolver = get_classes_from_stimulus_list(stimulus_list)
+    nclasses = len(class_resolver)
+    logger.info(f"nclasses: {nclasses}")
+    if nclasses < 256:
+        class_dtype = 'int8'
+    else: 
+        class_dtype = 'int16'
+        
+    class_resolver_func = lambda c: class_resolver[str(c)]
+
+    td, tt = glia.experiments_to_ndarrays(glia.flatten_group_dict(image_responses),
+                partial(image_class, class_resolver=class_resolver_func), append,
+                class_dtype=class_dtype)
+
+    logger.info(td.shape)
+    missing_duration = d - td.shape[1]
+    print(f"missing_duration of {missing_duration}")
+    pad_td = np.pad(td,
+        ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
+        mode='constant')
+    data = pad_td
+    target = tt
+
+    np.savez(name, data=data, target=target,
+        class_resolver=class_resolver)
 
 
 

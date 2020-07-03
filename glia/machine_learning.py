@@ -11,8 +11,7 @@ from functools import partial
 import logging
 from sklearn import datasets, svm, metrics, neighbors
 import pandas as pd
-logger = logging.getLogger('glia')
-
+from glia.config import logger
 
 TVT = namedtuple("TVT", ['training', "validation", "test"])
 
@@ -45,6 +44,11 @@ def f_split_dict(tvt):
         return split
 
     return anonymous
+
+flatten_group_dict = compose(
+    group_dict_to_list,
+    flatten
+)
 
 training_cohorts = compose(
         lambda x: x.training,
@@ -134,8 +138,9 @@ def spike_train_to_sparse(experiment, key_map, shape):
     return array
 
 
-def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['class'], append=0,
-    progress=False):
+def experiments_to_ndarrays(experiments,
+    get_class=lambda x: x['metadata']['class'], append=0, progress=False,
+    class_dtype=np.uint16):
     """
 
     get_class is a function"""
@@ -159,14 +164,13 @@ def experiments_to_ndarrays(experiments, get_class=lambda x: x['metadata']['clas
     d = int(np.ceil(duration*1000)) # 1ms bins
     # TODO hardcoded 64 channel x 10 unit
     shape = (nE,d,Unit.nrow,Unit.ncol,Unit.nunit)
-    data = np.full(shape, 0, dtype=np.int8)
-    classes = np.full(nE, np.nan, dtype=np.int8)
+    data = np.full(shape, 0, dtype=np.uint8)
 
     # accumulate indices for value 1
     # easy to parallelize accumulation & then single-threaded mutation
     sparse = []
 
-    classes = np.array(f_map(get_class)(experiments), dtype=np.int8)
+    classes = np.array(f_map(get_class)(experiments), dtype=class_dtype)
     assert classes.shape==(nE,)
 
     to_sparse = partial(spike_train_to_sparse, shape=shape[1:], key_map=key_map)
@@ -237,6 +241,10 @@ def px_to_logmar(px,px_per_deg=12.524):
     minutes = px/px_per_deg*60
     return np.log10(minutes)
 
+def px_to_cpd(px,px_per_deg=12.524):
+    cycle_per_px = 1/(px*2)
+    return cycle_per_px*px_per_deg
+
 def get_stimulus_parameters(stimulus_list, stimulus_type, parameter):
     f = compose(
         f_filter(lambda x: x["stimulus"]['stimulusType']==stimulus_type),
@@ -282,7 +290,8 @@ def get_grating_contrasts(stimulus_list, stimulus_type="GRATING"):
 
 def svm_helper(training_data, training_target, validation_data, validation_target):
     # Create a classifier: a support vector classifier
-    classifier = svm.SVC()
+    classifier = svm.SVC(gamma="auto")
+    # classifier = svm.SVC(gamma="scale")
     classifier.fit(training_data, training_target)
 
     predicted = classifier.predict(validation_data)

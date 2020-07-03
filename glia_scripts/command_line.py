@@ -9,7 +9,9 @@ import glia
 from glia import match_filename
 from fnmatch import fnmatch
 import click
-import os
+import os, av, pandas as pd
+from functools import reduce
+from pathlib import Path
 import sys
 import re
 import glia_scripts.solid as solid
@@ -18,12 +20,14 @@ import glia_scripts.acuity as acuity
 import glia_scripts.grating as grating
 import glia_scripts.raster as raster
 import glia_scripts.convert as convert
+import glia_scripts.video as video
 import errno
 from glia_scripts.classify import svc
-import traceback
+import traceback, pdb
 import glia.config as config
 from glia.config import logger, logging, channel_map
 from functools import update_wrapper, partial
+from matplotlib import animation, cm, gridspec
 # from tests.conftest import display_top, tracemalloc
 
 
@@ -51,6 +55,16 @@ def analysis_function(f):
         context_object = ctx.obj
         return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
             ctx.obj["metadata"], ctx.obj['filename'],
+            *args[2:], **kwargs)
+    return update_wrapper(new_func, f)
+
+def video_function(f):
+    @click.pass_context
+    def new_func(ctx, *args, **kwargs):
+        context_object = ctx.obj
+        return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
+            ctx.obj["metadata"], ctx.obj["c_unit_fig"], ctx.obj["c_retina_fig"],
+            ctx.obj['frame_log'], ctx.obj['video_file'],
             *args[2:], **kwargs)
     return update_wrapper(new_func, f)
 
@@ -237,6 +251,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         by_channel=False, integrity_filter=0.0, analog_idx=1,
         default_channel_map=False):
     """Analyze data recorded with eyecandy.
+    
+    This command/function preprocesses the data & aligns stimuli to ephys
+    recording.
     """
     print("version 0.5.1")
     init_logging(filename, processes, verbose, debug)
@@ -247,6 +264,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             filename = glia.match_filename(filename,"txt")
         except:
             filename = glia.match_filename(filename,"bxr")
+            
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
@@ -278,7 +296,6 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
     if not notebook:
         notebook = glia.find_notebook(data_directory)
 
-
     lab_notebook = glia.open_lab_notebook(notebook)
     logger.info(name)
     experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
@@ -304,7 +321,25 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             raise ValueError('not implemented')
         else:
             raise ValueError("invalid trigger: {}".format(trigger))
-
+    
+    # look for .frames file
+    try:
+        lab_notebook_notype = glia.open_lab_notebook(notebook, convert_types=False)
+        protocol_notype = glia.get_experiment_protocol(lab_notebook_notype,
+                                                                  name)
+        date_prefix = (data_directory + protocol_notype['date']).replace(':','_')
+        frames_file = date_prefix + "_eyecandy_frames.log"
+        video_file = date_prefix + "_eyecandy.mkv"
+        frame_log = pd.read_csv(frames_file)
+        frame_log = frame_log[:-1] # last frame is not encoded for some reason
+        ctx.obj["frame_log"] = frame_log
+        ctx.obj["video_file"] = video_file
+    except Exception as e:
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        print(e)
+        print("Attempting to continue...")
+    
     #### LOAD SPIKES
     spyking_regex = re.compile('.*\.result.hdf5$')
     eye = experiment_protocol['eye']
@@ -366,10 +401,11 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
 
 @analyze.resultcallback()
 @click.pass_context
-def cleanup(ctx, results, filename, trigger, threshold, eyecandy, ignore_extra=False,
-        fix_missing=False, output=None, notebook=None,
-        configuration=None, version=None, verbose=False, debug=False,processes=None,
-        by_channel=False, integrity_filter=0.0, analog_idx=1):
+def cleanup(ctx, results, filename, trigger, threshold, eyecandy,
+        ignore_extra=False, fix_missing=False, output=None, notebook=None,
+        configuration=None, version=None, verbose=False, debug=False,
+        processes=None, by_channel=False, integrity_filter=0.0, analog_idx=1,
+        default_channel_map=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -394,8 +430,6 @@ def cover(units, stimulus_list, metadata, c_unit_fig, c_retina_fig):
     c_unit_fig(result)
     glia.close_figs([fig for the_id,fig in result])
 
-
-
 @analyze.command()
 @click.pass_context
 def all(ctx):
@@ -404,6 +438,32 @@ def all(ctx):
     ctx.forward(bar_cmd)
     ctx.forward(grating_cmd)
 
+@analyze.command("sta")
+@video_function
+def sta_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
+        frame_log, video_file):
+    binary_noise_frame_idx = video.get_binary_noise_frame_idx(stimulus_list,
+                                                        frame_log)
+    # # single unit
+    # row_to_id = {}
+    # for i,key in enumerate(units.keys()):
+    #     row_to_id[i] = key
+    #     # spikes = units[key].spike_train[units[key].spike_train<9]
+    # unit_id = row_to_id[37]
+    # print("unit_id", unit_id)
+    # spike_train = units[unit_id].spike_train
+    
+    # sta = video.calc_sta(spike_train,  binary_noise_frame_idx, frame_log,
+    #                    video_file)
+    # fig = video.plot_sta(sta)
+    plot_func = partial(video.sta_unit_plot_function,
+                        frame_indices=binary_noise_frame_idx,
+                        frame_log=frame_log,
+                        video_file=video_file,
+                        nsamples_before=25)
+    gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
+    glia.plot_units(plot_func, partial(c_unit_fig,"spatial_filter"), units, nplots=2, ncols = 1, GridSpec = gs)
+    
 
 @analyze.command("solid")
 @click.option("--prepend", "-p", type=float, default=1,
@@ -473,13 +533,26 @@ def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, qua
         convert.save_letters_npz(
             units, stimulus_list, filename, append,
             partial(glia.group_contains, "TILED_LETTER"))
+    elif name=='10faces':
+        # there's a bug in this program and a single WAIT is missing metadata
+        oldLen = len(stimulus_list)
+        stimulus_list = [s for s in stimulus_list if 'metadata' in s['stimulus']]
+        assert len(stimulus_list)+1 == oldLen # bug fix for 0.1.0 10faces
+        
+        print("Saving faces NPZ file.")
+        convert.save_images_npz(
+            units, stimulus_list, filename, append)
+    elif 'faces' in name:
+        print("Saving faces NPZ file.")
+        convert.save_images_npz(
+            units, stimulus_list, filename, append)
     elif name=='eyechart-saccade':
         print("Saving eyechart-saccade NPZ file.")
-        convert.save_image_npz(
+        convert.save_acuity_image_npz(
             units, stimulus_list, filename, append)
     elif name=='letters-saccade':
         print("Saving letters-saccade NPZ file.")
-        convert.save_image_npz(
+        convert.save_acuity_image_npz(
             units, stimulus_list, filename, append)
     elif name=='checkerboard':
         convert.save_checkerboard_npz(
@@ -556,6 +629,102 @@ def strip_generated(name, choices=generate_choices):
             return name[length+1:]
     return name
 
+
+@main.command("process")
+@click.argument('filename', type=str, default=None)
+@click.option("--notebook", "-n", type=click.Path(exists=True))
+@click.option("--verbose", "-v", is_flag=True)
+@click.option("--debug", "-vv", is_flag=True)
+def preprocess_cmd(filename, notebook, debug=False, verbose=False):
+    "Process analog + frames log to align stim/ephys in .frames file."
+
+    init_logging(filename, processes=None, verbose=verbose, debug=debug)
+    #### FILEPATHS
+    logger.debug(str(filename) + "   " + str(os.path.curdir))
+    if not os.path.isfile(filename):
+        try:
+            filename = glia.match_filename(filename,"txt")
+        except:
+            filename = glia.match_filename(filename,"bxr")
+    data_directory, data_name = os.path.split(filename)
+    name, extension = os.path.splitext(data_name)
+    analog_file = os.path.join(data_directory, name +'.analog')
+    if not os.path.isfile(analog_file):
+        # use 3brain analog file
+        analog_file = os.path.join(data_directory, name +'.analog.brw')
+
+    stimulus_file = os.path.join(data_directory, name + ".stim")
+    if not notebook:
+        notebook = glia.find_notebook(data_directory)
+    lab_notebook = glia.open_lab_notebook(notebook, convert_types=False)
+    experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
+    
+    date_prefix = (data_directory + experiment_protocol['date']).replace(':','_')
+    frame_log_file = date_prefix + "_eyecandy_frames.log"
+    video_file = date_prefix + "_eyecandy.mkv"
+
+    
+    container = av.open(str(video_file))
+    n_video_frames = 0
+    for _ in container.decode(video=0):
+        n_video_frames += 1
+    
+    stimulus_list = glia.read_stimulus(stimulus_file)
+    nstimuli_list = len(stimulus_list[1])
+    analog = glia.read_raw_voltage(analog_file)
+    sampling_rate = glia.sampling_rate(analog_file)
+    
+    analog_std = 0.5*analog[:,1].std() + analog[:,1].min()
+    # beginning of experiment
+    # TODO: after clustering, should subtract known / estimated latency for better frame time..?
+    # for maximum temporal accuracy, frame should begin at start of slope
+    approximate_start_idx = np.where(analog[:,1] > analog_std)[0][0]
+    baseline_offset = int(sampling_rate/10) # rise started before experiment_start_idx
+    # we add 3sigma of baseline to baseline.max() to create threshold for end of experiment
+    baseline_thresh = np.max(analog[:approximate_start_idx-baseline_offset,1]) \
+                    + np.std(analog[:approximate_start_idx-baseline_offset,1])*3
+    experiment_start_idx = np.where(analog[:,1] > baseline_thresh)[0][0]
+    
+    frame_log = pd.read_csv(frame_log_file)
+    
+    nframes_in_log = len(frame_log)
+    assert np.abs(n_video_frames - nframes_in_log) < 2
+    assert n_video_frames == nframes_in_log or n_video_frames + 1 == nframes_in_log 
+    # gross adjustment for start time
+    frame_log.time = (frame_log.time - frame_log.time[0])/1000 + experiment_start_idx/sampling_rate
+
+    # finer piecewise linear adjustments for each stimulus start frame
+    # I've seen this off by 50ms after a 4.4s bar stimulus!
+    newStimFrames = np.where(frame_log.stimulusIndex.diff())[0]
+    stim_start_diff = np.abs(frame_log.iloc[newStimFrames].time.diff()[1:] - np.diff(np.array(list(map(lambda s: s["start_time"], stimulus_list[1])))))
+    max_time_diff = stim_start_diff.max()
+    print("stimulus start sum_time_diff", max_time_diff)
+    print("stimulus start mean_time_diff", stim_start_diff.mean())
+    assert len(newStimFrames) == len(stimulus_list[1])
+    for n,stim in enumerate(stimulus_list[1]):
+        flickerTime = stim["start_time"]
+        frameNum = newStimFrames[n]
+        if n +1 < len(stimulus_list[1]):
+            nextFrameNum = newStimFrames[n+1]
+            # we adjust all frames in a stimulus
+            loc = (frame_log.framenum >= frameNum) & (frame_log.framenum < nextFrameNum)
+        else:
+            loc = (frame_log.framenum >= frameNum)
+        frame_log_time = frame_log.loc[frameNum].time
+        time_delta = flickerTime - frame_log_time
+        frame_log.loc[loc, 'time'] += time_delta
+
+    stim_start_diff = np.abs(frame_log.iloc[newStimFrames].time.diff()[1:] - np.diff(np.array(list(map(lambda s: s["start_time"], stimulus_list[1])))))
+    max_time_diff = stim_start_diff.max()
+    print("post alignment stimulus start sum_time_diff", max_time_diff)
+    assert max_time_diff < 0.001
+    # frame_log.head()
+    
+    name, _ = os.path.splitext(frame_log_file)
+    frame_log.to_csv(name + ".frames", index=False)
+    print(f"Saved to {name + '.frames'}")
+    
+
 @main.command("classify")
 @click.argument('filename', type=str, default=None)
 @click.option('--nsamples', "-n", type=int, default=0,
@@ -570,12 +739,15 @@ def strip_generated(name, choices=generate_choices):
 @click.option("--processes", "-p", type=int, help="Number of processors")
 @click.option('--skip', "-s", default=False, is_flag=True,
     help="Skip method assertion (for testing)")
-@click.option("--n_draws", "-d", type=int, help="Number of draws for Monte Carlo Cross-validation", default=30)
+@click.option("--n-draws", "-d", type=int, help="Number of draws for Monte Carlo Cross-validation", default=30)
+@click.option("--px-per-deg", "-p", type=float, default=10.453,
+              help="Measured pixels per degree")
 # @click.option("--eyechart", default=False, is_flag=True,
 #     help="")
 # @click.option("--letter", default=False, is_flag=True,
 #     help="Output npz for letter classification")
-def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False, version=2, processes=None, n_draws=30):
+def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
+                 version=2, processes=None, n_draws=30, px_per_deg=10.453):
     "Classify using converted NPZ"
 
     if not os.path.isfile(filename):
@@ -623,31 +795,56 @@ def classify_cmd(filename, nsamples, notebook, skip, debug=False, verbose=False,
     if re.match('checkerboard',name):
         svc.checkerboard_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples, n_draws)
+             nsamples, n_draws, px_per_deg=px_per_deg)
     elif re.match('grating-sinusoidal',name):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples, n_draws, sinusoid=True)
+             nsamples, n_draws, sinusoid=True, px_per_deg=px_per_deg)
     elif re.match('grating',name):
         svc.grating_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples, n_draws)
+            nsamples, n_draws, px_per_deg=px_per_deg)
+    elif 'faces' in name:
+        # dict with entries like '[37, False, True]': 0
+        class_resolver = data['class_resolver'].item()
+        nclasses = np.array(list(class_resolver.values())).max()+1
+        id_map = {i: i for i in np.arange(nclasses)}
+        num2gender = {}
+        num2smiling = {}
+        num2person = {}
+        for class_str, num in class_resolver.items():
+            temp = class_str[1:-1].split(", ")
+        #     print(temp)
+            image_class = [int(temp[0]), temp[1]=="True", temp[2]=="True"]
+            num2gender[num] = image_class[1]
+            num2smiling[num] = image_class[2]
+            num2person[num] = image_class[0]
+        target_mappers = [id_map, num2gender, num2person, num2smiling]
+        mapper_classes = [np.arange(nclasses),
+                         ["Female", "Male"],
+                         np.arange(20),
+                         ["Not smiling", "Smiling"]]
+        mapper_names = ["by_image", "is_male", "by_person",
+                        "is_smiling"]
+        svc.generic_image_classify(
+            data, metadata, stimulus_list, lab_notebook, plot_directory,
+             nsamples, target_mappers, mapper_classes, mapper_names)
     elif 'letters-tiled'==name:
         svc.tiled_letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     elif 'eyechart-saccade'==name:
         svc.image_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     elif 'letters-saccade'==name:
         svc.image_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     elif re.match('letter',name):
         svc.letter_svc(
             data, metadata, stimulus_list, lab_notebook, plot_directory,
-             nsamples)
+             nsamples, px_per_deg=px_per_deg)
     else:
         raise(ValueError(f"unknown name: {name}"))
     # elif eyechart:
@@ -710,4 +907,9 @@ def acuity_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
 generate.add_command(acuity_cmd)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(tb)

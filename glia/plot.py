@@ -52,12 +52,16 @@ def multiple_figures(nfigs, nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4,
 
     return (figures, axis_generators)
 
-def subplots(nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, transpose=False,subplot_kw=None):
+def subplots(nplots, ncols=4, nrows=None, ax_xsize=4, ax_ysize=4, transpose=False,subplot_kw=None, GridSpec=None):
+    """For GridSpec, must """
     if not nrows:
         nrows = int(np.ceil(nplots/ncols))
-
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
-    axis = axis_generator(ax,transpose=transpose)
+    if GridSpec:
+        fig, ax = plt.figure()
+        axis = axis_generator(np.array([fig.add_subplot(s) for s in GridSpec]))
+    else:
+        fig, ax = plt.subplots(nrows, ncols, figsize=(ncols*ax_xsize,nrows*ax_ysize), subplot_kw=subplot_kw)
+        axis = axis_generator(ax,transpose=transpose)
 
     return fig, axis
 
@@ -347,9 +351,11 @@ def plot_from_generator(plot_function, data_generator, nplots, ncols=4, ax_xsize
 
 
 def plot(plot_function, data, nplots=1, ncols=1, nrows=None, ax_xsize=4,
-            ax_ysize=4, figure_title=None, transpose=False, subplot_kw=None):
-    fig, axes = subplots(nplots, ncols=ncols, nrows=nrows, ax_xsize=ax_xsize, ax_ysize=ax_ysize,
-                        transpose=transpose, subplot_kw=subplot_kw)
+            ax_ysize=4, figure_title=None, transpose=False, subplot_kw=None, GridSpec=None):
+    fig, axes = subplots(nplots, ncols=ncols, nrows=nrows,
+                         ax_xsize=ax_xsize, ax_ysize=ax_ysize,
+                        transpose=transpose, subplot_kw=subplot_kw,
+                        GridSpec=GridSpec)
     try:
         plot_function(fig, axes, data)
     except Exception as e:

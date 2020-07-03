@@ -11,6 +11,7 @@ import csv
 from .types import Unit
 from .io.mdaio import readmda
 from tqdm import tqdm
+from glia.config import logger
 
 file = str
 Dir = str
@@ -194,7 +195,8 @@ def merge_units(a,b):
     retina_id = a.retina_id
     assert retina_id == b.retina_id
     spike_train = merge_spike_trains(a.spike_train,b.spike_train)
-    new = Unit(retina_id, channel, "all", spike_train)
+    # we use unit_num of 0 since other code may use this for indexing
+    new = Unit(retina_id, channel, 0, spike_train)
     return new
 
 def merge_spike_trains(a,b):
