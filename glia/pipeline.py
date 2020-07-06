@@ -392,10 +392,12 @@ def get_unit(units, n=0):
         if i==n:
             return v
 
+def filter_label(l, label="integrity"):
+    return list(filter(lambda x: "label" in x["stimulus"]["metadata"] and \
+        x["stimulus"]["metadata"]["label"]==label, l))
 
 def filter_integrity(l):
-    return list(filter(lambda x: "label" in x["stimulus"]["metadata"] and \
-        x["stimulus"]["metadata"]["label"]=="integrity", l))
+    return filter_label(l, label="integrity")
 
 
 def by_speed_width_then_angle(unit):
