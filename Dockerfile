@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.3.14
+FROM continuumio/miniconda3:4.8.2
 
 ENV PYTHONUNBUFFERED 0
 
