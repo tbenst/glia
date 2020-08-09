@@ -19,5 +19,5 @@ RUN pip install -r /tmp/requirements.txt
 
 ADD . /src
 WORKDIR /src
-RUN python setup.py install
+RUN python setup.py develop
 ENTRYPOINT ["glia"]

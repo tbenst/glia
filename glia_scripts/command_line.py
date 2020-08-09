@@ -542,7 +542,7 @@ def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, qua
         print("Saving faces NPZ file.")
         convert.save_images_npz(
             units, stimulus_list, filename, append)
-    elif 'faces' in name:
+    elif ('faces' in name) or ('ffhq' in name):
         print("Saving faces NPZ file.")
         convert.save_images_npz(
             units, stimulus_list, filename, append)
