@@ -327,7 +327,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         lab_notebook_notype = glia.open_lab_notebook(notebook, convert_types=False)
         protocol_notype = glia.get_experiment_protocol(lab_notebook_notype,
                                                                   name)
-        date_prefix = (data_directory + protocol_notype['date']).replace(':','_')
+        date_prefix = os.path.join(data_directory,
+            protocol_notype['date'].replace(':','_'))
         frames_file = date_prefix + "_eyecandy_frames.log"
         video_file = date_prefix + "_eyecandy.mkv"
         frame_log = pd.read_csv(frames_file)
