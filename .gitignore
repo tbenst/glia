@@ -65,3 +65,4 @@ boilerplate/
 
 .mypy_cache/
 .vscode/
+.ipynb_checkpoints/

@@ -160,7 +160,8 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
         for channel, spike_time in spikes:
             c = channel_map[channel]
             # convert to tuple
-            c = (c[0],c[1])
+            # account for 1-indexing
+            c = (c[0]-1,c[1]-1)
             t = spike_time / sampling_rate
 
             # hardcoded 0 as no spike sorting

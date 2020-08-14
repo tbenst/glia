@@ -162,7 +162,6 @@ def experiments_to_ndarrays(experiments,
             logger.info(f"duration: {duration} != {l['lifespan']}, for {l}" )
             raise
     d = int(np.ceil(duration*1000)) # 1ms bins
-    # TODO hardcoded 64 channel x 10 unit
     shape = (nE,d,Unit.nrow,Unit.ncol,Unit.nunit)
     data = np.full(shape, 0, dtype=np.uint8)
 

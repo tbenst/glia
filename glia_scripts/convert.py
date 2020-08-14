@@ -436,7 +436,7 @@ def save_images_npz(units, stimulus_list, name, append):
     """Assumes each group is three stimuli with image in second position.
     
     Concatenate second stimuli with first 0.5s of third stimuli"""
-
+    
     get_image_responses = glia.compose(
         # returns a list
         partial(glia.create_experiments,
