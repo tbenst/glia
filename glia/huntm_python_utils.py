@@ -308,7 +308,7 @@ def normalize_cell_firing(ifr):
     return subcluster_dict
 """
 
-def recursive_clustering(ifr_segment_list,chopped_plt_list,nested_cluster_dict,subcluster_dict=None):
+def recursive_clustering(ifr_segment_list,chopped_plt_list,original_positions,nested_cluster_dict,subcluster_dict=None):
     """The one fn to rule them all. Take in the big ifr_segment_list and nested cluster dicts and does
     clustering and further subclustering.
     nested_cluster_dict: {'level':1,'parent_cluster':None,...rest_of_dictionary...
@@ -317,45 +317,60 @@ def recursive_clustering(ifr_segment_list,chopped_plt_list,nested_cluster_dict,s
                                         'subclusters':{cluster#:{'ifr':[...},cluster#:...}},
                             cluster#:{}}
 
+    original_positions is just a vector like np.arange(ifr_segment_list[0].shape[0])
 
     Note: I may need to return the labels as well somehow.
     """
     cluster_dict = nested_cluster_dict
     labels_list = cluster_pipeline_chopped(ifr_segment_list,chopped_plt_list,cluster_dict)
-    if len(cluster_dict['segments_to_cluster'])<6: #less than full stim
-        print(f"plotting full cluster traces, even tho we clustered on only {len(cluster_dict['segments_to_cluster'])} of 6.")
-        traces_dict = {'overlap_stim_on_plot':True, 'plot_unclustered':True,}
-        plot_cluster_traces_nopd(labels_list[0],np.concatenate(ifr_segment_list,axis=1),chopped_plt_list,traces_dict)
+    if cluster_dict.get('plot_full_traces',False):
+        if len(cluster_dict['segments_to_cluster'])<6: #less than full stim
+            print(f"plotting full cluster traces, even tho we clustered on only {len(cluster_dict['segments_to_cluster'])} of 6.")
+            traces_dict = {'overlap_stim_on_plot':True,'plot_unclustered':True,'global_palette':cluster_dict.get('global_palette')}
+            plot_cluster_traces_nopd(labels_list[0],np.concatenate(ifr_segment_list,axis=1),chopped_plt_list,traces_dict)
+
+    if cluster_dict.get('global_palette'):
+        shorten_palette(cluster_dict,labels_list)
 
     labels_array = labels_list[0]
     kappa = cluster_dict['kappas_mat']
-    subcluster_dict = make_subcluster_dict(ifr_segment_list,labels_array,kappa)
+    subcluster_dict = make_subcluster_dict(ifr_segment_list,labels_array,original_positions,kappa)
     if 'clusters_to_split' in cluster_dict: #Recurse
         clusters_to_split = cluster_dict['clusters_to_split']# this is how the recursive structrue takes place
         for cluster_of_interest in clusters_to_split:
             print(f"Plotting cluster_{cluster_of_interest}")
             ifr_subsegs = subcluster_dict[cluster_of_interest]['ifr']
             kps = subcluster_dict[cluster_of_interest]['kappas']
+            original_positions = subcluster_dict[cluster_of_interest]['original_positions']
+            global_palette = cluster_dict.get('global_palette')
             cluster_dict = nested_cluster_dict['subcluster_dicts'][f"cluster_{cluster_of_interest}"]
+            cluster_dict.update({'global_palette':global_palette})
             if cluster_dict['kappas_mat'] is not None:
                 cluster_dict['kappas_mat'] = kps
-            scd = recursive_clustering(ifr_subsegs,chopped_plt_list,cluster_dict)
+            scd = recursive_clustering(ifr_subsegs,chopped_plt_list,original_positions,cluster_dict)
             subcluster_dict[cluster_of_interest]['subclusters']=scd
     return subcluster_dict
 
-def make_subcluster_dict(ifr_segment_list,labels,kappas = None):
-    """uses the labels to return a dict: label_# --> list_of_segments from corresponding label"""
+def shorten_palette(cluster_dict,labels_list):
+    for i in range(np.amax(labels_list)+2):
+        popped = cluster_dict['global_palette'].pop(0)
+        print(f"popped {popped} from the palette")
+
+def make_subcluster_dict(ifr_segment_list,labels,original_positions,kappas = None):
+    """uses the labels to return a dict: label_# --> list_of_segments from corresponding label
+    original_positions is a vector giving each cell's position in the original ifr matrix."""
     subcluster_dict = {}
     nclust = max(labels)
     for c in range(-1,nclust+1):
         # We are also including -1 unclustered.
-        subcluster_dict[c] = {'ifr':[]}
+        subcluster_dict[c] = {'ifr':[],'original_positions':original_positions[labels == c]}
         for ifr_segment in ifr_segment_list:
             subcluster_dict[c]['ifr'].append(ifr_segment[labels == c,:])
             if kappas is not None:
                 subcluster_dict[c]['kappas'] = kappas[labels==c]
             else:
                 subcluster_dict[c]['kappas'] = None
+
     return subcluster_dict
 
 
@@ -383,6 +398,53 @@ def examine_subcluster_dict(subcluster_dict,level=0,parent=None,return_cluster=N
             print(f"For cluster {k}, we have subclusters...")
             cluster_to_return = examine_subcluster_dict(subcluster_dict[k]['subclusters'],level=level+1,parent=cluster_str,return_cluster = return_cluster)
     return cluster_to_return
+
+def assign_subcluster_labels(scd,sc_labels_out,parent = None):
+    """recurse thru the subcluster dict and make a subcluster_labels_list which is the shape of our original
+    ifr, and has the subcluster label at each position. The subcluster label is somthing like 4.0.2 for
+    cluster 4, subcluster 0, subcluster 2"""
+    for k,v in scd.items():
+        if parent is None:
+            cluster_str = str(k)
+        else:
+            cluster_str = f"{parent}.{k}"
+        if 'subclusters' in v:
+            assign_subcluster_labels(v['subclusters'],sc_labels_out,parent=cluster_str)
+        else:
+            print(cluster_str)
+            original_positions = v['original_positions']
+            for i in original_positions:
+                sc_labels_out[i] = cluster_str
+
+
+def plot_subcluster_labels_on_original(subcluster_dict,original_dim_reduction,marker_dict={}):
+    """we plot our subcluster labels onto our dimensionality-reduced plot. If the dim reduction is umap, then
+    its type will be string and we'll use a saved and loaded reduction, so we don't make mistakes trying to
+    remake it"""
+    if type(original_dim_reduction) == str:
+        print(f"loading the last embeddings from {original_dim_reduction}")
+        embedding_dict = pickle.load(open(original_dim_reduction,'rb'))
+        lowdim_data = embedding_dict['lowdim_data']
+
+    original_ifr_length = sum([v['original_positions'].shape[0] for v in subcluster_dict.values()])
+    sc_labels_out = ['Fill' for x in range(original_ifr_length)]
+
+    assign_subcluster_labels(subcluster_dict,sc_labels_out,parent = None)
+    cluster_set = sorted(set(sc_labels_out))
+    palette = sns.color_palette("muted", len(cluster_set))
+    print(len(palette))
+
+    plt.figure(figsize=(20,20))
+    for klass, color in zip(cluster_set, palette):
+        Xk = np.array([lowdim_data[i] for i in range(len(sc_labels_out)) if sc_labels_out[i] == klass])
+        plt.scatter(Xk[:, 0], Xk[:, 1], color=color, label=klass, marker=marker_dict.get(klass,'.'), alpha=0.8)
+    plt.legend()
+    plt.show()
+#     plt.plot(X[labels_1 == -1, pc_plot[0]], X[labels_1 == -1, pc_plot[1]], 'k+', alpha=0.1)
+#     plt.set_title(f'Clustering at {ep} epsilon cut\nDBSCAN')
+#     plt.set_xlabel(f"PC {pc_plot[0]}")
+#     plt.set_ylabel(f"PC {pc_plot[1]}")
+
 
 
 
@@ -520,6 +582,7 @@ def cluster_and_plot_traces(ifr_segment,cluster_dict,plist):
 
     # The following saves a bunch of time by caching the optics results. Note that we automatically overwrite
     # if there has been a change in  the cluster_dict or the umap dict inside of the cluster_dict
+    """TO DO: Extract this to a load_state() function"""
     def compare_optics_dict(cluster_dict,loaded_dict,excluded_keys):
         cd = {k:v for k,v in cluster_dict.items() if k not in excluded_keys}
         ld = {k:v for k,v in loaded_dict.items() if k not in excluded_keys}
@@ -528,7 +591,7 @@ def cluster_and_plot_traces(ifr_segment,cluster_dict,plist):
     if cluster_dict.get('save_load_optics',False) and cluster_dict.get('overwrite_optics',False)==False and path.exists(cluster_dict['save_load_optics']):
         print(f"Loading optics clustering results from {cluster_dict['save_load_optics']}")
         optics_dict = pickle.load(open(cluster_dict['save_load_optics'],'rb'))
-        if compare_optics_dict(cluster_dict,optics_dict['cluster_dict'],excluded_keys = ['eps','overlap_stim_on_plot','plot_unclustered','plot_optics','pc_plot']):
+        if compare_optics_dict(cluster_dict,optics_dict['cluster_dict'],excluded_keys = ['global_palette','suppress_plots','clusters_to_split','subcluster_dicts','eps','overlap_stim_on_plot','plot_unclustered','plot_optics','pc_plot']):
             make_new_optics = False
             optics = optics_dict['data']
         else:
@@ -547,12 +610,13 @@ def cluster_and_plot_traces(ifr_segment,cluster_dict,plist):
     labels = optics.labels_
     nclust = max(labels)+1
     labels_list = plot_clusters_and_reachability(lowdim_data,optics,nclust,cluster_dict)
-    if 'plot_optics' in cluster_dict:
-        if cluster_dict['plot_optics']==True:
-            plot_cluster_traces_nopd(labels,ifr_segment,plist,cluster_dict)
-    if labels_list != []:
-        for i in range(len(labels_list)):
-            plot_cluster_traces_nopd(labels_list[i],ifr_segment,plist,cluster_dict)
+    if not cluster_dict.get('suppress_plots',False):
+        if 'plot_optics' in cluster_dict:
+            if cluster_dict['plot_optics']==True:
+                plot_cluster_traces_nopd(labels,ifr_segment,plist,cluster_dict)
+        if labels_list != []:
+            for i in range(len(labels_list)):
+                plot_cluster_traces_nopd(labels_list[i],ifr_segment,plist,cluster_dict)
     return labels_list, nclust
 
 def plot_clusters_and_reachability(lowdim_data,optics,nclust,cluster_dict):
@@ -564,7 +628,10 @@ def plot_clusters_and_reachability(lowdim_data,optics,nclust,cluster_dict):
 #             eps1=cluster_dict['eps'][0]
 #         eps2=cluster_dict['eps'][1]
     pc_plot = [0,1]
-    palette = sns.color_palette("colorblind", nclust)
+    if cluster_dict.get('global_palette') is None:
+        palette = sns.color_palette("colorblind", nclust)
+    else:
+        palette = cluster_dict['global_palette']
     fig = plt.figure(figsize=(15, 10))
     G = gridspec.GridSpec(2, 3)
     ax1 = plt.subplot(G[0, :])
@@ -615,11 +682,11 @@ def plot_clusters_and_reachability(lowdim_data,optics,nclust,cluster_dict):
             # DBSCAN at eps1
             for klass, color in zip(range(0, max(labels_1)+1), palette):
                 Xk = X[labels_1 == klass]
-                ax3.plot(Xk[:, -2], Xk[:, -1], color=color, linestyle='None', marker='.', alpha=0.3)
-            ax3.plot(X[labels_1 == -1, -2], X[labels_1 == -1, -1], 'k+', alpha=0.1)
+                ax3.plot(Xk[:, pc_plot[0]], Xk[:, pc_plot[1]], color=color, linestyle='None', marker='.', alpha=0.3)
+            ax3.plot(X[labels_1 == -1, pc_plot[0]], X[labels_1 == -1, pc_plot[1]], 'k+', alpha=0.1)
             ax3.set_title(f'Clustering at {ep} epsilon cut\nDBSCAN')
-            ax3.set_xlabel("PC 1")
-            ax3.set_ylabel("PC 2")
+            ax3.set_xlabel(f"PC {pc_plot[0]}")
+            ax3.set_ylabel(f"PC {pc_plot[1]}")
 #             # DBSCAN at eps2.
 #             for klass, color in zip(range(0, max(labels_2)+1), palette):
 #                 Xk = X[labels_2 == klass]
@@ -696,42 +763,54 @@ def plot_cluster_traces_nopd(labels,ifr_segment,plist,cluster_dict):
     x = []
     x_plot = [t for seg_times in stim_x for t in seg_times]
 
-    palette = sns.color_palette("colorblind", nclust+1)
+    if cluster_dict.get('global_palette') is None:
+        palette = sns.color_palette("colorblind", nclust+1)
+    else:
+        palette = cluster_dict['global_palette']
+
     for c in range(-1,nclust):
         if c > -1:
             cells_to_plot = ifr_segment[labels==c,:]
+#             plot_trace(ax,cells_to_plot,palette,c,y_min,stim_x,stim_y,cluster_dict)
             mean = np.mean(cells_to_plot,axis =0)
             std = np.std(cells_to_plot,axis=0)
             ax[c+1].plot(x_plot,mean,color=palette[c])
             ax[c+1].fill_between(x_plot,mean-std,mean+std,alpha = 0.5,color=palette[c])
             ax[c+1].set_ylim(bottom=y_min,top=None)
             ax[c+1].set_title(f"Cluster {c}: {cells_to_plot.shape[0]} cells")
-            if overlap: #if we want to overlap, we can plot the max(mean)*stim height
+            if cluster_dict.get('overlap_stim_on_plot'): #if we want to overlap, we can plot the max(mean)*stim height
                 for i in range(len(stim_x)):
                     ax[c+1].plot(stim_x[i],stim_y[i]*np.amax(mean),color=color[i],alpha=0.2)
     if cluster_dict['plot_unclustered']==True:
         cells_to_plot = ifr_segment[labels==-1,:]
+        if cluster_dict.get('global_palette') is None:
+            trace_color = palette[-1]
+        else:
+            trace_color = palette[nclust]
         mean = np.mean(cells_to_plot,axis =0)
         std = np.std(cells_to_plot,axis=0)
-        ax[-1].plot(x_plot,mean,color=palette[-1])
-        ax[-1].fill_between(x_plot,mean-std,mean+std,alpha = 0.5,color=palette[-1])
+        ax[-1].plot(x_plot,mean,color=trace_color)
+        ax[-1].fill_between(x_plot,mean-std,mean+std,alpha = 0.5,color=trace_color)
         ax[-1].set_ylim(bottom=y_min,top=None)
         ax[-1].set_title(f"Unclustered cells: {cells_to_plot.shape[0]} cells")
-        if overlap: #if we want to overlap, we can plot the max(mean)*stim height
+        if cluster_dict.get('overlap_stim_on_plot'): #if we want to overlap, we can plot the max(mean)*stim height
             for i in range(len(stim_x)):
                 ax[-1].plot(stim_x[i],stim_y[i]*np.amax(mean),color=color[i],alpha=0.2)
     fig.tight_layout(pad=2)
     plt.show()
 
-#     for c in range(-1,nclust):
-#         ncell = np.sum(labels==c)
-#         ncells.append(ncell)
-#         cells.append(np.concatenate([
-#             np.full([ncell,1],c), # cluster
-#             ifr_segment[labels==c] # firing rate
-#             ],1)
-#             )
-# # 
+
+def plot_trace(ax,cells_to_plot,palette,c,y_min,stim_x,stim_y,cluster_dict):
+    mean = np.mean(cells_to_plot,axis =0)
+    std = np.std(cells_to_plot,axis=0)
+    ax[c+1].plot(x_plot,mean,color=palette[c])
+    ax[c+1].fill_between(x_plot,mean-std,mean+std,alpha = 0.5,color=palette[c])
+    ax[c+1].set_ylim(bottom=y_min,top=None)
+    ax[c+1].set_title(f"Cluster {c}: {cells_to_plot.shape[0]} cells")
+    if cluster_dict.get('overlap_stim_on_plot'): #if we want to overlap, we can plot the max(mean)*stim height
+        for i in range(len(stim_x)):
+            ax[c+1].plot(stim_x[i],stim_y[i]*np.amax(mean),color=color[i],alpha=0.2)
+
 # 
  
 """The following are just abstracted functions from the jupyter notebook"""
