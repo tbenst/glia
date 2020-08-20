@@ -470,3 +470,36 @@ def _lines_with_float(path: file):
             except:
                 next
     return
+
+def print_h5py_attrs(name, obj):
+    shift = name.count('/') * '    '
+    print(shift + name)
+    for key, val in obj.attrs.items():
+        print(shift + '    ' + f"{key}: {val}")
+
+def describe_h5py(h5):
+    h5.visititems(print_h5py_attrs)
+
+
+# These may vary from recording to recording so skip...
+to_skip = [ "3BRecInfo/3BRecVars/NRecFrames"
+        , "3BData/Raw"
+        , "3BData/3BInfo/3BNoise/StdMean"
+        , "3BData/3BInfo/3BNoise/ValidChs"
+        , "3BRecInfo/3BMeaStreams/Spikes/Params"
+        , "3BUserInfo/ChsGroups"
+        , "3BUserInfo/ExpMarkers"
+        , "3BUserInfo/ExpNotes"
+        , "3BUserInfo/MeaLayersInfo"
+        , "3BUserInfo/TimeIntervals"
+        ]
+def copy_metadata(name, obj, copy_to, to_skip=to_skip):
+    "copy {name: obj} to copy_to"
+    if name in to_skip:
+        pass
+    else:
+        if type(obj) is h5py._hl.group.Group:
+            copy_to.require_group(name)
+        else:
+            if obj.shape[0] > 0:
+                copy_to[name] = obj[()]

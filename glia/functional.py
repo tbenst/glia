@@ -34,10 +34,6 @@ StimulusType = str
 SpikeTrains = List[SpikeTrain]
 Analytics = Dict[str,Any]
 
-# use global to avoid using excess memory
-THREADPOOL = ThreadPool(processes)
-POOL = Pool(processes)
-
 def compose(*functions):
     return functools.reduce(lambda f, g: lambda x: g(f(x)), functions)
 
@@ -52,9 +48,9 @@ def pmap(function, data, progress=False, length=None, thread=False):
     Use progress for interactive sessions."""
 
     if thread:
-        pool = THREADPOOL
+        pool = ThreadPool(processes)
     else:
-        pool = POOL
+        pool = Pool(processes)
     if progress and length is None:
         length = len(data)
 

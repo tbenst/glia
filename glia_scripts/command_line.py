@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+#%%
 import matplotlib
 matplotlib.use("agg")
 matplotlib.rcParams['figure.max_open_warning'] = 250
@@ -13,7 +13,7 @@ import os, av, pandas as pd
 from functools import reduce
 from pathlib import Path
 import sys
-import re
+import re, h5py
 import glia_scripts.solid as solid
 import glia_scripts.bar as bar
 import glia_scripts.acuity as acuity
@@ -30,7 +30,7 @@ from functools import update_wrapper, partial
 from matplotlib import animation, cm, gridspec
 # from tests.conftest import display_top, tracemalloc
 
-
+from tqdm import tqdm
 from glob import glob
 from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
@@ -39,7 +39,7 @@ import numpy as np
 import yaml
 import cProfile
 
-
+#%%
 def plot_function(f):
     @click.pass_context
     def new_func(ctx, *args, **kwargs):
@@ -906,6 +906,76 @@ def acuity_cmd(units, stimulus_list, metadata, c_unit_fig, c_retina_fig,
             prepend, append)
 
 generate.add_command(acuity_cmd)
+
+#%%
+@main.command()
+@click.argument('files', type=str, nargs=-1)
+@click.argument('output', type=str, nargs=1)
+def combine(files, output):
+    """Combine multiple .brw files into a single .brw file.
+
+    Useful to spike sort multiple recordings as if continuous.
+    """
+    # read all files
+    bxrs = [h5py.File(f,'r') for f in files]
+    # some paths we might care about & will copy
+    metadata_paths = [
+        '3BRecInfo/3BRecVars/MaxVolt',
+        '3BRecInfo/3BRecVars/MinVolt',
+        '3BRecInfo/3BRecVars/BitDepth',
+        '3BRecInfo/3BRecVars/SignalInversion',
+        '3BRecInfo/3BRecVars/SamplingRate',
+        '3BRecInfo/3BRecVars/ExperimentType',
+        '3BRecInfo/3BMeaChip/NRows',
+        '3BRecInfo/3BMeaChip/NCols',
+        '3BRecInfo/3BMeaChip/Layout',
+        '3BRecInfo/3BMeaChip/MeaType',
+        '3BRecInfo/3BMeaSystem/FwVersion',
+        '3BRecInfo/3BMeaSystem/HwVersion',
+        '3BRecInfo/3BMeaSystem/System'
+    ]
+
+    # count n_frames, n_samples from each file
+    # also verify that key metadata matches
+    n_frames = bxrs[0]['3BRecInfo/3BRecVars/NRecFrames'][0]
+    n_samples = [bxrs[0]['3BData/Raw'].shape[0]]
+    sampling_rate = bxrs[0]['3BRecInfo/3BRecVars/SamplingRate'][0]
+    print("checking that all brw files have matching metadata")
+    for b in bxrs[1:]:
+        for m in metadata_paths:
+            assert bxrs[0][m] == b[m]
+        n_frames += b['3BRecInfo/3BRecVars/NRecFrames'][0]
+        n_samples.append(b["3BData/Raw"].shape[0])
+    print(f"combined duration: {n_frames/sampling_rate/60:.2f} minutes")
+
+    out_bxr = h5py.File(output, "w")
+    # copy metadata
+    bxrs[0].visititems(partial(glia.copy_metadata, copy_to=out_bxr))
+
+    # copy data
+    out_bxr['3BRecInfo/3BRecVars/NRecFrames'] = [n_frames]
+    out_bxr['nSamplesPerRecording'] = n_samples
+    tot_samples = sum(n_samples)
+    assert np.isclose(tot_samples/n_frames, 4096) #4096 channels
+    
+    # copy raw data
+    raw_dtype = bxrs[0]["3BData/Raw"].dtype
+    dset = out_bxr.create_dataset("3BData/Raw", (tot_samples,),
+        dtype=raw_dtype)
+    start_sample = 0
+    max_chunk = int(1e8) # <1GiB 
+    for i, b in enumerate(bxrs):
+        print(f"Copying {files[i]}")
+        end_sample = start_sample+n_samples[i]
+        for s in tqdm(range(0,n_samples[i],max_chunk)):
+            e = min(s+max_chunk, end_sample)
+            dset[start_sample+s:start_sample+e] = b["3BData/Raw"][s:e]
+        start_sample = end_sample
+
+    # cleanup
+    out_bxr.close()
+    [b.close() for b in bxrs]
+
 
 if __name__ == '__main__':
     try:
