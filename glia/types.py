@@ -40,6 +40,7 @@ class Retina:
 # use md5 as key to retrieve unit_name
 
 class Unit:
+    "assumes that the number of units equals max(unit_number)+1"
 
     # store humanized names as value with unit_id as key
     lookup = {}

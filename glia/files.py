@@ -149,15 +149,30 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
     with h5py.File(filepath, 'r') as h5_3brain_spikes:
         # read into memory by using [()]
         spike_channel_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeChIDs"][()]
+        spike_unit_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeUnits"][()]
         spike_times = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeTimes"][()]
-        spikes = zip(spike_channel_ids, spike_times)
+        spikes = zip(spike_channel_ids, spike_unit_ids, spike_times)
 
         if channel_map is None:
             channel_map = h5_3brain_spikes["3BRecInfo"]["3BMeaStreams"]["Raw"]["Chs"][()]
 
         sampling_rate = float(h5_3brain_spikes["3BRecInfo"]["3BRecVars"]["SamplingRate"][0])
 
-        for channel, spike_time in spikes:
+        # map 3brain unit num
+        # numbers typically from -4 to 9000
+        # where negative numbers appear across multiple channels
+        # and thus are presumably bad units...?
+        # positive-numbered units appear on one channel
+        unit_num = {}
+
+        n_unit_nums = 0
+        for chunk in iter_chunks(result_h5['3BResults/3BChEvents/SpikeUnits'], 10000):
+            n_unit_nums = max(the_max, chunk.max())
+        
+        unit_map = {}
+        #TODO map absolute unit number to relative unit number
+        # read in spikes
+        for channel, unit_id, spike_time in spikes:
             c = channel_map[channel]
             # convert to tuple
             # account for 1-indexing
@@ -244,6 +259,14 @@ def sampling_rate(filename: file) -> (int):
 
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
+
+def iter_chunks(array, max_chunk):
+    "Iterate chunks on first dim of arrary."
+    start_idx = 0
+    end_idx = array.shape[0]
+    for s in tqdm(range(0,end_idx,max_chunk)):
+        e = min(s+max_chunk, end_idx)
+        yield array[s:e]
 
 
 def read_spyking_results(filepath: str, retina_id, sampling_rate: int) -> (
@@ -473,9 +496,19 @@ def _lines_with_float(path: file):
 
 def print_h5py_attrs(name, obj):
     shift = name.count('/') * '    '
-    print(shift + name)
+    if type(obj)==h5py._hl.dataset.Dataset:
+        prefix = "o "
+        postfix = ": " + str(obj)
+    elif type(obj)==h5py._hl.group.Group:
+        prefix = "- "
+        postfix = ""
+    print(shift + prefix + name + postfix)
     for key, val in obj.attrs.items():
-        print(shift + '    ' + f"{key}: {val}")
+        print(shift + '    ' + f"{key}: {val}", end="")
+        if type(val)==h5py._hl.dataset.Dataset:
+            print(val)
+        else:
+            print("")
 
 def describe_h5py(h5):
     h5.visititems(print_h5py_attrs)
