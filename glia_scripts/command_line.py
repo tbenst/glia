@@ -909,7 +909,7 @@ generate.add_command(acuity_cmd)
 
 #%%
 @main.command()
-@click.argument('files', type=str, nargs=-1)
+@click.argument('files', type=click.Path(exists=True), nargs=-1)
 @click.argument('output', type=str, nargs=1)
 def combine(files, output):
     """Combine multiple .brw files into a single .brw file.
