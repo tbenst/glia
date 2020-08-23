@@ -1,5 +1,5 @@
 import numpy as np
-import re
+import re, av
 from typing import List, Dict
 # import pytest
 from glob import glob
@@ -139,10 +139,12 @@ def read_3brain_analog(analog_file):
         analog = np.array(file["3BData"]["Raw"])
     return analog
 
-def read_3brain_spikes(filepath, retina_id, channel_map=None):
+def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False):
     """Read spikes detected by 3brain in a .bxr file.
 
-    If channel_map is None, read from file, else use arg."""
+    If channel_map is None, read from file, else use arg. Units will
+    be sorted by order of first spike. For easy debugging, only read in a subset
+    of spikes by setting truncate=True."""
     unit_dictionary = {}
     assert os.path.splitext(filepath)[1]==".bxr"
 
@@ -151,6 +153,7 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
         spike_channel_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeChIDs"][()]
         spike_unit_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeUnits"][()]
         spike_times = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeTimes"][()]
+        tot_spikes = spike_times.shape[0]
         spikes = zip(spike_channel_ids, spike_unit_ids, spike_times)
 
         if channel_map is None:
@@ -163,32 +166,61 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None):
         # where negative numbers appear across multiple channels
         # and thus are presumably bad units...?
         # positive-numbered units appear on one channel
-        unit_num = {}
+        unit_id_2_num = {}
 
         n_unit_nums = 0
-        for chunk in iter_chunks(result_h5['3BResults/3BChEvents/SpikeUnits'], 10000):
-            n_unit_nums = max(the_max, chunk.max())
+        for chunk in iter_chunks(h5_3brain_spikes['3BResults/3BChEvents/SpikeUnits'], 10000):
+            n_unit_nums = max(n_unit_nums, chunk.max())
         
         unit_map = {}
+        channel_unit_count = {}
         #TODO map absolute unit number to relative unit number
         # read in spikes
-        for channel, unit_id, spike_time in spikes:
+        print("assign each spike to a channel & unit")
+        # for rapid debugging, cap number of spikes read
+        nnn = 0
+        if truncate:
+            logger.warn("PARTIAL READ OF SPIKES DEBUG!!!!")
+        for channel, unit_id, spike_time in tqdm(spikes, total=tot_spikes):
+            nnn+=1
+            if truncate and nnn>1000000:
+                break
             c = channel_map[channel]
             # convert to tuple
             # account for 1-indexing
             c = (c[0]-1,c[1]-1)
-            t = spike_time / sampling_rate
 
-            # hardcoded 0 as no spike sorting
-            unit_num = 0
+            # count num units on channel
+            # first check if we've seen this channel before
+            if not c in channel_unit_count:
+                # if not, initialize channel_unit_count for the channel
+                channel_unit_count[c] = 1
+                unit_num = 0
+                # add unit
+                unit_id_2_num[unit_id] = unit_num
+            else:
+                
+                # then check if we've seen this unit before
+                if not unit_id in unit_id_2_num:
+                    # if not, assign unit_num for this new unit
+                    unit_num = channel_unit_count[c]
+                    unit_id_2_num[unit_id] = unit_num
+                    channel_unit_count[c] += 1
+                else:
+                    # otherwise, look it up
+                    unit_num = unit_id_2_num[unit_id]
+
+            t = spike_time / sampling_rate
+            # next, we add unit to our dictionary if not already there
             if (c, unit_num) not in unit_dictionary:
                 # initialize key for both dictionaries
                 unit = Unit(retina_id, c, unit_num)
                 unit_dictionary[(c, unit_num)] = unit
-
+            # finally, we add the spike
             unit_dictionary[(c, unit_num)].spike_train.append(t)
 
-
+ 
+    # convert each list to numpy array
     for uid in unit_dictionary.keys():
         # unit_dictionary[uid] = unit_dictionary[uid]
         unit_dictionary[uid].spike_train = np.array(unit_dictionary[uid].spike_train)
@@ -260,11 +292,13 @@ def sampling_rate(filename: file) -> (int):
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
 
-def iter_chunks(array, max_chunk):
+def iter_chunks(array, max_chunk, verbose=False):
     "Iterate chunks on first dim of arrary."
-    start_idx = 0
     end_idx = array.shape[0]
-    for s in tqdm(range(0,end_idx,max_chunk)):
+    gen = range(0,end_idx,max_chunk)
+    if verbose:
+        gen = tqdm(gen)
+    for s in gen:
         e = min(s+max_chunk, end_idx)
         yield array[s:e]
 
@@ -536,3 +570,47 @@ def copy_metadata(name, obj, copy_to, to_skip=to_skip):
         else:
             if obj.shape[0] > 0:
                 copy_to[name] = obj[()]
+
+def get_images_from_vid(stimulus_list, frame_log, video_file):
+    # sometimes we drop a frame on the first render of a stimuli, so take the last frame to be conservative
+    # this index in frame-space
+    last_frame_idx_of_stimuli = np.concatenate([
+        np.where(np.diff(frame_log.stimulusIndex))[0],
+        [frame_log.stimulusIndex.iloc[-1]]
+    ])
+
+    image_stim = list(filter(
+        lambda s: s['stimulus']['stimulusType']=='IMAGE',
+        stimulus_list))
+    image_stim_idx = [s['stimulus']['stimulusIndex']
+                            for s in image_stim]
+    image_classes = [s['stimulus']['metadata']['class']
+                            for s in image_stim]
+
+    # # take last frame of stimulus as image is static
+    image_stim_frame_idx = last_frame_idx_of_stimuli[image_stim_idx]
+
+    # get first frame from video so we know the size
+    container = av.open(video_file)
+    for frame in container.decode(video=0):
+        first_frame = frame.to_ndarray(format='rgb24')
+        break
+
+    frame_indices = list(image_stim_frame_idx)
+    next_frame_idx = frame_indices.pop(0)
+
+    # iterate through frames, and match to each entry in frame_indices
+    # seeking by time would be faster, but does not map 1:1 with frame index
+    frames = []
+    for n,frame in tqdm(enumerate(container.decode(video=0)),total=frame_indices[-1]):
+        if n==(next_frame_idx):
+            frames.append(frame.to_ndarray(format='rgb24'))
+            if len(frame_indices)!=0:
+                next_frame_idx = frame_indices.pop(0)
+            else:
+                break
+
+
+    if len(frames) != len(image_classes):
+        logger.warn(f"Different number of frames and classes (number of stimuli) found: {len(frames)} and {len(image_classes)}")
+    return frames, image_classes
