@@ -528,7 +528,7 @@ def save_images_h5(units, stimulus_list, name, frame_log,
         glia.experiments_to_h5(experiments,
             data, target,
             partial(get_image_class_from_stim, class_resolver=class_resolver_func),
-            append, class_dtype=class_dtype, use_sparse=True)
+            append, class_dtype=class_dtype)
 
 
 def save_checkerboard_npz(units, stimulus_list, name, append, group_by, quad=False):

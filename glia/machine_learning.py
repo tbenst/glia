@@ -137,21 +137,20 @@ def spike_train_to_sparse(experiment, key_map, shape):
     return array
 
 
-def spike_train_to_h5(experiment, key_map, h5_dset):
+def spike_train_to_h5(experiment, key_map, h5_dset, index):
     "efficient ndarray storage using hdf5."
     for unit_id, spikes in experiment['units'].items():
         # TODO check row/column
         (row, column, unit_num) = key_map[unit_id]
         for spike in spikes:
             s = int(np.floor(spike*1000))
-            h5_dset[s,row,column,unit_num] = 1
+            h5_dset[index,s,row,column,unit_num] = 1
     return h5_dset
 
 
 def experiments_to_h5(experiments, data_dset, target_dset,
     get_class=lambda x: x['metadata']['class'], append=0, progress=False,
-    class_dtype=np.uint16,
-    use_sparse=False):
+    class_dtype=np.uint16):
     """
 
     get_class is a function"""
@@ -173,7 +172,7 @@ def experiments_to_h5(experiments, data_dset, target_dset,
 
     print(f"assigning experiments to hdf5 file")
     for i,e in enumerate(tqdm(experiments)):
-        spike_train_to_h5(e, key_map, data_dset[i])
+        spike_train_to_h5(e, key_map, data_dset, index=i)
     target_dset[:] = classes
     return (data_dset, target_dset)
 
