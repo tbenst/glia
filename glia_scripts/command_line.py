@@ -697,7 +697,7 @@ def process_cmd(filename, notebook, debug=False, verbose=False):
         n_video_frames += 1
     
     stimulus_list = glia.read_stimulus(stimulus_file)
-    nstimuli_list = len(stimulus_list[1])
+
     if analog_file[-4:]==".brw":
         analog = glia.read_3brain_analog(analog_file)
     else:
@@ -719,8 +719,8 @@ def process_cmd(filename, notebook, debug=False, verbose=False):
     
     nframes_in_log = len(frame_log)
     if np.abs(n_video_frames - nframes_in_log) > 1:
-        logger.warn(f"found {n_video_frames} video frames, but only {nframes_in_log} frames in log")
-    # assert np.abs(n_video_frames - nframes_in_log) < 2
+        logger.warn(f"found {n_video_frames} video frames, but {nframes_in_log} frames in log")
+    assert np.abs(n_video_frames - nframes_in_log) < 2
     # assert n_video_frames == nframes_in_log or n_video_frames + 1 == nframes_in_log 
     # gross adjustment for start time
     frame_log.time = (frame_log.time - frame_log.time[0])/1000 + experiment_start_idx/sampling_rate
