@@ -470,7 +470,7 @@ def save_images_h5(units, stimulus_list, name, frame_log,
         nFrames = len(frames)
         for i, idx in enumerate(idx_sorted_order):
             if idx >= nFrames:
-                logger.warn(f"skipping index {i} as no accompanying frame. This should only occur if experiment stopped early.")
+                logger.warn(f"skipping class {image_classes[idx]} as no accompanying frame. This should only occur if experiment stopped early.")
                 continue
             images[i] = frames[idx]
 
