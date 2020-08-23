@@ -10,6 +10,7 @@ from functools import partial
 import logging
 from sklearn import datasets, svm, metrics, neighbors
 import pandas as pd
+from numba import jit
 from glia.config import logger
 
 TVT = namedtuple("TVT", ['training', "validation", "test"])
@@ -138,15 +139,23 @@ def spike_train_to_sparse(experiment, key_map, shape):
 
 
 def spike_train_to_h5(experiment, key_map, h5_dset, index):
-    "efficient ndarray storage using hdf5."
+    """efficient sparse ndarray storage using hdf5.
+    
+    First assign to ndarray for efficiency, then write array to disk."""
+    subarray = np.zeros(h5_dset.shape[1:])
     for unit_id, spikes in experiment['units'].items():
         # TODO check row/column
         (row, column, unit_num) = key_map[unit_id]
-        for spike in spikes:
-            s = int(np.floor(spike*1000))
-            h5_dset[index,s,row,column,unit_num] = 1
+        subarray = add_spikes_to_array(subarray, spikes, row,column,unit_num)
+    h5_dset[index] = subarray
     return h5_dset
 
+@jit(nopython=True)
+def add_spikes_to_array(array, spikes, row,column,unit_num):
+    for spike in spikes:
+        s = int(np.floor(spike*1000))
+        array[s,row,column,unit_num] = 1
+    return array
 
 def experiments_to_h5(experiments, data_dset, target_dset,
     get_class=lambda x: x['metadata']['class'], append=0, progress=False,
