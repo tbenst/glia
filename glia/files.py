@@ -613,4 +613,7 @@ def get_images_from_vid(stimulus_list, frame_log, video_file):
 
     if len(frames) != len(image_classes):
         logger.warn(f"Different number of frames and classes (number of stimuli) found: {len(frames)} and {len(image_classes)}")
+        # TODO: raise exception instead to be safe??
+        # raise ValueError(f"Different number of frames and classes (number of stimuli) found: {len(frames)} and {len(image_classes)}")
+
     return frames, image_classes
