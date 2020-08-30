@@ -368,6 +368,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         extype, value, tb = sys.exc_info()
         traceback.print_exc()
         print(e)
+        ctx.obj["frame_log"] = None
+        ctx.obj["video_file"] = None
         print("Attempting to continue without frame log...")
     
     #### LOAD SPIKES
