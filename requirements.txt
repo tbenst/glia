@@ -5,6 +5,7 @@ elephant
 h5py
 matplotlib
 neo
+numba
 numpy
 pandas
 pyarrow
