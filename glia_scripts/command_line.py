@@ -58,6 +58,16 @@ def analysis_function(f):
             *args[2:], **kwargs)
     return update_wrapper(new_func, f)
 
+def vid_analysis_function(f):
+    @click.pass_context
+    def new_func(ctx, *args, **kwargs):
+        context_object = ctx.obj
+        return ctx.invoke(f, ctx.obj["units"], ctx.obj["stimulus_list"],
+            ctx.obj["metadata"], ctx.obj['filename'],
+            ctx.obj['frame_log'], ctx.obj['video_file'],
+            *args[2:], **kwargs)
+    return update_wrapper(new_func, f)
+
 def video_function(f):
     @click.pass_context
     def new_func(ctx, *args, **kwargs):
@@ -174,6 +184,24 @@ def generate(ctx, filename, eyecandy, generate_method, notebook, number,
         name = unit_id
         os.makedirs(os.path.join(plot_directory,name), exist_ok=True)
 
+    try:
+        lab_notebook_notype = glia.open_lab_notebook(notebook, convert_types=False)
+        protocol_notype = glia.get_experiment_protocol(lab_notebook_notype,
+                                                                  name)
+        date_prefix = os.path.join(data_directory,
+            protocol_notype['date'].replace(':','_'))
+        frames_file = date_prefix + "_eyecandy_frames.log"
+        video_file = date_prefix + "_eyecandy.mkv"
+        frame_log = pd.read_csv(frames_file)
+        frame_log = frame_log[:-1] # last frame is not encoded for some reason
+        ctx.obj["frame_log"] = frame_log
+        ctx.obj["video_file"] = video_file
+    except Exception as e:
+        extype, value, tb = sys.exc_info()
+        traceback.print_exc()
+        print(e)
+        print("Attempting to continue without frame log...")
+
 
 @main.command()
 @click.argument('filename', type=str)
@@ -239,6 +267,7 @@ def init_logging(name, processes, verbose, debug):
 @click.option("--by-channel", "-C", is_flag=True, help="Combine units by channel")
 @click.option("--default-channel-map", "-m", is_flag=True, help="Use default channel map instead of reading from 3brain file")
 @click.option("--debug", "-vv", is_flag=True)
+@click.option("--dev", is_flag=True)
 @click.option("--trigger", "-t", type=click.Choice(["flicker", 'detect-solid', "legacy", "ttl"]), default="flicker",
     help="""Use flicker if light sensor was on the eye candy flicker, solid if the light sensor detects the solid stimulus,
     or ttl if there is a electrical impulse for each stimulus.
@@ -249,7 +278,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         fix_missing=False, output=None, notebook=None,
         configuration=None, verbose=False, debug=False,processes=None,
         by_channel=False, integrity_filter=0.0, analog_idx=1,
-        default_channel_map=False):
+        default_channel_map=False, dev=False):
     """Analyze data recorded with eyecandy.
     
     This command/function preprocesses the data & aligns stimuli to ephys
@@ -339,7 +368,9 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         extype, value, tb = sys.exc_info()
         traceback.print_exc()
         print(e)
-        print("Attempting to continue...")
+        ctx.obj["frame_log"] = None
+        ctx.obj["video_file"] = None
+        print("Attempting to continue without frame log...")
     
     #### LOAD SPIKES
     spyking_regex = re.compile('.*\.result.hdf5$')
@@ -356,7 +387,8 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             channel_map_3brain = config.channel_map_3brain
         else:
             channel_map_3brain = None
-        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id, channel_map_3brain)
+        ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id,
+            channel_map_3brain, truncate=dev)
     elif re.match(spyking_regex, filename):
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
@@ -406,7 +438,7 @@ def cleanup(ctx, results, filename, trigger, threshold, eyecandy,
         ignore_extra=False, fix_missing=False, output=None, notebook=None,
         configuration=None, version=None, verbose=False, debug=False,
         processes=None, by_channel=False, integrity_filter=0.0, analog_idx=1,
-        default_channel_map=None):
+        default_channel_map=None, dev=None):
     if output == "pdf":
         ctx.obj["retina_pdf"].close()
         glia.close_pdfs(ctx.obj["unit_pdfs"])
@@ -523,8 +555,9 @@ generate.add_command(bar_cmd)
     help="use four classes for checkerboard")
 @click.option("--append", "-a", type=float, default=0,
     help="add time (seconds) after stimulus end time")
-@analysis_function
-def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, quad=False):
+@vid_analysis_function
+def convert_cmd(units, stimulus_list, metadata, filename, frame_log,
+        video_file, append, version=2, quad=False):
     name = metadata['name']
     if name=='letters':
         convert.save_letter_npz(
@@ -536,17 +569,12 @@ def convert_cmd(units, stimulus_list, metadata, filename, append, version=2, qua
             partial(glia.group_contains, "TILED_LETTER"))
     elif name=='10faces':
         # there's a bug in this program and a single WAIT is missing metadata
-        oldLen = len(stimulus_list)
-        stimulus_list = [s for s in stimulus_list if 'metadata' in s['stimulus']]
-        assert len(stimulus_list)+1 == oldLen # bug fix for 0.1.0 10faces
-        
-        print("Saving faces NPZ file.")
-        convert.save_images_npz(
-            units, stimulus_list, filename, append)
+        raise ValueError("Deprecated--use glia commit from before 2020-08-20")
     elif ('faces' in name) or ('ffhq' in name):
-        print("Saving faces NPZ file.")
-        convert.save_images_npz(
-            units, stimulus_list, filename, append)
+        print("Saving faces h5 file.")
+        convert.save_images_h5(
+            units, stimulus_list, filename,
+            frame_log, video_file, append)
     elif name=='eyechart-saccade':
         print("Saving eyechart-saccade NPZ file.")
         convert.save_acuity_image_npz(
@@ -636,7 +664,7 @@ def strip_generated(name, choices=generate_choices):
 @click.option("--notebook", "-n", type=click.Path(exists=True))
 @click.option("--verbose", "-v", is_flag=True)
 @click.option("--debug", "-vv", is_flag=True)
-def preprocess_cmd(filename, notebook, debug=False, verbose=False):
+def process_cmd(filename, notebook, debug=False, verbose=False):
     "Process analog + frames log to align stim/ephys in .frames file."
 
     init_logging(filename, processes=None, verbose=verbose, debug=debug)
@@ -671,26 +699,31 @@ def preprocess_cmd(filename, notebook, debug=False, verbose=False):
         n_video_frames += 1
     
     stimulus_list = glia.read_stimulus(stimulus_file)
-    nstimuli_list = len(stimulus_list[1])
-    analog = glia.read_raw_voltage(analog_file)
+
+    if analog_file[-4:]==".brw":
+        analog = glia.read_3brain_analog(analog_file)
+    else:
+        analog = glia.read_raw_voltage(analog_file)[:,1]
     sampling_rate = glia.sampling_rate(analog_file)
     
-    analog_std = 0.5*analog[:,1].std() + analog[:,1].min()
+    analog_std = 0.5*analog.std() + analog.min()
     # beginning of experiment
     # TODO: after clustering, should subtract known / estimated latency for better frame time..?
     # for maximum temporal accuracy, frame should begin at start of slope
-    approximate_start_idx = np.where(analog[:,1] > analog_std)[0][0]
+    approximate_start_idx = np.where(analog > analog_std)[0][0]
     baseline_offset = int(sampling_rate/10) # rise started before experiment_start_idx
     # we add 3sigma of baseline to baseline.max() to create threshold for end of experiment
-    baseline_thresh = np.max(analog[:approximate_start_idx-baseline_offset,1]) \
-                    + np.std(analog[:approximate_start_idx-baseline_offset,1])*3
-    experiment_start_idx = np.where(analog[:,1] > baseline_thresh)[0][0]
+    baseline_thresh = np.max(analog[:approximate_start_idx-baseline_offset]) \
+                    + np.std(analog[:approximate_start_idx-baseline_offset])*3
+    experiment_start_idx = np.where(analog > baseline_thresh)[0][0]
     
     frame_log = pd.read_csv(frame_log_file)
     
     nframes_in_log = len(frame_log)
+    if np.abs(n_video_frames - nframes_in_log) > 1:
+        logger.warn(f"found {n_video_frames} video frames, but {nframes_in_log} frames in log")
     assert np.abs(n_video_frames - nframes_in_log) < 2
-    assert n_video_frames == nframes_in_log or n_video_frames + 1 == nframes_in_log 
+    # assert n_video_frames == nframes_in_log or n_video_frames + 1 == nframes_in_log 
     # gross adjustment for start time
     frame_log.time = (frame_log.time - frame_log.time[0])/1000 + experiment_start_idx/sampling_rate
 

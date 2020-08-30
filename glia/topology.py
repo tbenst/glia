@@ -7,7 +7,6 @@ import re
 import matplotlib.pyplot as plt
 import pandas as pd
 from glob import glob
-from scipy.sparse import csc_matrix
 from scipy.ndimage import filters
 from scipy import signal
 from matplotlib.ticker import FuncFormatter, MultipleLocator

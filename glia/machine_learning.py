@@ -5,12 +5,12 @@ from .functional import f_map, pmap, flatten, compose, f_filter, group_by
 from .pipeline import group_dict_to_list
 from .eyecandy import checkerboard_contrast, grating_contrast
 import numpy as np
-from scipy.sparse import csr_matrix
 from tqdm import tqdm
 from functools import partial
 import logging
 from sklearn import datasets, svm, metrics, neighbors
 import pandas as pd
+from numba import jit
 from glia.config import logger
 
 TVT = namedtuple("TVT", ['training', "validation", "test"])
@@ -38,7 +38,7 @@ def f_split_dict(tvt):
             elif i < tvt.test + tvt.validation + tvt.training:
                 split.test[k] = v
             else:
-                raise(ValueError, 'bad training, validation & test split.')
+                raise(ValueError('bad training, validation & test split.'))
             i += 1
         assert i == tvt.training+tvt.validation+tvt.test
         return split
@@ -84,7 +84,7 @@ def f_split_list(tvt, get_list=lambda x: x):
             elif i < tvt.test + tvt.validation + tvt.training:
                 split.test.append(v)
             else:
-                raise(ValueError, 'bad training, validation & test split.')
+                raise ValueError('bad training, validation & test split.')
         try:
             assert len(my_list) == tvt.training+tvt.validation+tvt.test
         except Exception as e:
@@ -138,6 +138,54 @@ def spike_train_to_sparse(experiment, key_map, shape):
     return array
 
 
+def spike_train_to_h5(experiment, key_map, h5_dset, index):
+    """efficient sparse ndarray storage using hdf5.
+    
+    First assign to ndarray for efficiency, then write array to disk."""
+    subarray = np.zeros(h5_dset.shape[1:])
+    for unit_id, spikes in experiment['units'].items():
+        # TODO check row/column
+        (row, column, unit_num) = key_map[unit_id]
+        subarray = add_spikes_to_array(subarray, spikes, row,column,unit_num)
+    h5_dset[index] = subarray
+    return h5_dset
+
+@jit(nopython=True)
+def add_spikes_to_array(array, spikes, row,column,unit_num):
+    for spike in spikes:
+        s = int(np.floor(spike*1000))
+        array[s,row,column,unit_num] = 1
+    return array
+
+def experiments_to_h5(experiments, data_dset, target_dset,
+    get_class=lambda x: x['metadata']['class'], append=0, progress=False,
+    class_dtype=np.uint16):
+    """
+
+    get_class is a function"""
+
+    key_map = {}
+    for k in experiments[0]['units'].keys():
+        u = Unit.lookup[k]
+        (row,column) = u.channel
+        unit_num = u.unit_num
+        key_map[k] = (row,column,unit_num)
+    duration = experiments[0]['lifespan']+append
+    for l in experiments:
+        try:
+            assert duration==l['lifespan']+append
+        except:
+            logger.info(f"duration: {duration} != {l['lifespan']}, for {l}" )
+            raise
+    classes = np.array(f_map(get_class)(experiments), dtype=class_dtype)
+
+    print(f"assigning experiments to hdf5 file")
+    for i,e in enumerate(tqdm(experiments)):
+        spike_train_to_h5(e, key_map, data_dset, index=i)
+    target_dset[:] = classes
+    return (data_dset, target_dset)
+
+
 def experiments_to_ndarrays(experiments,
     get_class=lambda x: x['metadata']['class'], append=0, progress=False,
     class_dtype=np.uint16):
@@ -163,11 +211,9 @@ def experiments_to_ndarrays(experiments,
             raise
     d = int(np.ceil(duration*1000)) # 1ms bins
     shape = (nE,d,Unit.nrow,Unit.ncol,Unit.nunit)
+    # max 1 spike per ms in theory
+    # 256 per bin should be plenty
     data = np.full(shape, 0, dtype=np.uint8)
-
-    # accumulate indices for value 1
-    # easy to parallelize accumulation & then single-threaded mutation
-    sparse = []
 
     classes = np.array(f_map(get_class)(experiments), dtype=class_dtype)
     assert classes.shape==(nE,)

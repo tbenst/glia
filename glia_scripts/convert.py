@@ -3,12 +3,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from functools import partial
 from warnings import warn
+import warnings
 from collections import namedtuple
 from copy import deepcopy
-import logging
+import logging, tables
 logger = logging.getLogger('glia')
-
 from glia.types import Unit
+from tables import NaturalNameWarning
+warnings.filterwarnings("ignore", category=NaturalNameWarning)
 
 letter_map = {'K': 4, 'C': 1, 'V': 9, 'N': 5, 'R': 7, 'H': 3, 'O': 6, 'Z': 10, 'D': 2, 'S': 8, 'BLANK': 0}
 
@@ -65,7 +67,7 @@ def get_classes_from_stimulus_list(stimulus_list):
         class_resolver[k] = i
     return class_resolver
 
-def image_class(stimulus, class_resolver):
+def get_image_class_from_stim(stimulus, class_resolver):
     "Based on precedent in 20faces.js"
     metadata = stimulus["metadata"]
     return class_resolver(metadata["class"])
@@ -80,7 +82,7 @@ def checker_class(stimulus):
     else:
         raise ValueError
 
-def grating_class(stimulus):
+def get_grating_class_from_stim(stimulus):
     grating = stimulus["metadata"]["class"]
     if grating=='FORWARD':
         return 0
@@ -89,7 +91,7 @@ def grating_class(stimulus):
     else:
         raise ValueError
 
-def checker_discrimination_class(stimulus):
+def get_checker_discrimination_class(stimulus):
     checker = stimulus["metadata"]["target"]
     if checker=='SAME':
         return 0
@@ -98,7 +100,7 @@ def checker_discrimination_class(stimulus):
     else:
         raise ValueError
 
-def checker_quad_discrimination_class(stimulus):
+def get_checker_quad_discrimination_class(stimulus):
     checker = stimulus["metadata"]["target"]
     # frame A or frame B
     first_class = stimulus["metadata"]["class"]
@@ -432,65 +434,101 @@ def save_acuity_image_npz(units, stimulus_list, name, append):
     #   test_data=test_data, test_target=test_target)
 
 
-def save_images_npz(units, stimulus_list, name, append):
+def save_images_h5(units, stimulus_list, name, frame_log, 
+        video_file, append):
     """Assumes each group is three stimuli with image in second position.
     
     Concatenate second stimuli with first 0.5s of third stimuli"""
-    
-    get_image_responses = glia.compose(
-        # returns a list
-        partial(glia.create_experiments,
-            stimulus_list=stimulus_list,progress=True, append_lifespan=append),
-        partial(glia.group_by,
-            key=lambda x: x["metadata"]["group"]),
-        glia.group_dict_to_list,
-        glia.f_filter(partial(glia.group_contains, "IMAGE")),
-        # truncate to 0.5s
-        glia.f_map(lambda x: [x[1], truncate(x[2],0.5)]),
-        glia.f_map(glia.merge_experiments),
-        partial(glia.group_by,
-                key=lambda x: x["metadata"]["cohort"]),
-        # glia.f_map(f_flatten)
-    )
-    
-    image_responses = get_image_responses(units)
-    ncohorts = len(image_responses)
-    ex_cohort = glia.get_value(image_responses)
-    images_per_cohort = len(ex_cohort)
-    print("images_per_cohort",images_per_cohort)
-    duration = ex_cohort[0]["lifespan"]
+    # open first so if there's a problem we don't waste time
+    compression_level = 3
+    dset_filter = tables.filters.Filters(complevel=compression_level,
+        complib='blosc:zstd')
+    with tables.open_file(name + ".h5", 'w') as h5:
+        class_resolver = get_classes_from_stimulus_list(stimulus_list)
+        nclasses = len(class_resolver)
+        frames, image_classes = glia.get_images_from_vid(stimulus_list, frame_log, video_file)
 
-    d = int(np.ceil(duration*1000)) # 1ms bins
-    logger.info(f"ncohorts: {ncohorts}")
-    # import pdb; pdb.set_trace()
-    
-    class_resolver = get_classes_from_stimulus_list(stimulus_list)
-    nclasses = len(class_resolver)
-    logger.info(f"nclasses: {nclasses}")
-    if nclasses < 256:
-        class_dtype = 'int8'
-    else: 
-        class_dtype = 'int16'
+        image_class_num = list(map(lambda x: class_resolver[str(x)], image_classes))
+        idx_sorted_order = np.argsort(image_class_num)
+
+        # save mapping of class_num target to class metadata
+        # this way h5.root.image_classes[n] will give the class metadata string
+        logger.info("create class_resolver with max string of 256")
+        resolver = h5.create_carray(h5.root, "image_classes",
+                        tables.StringAtom(itemsize=256),(nclasses,))
+        img_class_array = np.array(image_classes,
+                                   dtype="S256")[idx_sorted_order]
+        for i, image_class in enumerate(img_class_array):
+            resolver[i] = image_class
         
-    class_resolver_func = lambda c: class_resolver[str(c)]
+        atom = tables.Atom.from_dtype(frames[0].dtype)
+        images = h5.create_carray(h5.root, "images", atom,
+            (nclasses, *frames[0].shape),
+            filters=dset_filter)
+        
+        frames = np.array(frames)
+        nFrames = len(frames)
+        for i, idx in enumerate(idx_sorted_order):
+            if idx >= nFrames:
+                logger.warn(f"skipping class {image_classes[idx]} as no accompanying frame. This should only occur if experiment stopped early.")
+                continue
+            images[i] = frames[idx]
 
-    td, tt = glia.experiments_to_ndarrays(glia.flatten_group_dict(image_responses),
-                partial(image_class, class_resolver=class_resolver_func), append,
-                class_dtype=class_dtype)
+        print("finished saving images")
+        get_image_responses = glia.compose(
+            # returns a list
+            partial(glia.create_experiments,
+                stimulus_list=stimulus_list,progress=True, append_lifespan=append),
+            partial(glia.group_by,
+                key=lambda x: x["metadata"]["group"]),
+            glia.group_dict_to_list,
+            glia.f_filter(partial(glia.group_contains, "IMAGE")),
+            # truncate to 0.5s
+            glia.f_map(lambda x: [x[1], truncate(x[2],0.5)]),
+            glia.f_map(glia.merge_experiments),
+            partial(glia.group_by,
+                    key=lambda x: x["metadata"]["cohort"]),
+            # glia.f_map(f_flatten)
+        )
+        
+        image_responses = get_image_responses(units)
+        ncohorts = len(image_responses)
+        ex_cohort = glia.get_value(image_responses)
+        images_per_cohort = len(ex_cohort)
+        print("images_per_cohort",images_per_cohort)
+        duration = ex_cohort[0]["lifespan"]
 
-    logger.info(td.shape)
-    missing_duration = d - td.shape[1]
-    print(f"missing_duration of {missing_duration}")
-    pad_td = np.pad(td,
-        ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
-        mode='constant')
-    data = pad_td
-    target = tt
+        d = int(np.ceil(duration*1000)) # 1ms bins
+        logger.info(f"ncohorts: {ncohorts}")
+        # import pdb; pdb.set_trace()
+        
+        logger.info(f"nclasses: {nclasses}")
+        if nclasses < 256:
+            class_dtype = np.dtype('uint8')
+        else: 
+            class_dtype = np.dtype('uint16')
+            
+        class_resolver_func = lambda c: class_resolver[str(c)]
 
-    np.savez(name, data=data, target=target,
-        class_resolver=class_resolver)
+        # determine shape
+        experiments = glia.flatten_group_dict(image_responses)
+        nE = len(experiments)
+        d = int(np.ceil(duration*1000)) # 1ms bins
+        data_shape = (nE,d,Unit.nrow,Unit.ncol,Unit.nunit)
 
 
+        print(f"writing to {name}.h5 with zstd compression...")
+        data = h5.create_carray("/", "data",
+            tables.Atom.from_dtype(np.dtype('uint8')), shape=data_shape,
+            filters=dset_filter)
+        target = h5.create_carray("/", "target",
+            tables.Atom.from_dtype(class_dtype), shape=(nE,),
+            filters=dset_filter)
+
+        glia.experiments_to_h5(experiments,
+            data, target,
+            partial(get_image_class_from_stim, class_resolver=class_resolver_func),
+            append, class_dtype=class_dtype)
 
 
 def save_checkerboard_npz(units, stimulus_list, name, append, group_by, quad=False):
@@ -559,9 +597,9 @@ def save_checkerboard_npz(units, stimulus_list, name, append, group_by, quad=Fal
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
     if quad:
-        get_class = checker_quad_discrimination_class
+        get_class = get_checker_quad_discrimination_class
     else:
-        get_class = checker_discrimination_class
+        get_class = get_checker_discrimination_class
     condition_map = {c: i for i,c in enumerate(conditions)}
     size_map = {s: i for i,s in enumerate(sizes)}
     for condition, sizes in checkers.items():
@@ -664,9 +702,9 @@ def save_checkerboard_flicker_npz(units, stimulus_list, name, append, group_by, 
     # test_target = np.full((nsizes,tvt.test),0,dtype='int8')
 
     if quad:
-        get_class = checker_quad_discrimination_class
+        get_class = get_checker_quad_discrimination_class
     else:
-        get_class = checker_discrimination_class
+        get_class = get_checker_discrimination_class
     condition_map = {c: i for i,c in enumerate(conditions)}
     size_map = {s: i for i,s in enumerate(sizes)}
     for condition, sizes in checkers.items():
@@ -758,7 +796,7 @@ def save_grating_npz(units, stimulus_list, name, append, group_by, sinusoid=Fals
             X = glia.f_split_dict(tvt)(cohorts)
 
             td, tt = glia.experiments_to_ndarrays(glia.training_cohorts(X),
-                        grating_class, append)
+                        get_grating_class_from_stim, append)
             missing_duration = d - td.shape[1]
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
@@ -769,7 +807,7 @@ def save_grating_npz(units, stimulus_list, name, append, group_by, sinusoid=Fals
             training_target[condition_index, size_index] = tt
 
             td, tt = glia.experiments_to_ndarrays(glia.validation_cohorts(X),
-                        grating_class, append)
+                        get_grating_class_from_stim, append)
             pad_td = np.pad(td,
                 ((0,0),(0,missing_duration),(0,0),(0,0),(0,0)),
                 mode='constant')
