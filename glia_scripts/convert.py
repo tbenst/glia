@@ -10,6 +10,7 @@ import logging, tables
 logger = logging.getLogger('glia')
 from glia.types import Unit
 from tables import NaturalNameWarning
+import json
 warnings.filterwarnings("ignore", category=NaturalNameWarning)
 
 letter_map = {'K': 4, 'C': 1, 'V': 9, 'N': 5, 'R': 7, 'H': 3, 'O': 6, 'Z': 10, 'D': 2, 'S': 8, 'BLANK': 0}
@@ -54,12 +55,14 @@ def acuity_image_class(stimulus):
         return letter_map["BLANK"]
     
 def get_classes_from_stimulus_list(stimulus_list):
-    "use `stimulus.metadata.class` as (string) key, and resolve to a number"
+    "use `stimulus.metadata.class` as (JSONstring) key, and resolve to a number"
     class_resolver = dict()
     for s in stimulus_list:
         metadata = s['stimulus']['metadata']
         if "class" in metadata:
-            class_resolver[str(metadata['class'])] = str(metadata['classLabels'])
+            c = json.dumps(metadata['class'])
+            l = json.dumps(metadata['classLabels'])
+            class_resolver[c] = l
             
     label = glia.get_value(class_resolver)
     for i,k in enumerate(class_resolver.keys()):
@@ -448,7 +451,9 @@ def save_images_h5(units, stimulus_list, name, frame_log,
         nclasses = len(class_resolver)
         frames, image_classes = glia.get_images_from_vid(stimulus_list, frame_log, video_file)
 
-        image_class_num = list(map(lambda x: class_resolver[str(x)], image_classes))
+        # serialize as JSON
+        image_class_num = list(map(lambda x: class_resolver[json.dumps(x)],
+            image_classes))
         idx_sorted_order = np.argsort(image_class_num)
 
         # save mapping of class_num target to class metadata
@@ -456,7 +461,7 @@ def save_images_h5(units, stimulus_list, name, frame_log,
         logger.info("create class_resolver with max string of 256")
         resolver = h5.create_carray(h5.root, "image_classes",
                         tables.StringAtom(itemsize=256),(nclasses,))
-        img_class_array = np.array(image_classes,
+        img_class_array = np.array([json.dumps(c) for c in image_classes],
                                    dtype="S256")[idx_sorted_order]
         for i, image_class in enumerate(img_class_array):
             resolver[i] = image_class
