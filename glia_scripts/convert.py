@@ -513,7 +513,7 @@ def save_images_h5(units, stimulus_list, name, frame_log,
         else: 
             class_dtype = np.dtype('uint16')
             
-        class_resolver_func = lambda c: class_resolver[str(c)]
+        class_resolver_func = lambda c: class_resolver[json.dumps(c)]
 
         # determine shape
         experiments = glia.flatten_group_dict(image_responses)
