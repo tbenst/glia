@@ -25,6 +25,10 @@ plot_directory = None
 analog_calibration = 'auto'
 user_config = None
 
+# A global list storing the variables passed from the initializer for pmap.
+global worker_args
+worker_args = []
+
 # see https://stackoverflow.com/questions/6028000/how-to-read-a-static-file-from-inside-a-python-package
 resource_package = __name__  # Could be any module/package name
 resource_path = '/'.join(('..', 'resources', '3brain_channel_map.npy'))  # Do not use os.path.join()
