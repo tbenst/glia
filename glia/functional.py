@@ -8,6 +8,7 @@ from typing import List, Any, Union
 from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 from .config import processes
+import glia.config as config
 from tqdm import tqdm
 import traceback
 
@@ -42,15 +43,23 @@ def _func(x,function=lambda x: x):
     k,v = x
     return (k,function(v))
 
-def pmap(function, data, progress=False, length=None, thread=False):
+
+def init_worker(*args):
+    config.worker_args = []
+    for arg in args:
+        config.worker_args.append(arg)
+
+def pmap(function, data, progress=False, length=None, thread=False,
+         initializer=init_worker, initargs=[]):
     """Parallel map that accepts lists or dictionaries.
 
-    Use progress for interactive sessions."""
+    Use progress for interactive sessions. Supports use of initializer per
+    https://docs.python.org/3/library/multiprocessing.html#multiprocessing.pool.Pool"""
 
     if thread:
-        pool = ThreadPool(processes)
+        pool = ThreadPool(processes, initializer, initargs)
     else:
-        pool = Pool(processes)
+        pool = Pool(processes, initializer, initargs)
     if progress and length is None:
         length = len(data)
 
