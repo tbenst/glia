@@ -8,7 +8,7 @@ from typing import List, Any, Union
 from .functional import f_filter, f_map, f_reduce
 from scipy import signal
 from glia.types import Unit
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 def random_unit(total_time, retina_id, channel, unit_num):
     spike_train = []

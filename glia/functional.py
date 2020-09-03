@@ -9,7 +9,7 @@ from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
 from .config import processes
 import glia.config as config
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import traceback
 
 import logging

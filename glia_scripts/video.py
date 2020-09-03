@@ -1,5 +1,5 @@
 import tables, numpy as np, matplotlib.pyplot as plt, av, seaborn as sns
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 def frame_idx_before_time(frame_log,time,nBefore=2):
     # get previous frame by subtracting 1, or else we get

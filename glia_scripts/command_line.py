@@ -30,7 +30,7 @@ from functools import update_wrapper, partial
 from matplotlib import animation, cm, gridspec
 # from tests.conftest import display_top, tracemalloc
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from glob import glob
 from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages

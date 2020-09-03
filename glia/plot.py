@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from typing import List, Any, Dict
 
 

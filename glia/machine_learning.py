@@ -5,7 +5,7 @@ from .functional import f_map, pmap, flatten, compose, f_filter, group_by
 from .pipeline import group_dict_to_list
 from .eyecandy import checkerboard_contrast, grating_contrast
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from functools import partial
 import logging
 from sklearn import datasets, svm, metrics, neighbors

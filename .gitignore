@@ -66,3 +66,5 @@ boilerplate/
 .mypy_cache/
 .vscode/
 .ipynb_checkpoints/
+ffhq_viz
+lightning_logs

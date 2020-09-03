@@ -10,7 +10,7 @@ import os
 import csv
 from .types import Unit
 from .io.mdaio import readmda
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from glia.config import logger
 
 file = str
