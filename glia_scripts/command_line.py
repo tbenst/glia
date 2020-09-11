@@ -976,7 +976,15 @@ def combine(files, output):
     print("checking that all brw files have matching metadata")
     for b in bxrs[1:]:
         for m in metadata_paths:
-            assert bxrs[0][m] == b[m]
+            try:
+                if len(bxrs[0][m])==1:
+                    assert bxrs[0][m][:] == b[m][:]
+                else:
+                    assert np.all(bxrs[0][m][:] == b[m][:])
+            except Exception as E:
+                logger.warn(f"""metadata does not match for {m}:
+                found {bxrs[0][m]} and {b[m]}
+                """)
         n_frames += b['3BRecInfo/3BRecVars/NRecFrames'][0]
         n_samples.append(b["3BData/Raw"].shape[0])
     print(f"combined duration: {n_frames/sampling_rate/60:.2f} minutes")
