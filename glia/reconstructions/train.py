@@ -65,9 +65,13 @@ retina_dset = RetinaData(h5["data"], no_units=False)
 (image_dset[0].shape, retina_dset[0].shape)
 
 # TODO add args
-MODEL_NAME = "VAE"
-from models.vae import sample_model
+# MODEL_NAME = "VAE"
+# from models.vae import sample_model
+# study_name = "2020-09-14_FEI_VAE"
 
+study_name = "2020-09-14_FEI_conv-eigsum"
+MODEL_NAME = "conv-eigsum"
+from models.conv_eigsum import sample_model
 
 def objective(trial, tags, save_dir, max_train_iter, datamodule,
         monitor='val_mse_loss', gpus=[0]):
@@ -89,7 +93,7 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
         api_key=os.environ["NEPTUNE_API_TOKEN"],
         project_name="tbenst/retina",
         params=model.hparams,
-        experiment_name="VAE",  # Optional,
+        experiment_name=MODEL_NAME,  # Optional,
         tags=["optuna-trial"] + tags
     )
     trainer = pl.Trainer(gpus=gpus, gradient_clip_val=0.5,
@@ -116,14 +120,13 @@ now_str = datetime.now().isoformat()
 save_dir = os.path.join(model_base_dir,
     now_str + "-optuna")
 
-neptune.init(project_qualified_name='tbenst/retina')
+tags = [MODEL_NAME, now_str+"-optuna"]
 
-tags = ["VAE", now_str+"-optuna"]
+neptune.init(project_qualified_name='tbenst/retina')
 neptune.create_experiment('optuna', tags=["optuna-master"] + tags)
 neptune_callback = optuna_utils.NeptuneCallback()
 
 max_train_iter = 50
-study_name = "2020-09-14_FEI_VAE"
 storage = f'postgresql://{user}:{pw}@{server}:{port}/optuna'
 pruner = optuna.pruners.HyperbandPruner(
     min_resource=1,
