@@ -75,7 +75,7 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
     # gc.collect()
     # torch.cuda.empty_cache()
     save_dir = os.path.join(save_dir, f"trial_{trial.number}")
-    model = sample_model(trial, datamodule, save_dir)
+    model, datamodule = sample_model(trial, datamodule, save_dir)
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         filepath=save_dir,
         save_top_k=True,
@@ -100,7 +100,7 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
     #     weights_save_path=save_dir)
     #                      logger=mlf_logger)
     # trainer = pl.Trainer(num_processes=1, gradient_clip_val=0.5)
-    trainer.fit(model, dm)
+    trainer.fit(model, datamodule)
     
     return trainer.logged_metrics[monitor]
 
@@ -122,14 +122,18 @@ tags = ["VAE", now_str+"-optuna"]
 neptune.create_experiment('optuna', tags=["optuna-master"] + tags)
 neptune_callback = optuna_utils.NeptuneCallback()
 
-max_train_iter = 25
+max_train_iter = 50
+study_name = "2020-09-14_FEI_VAE"
+storage = f'postgresql://{user}:{pw}@{server}:{port}/optuna'
+pruner = optuna.pruners.HyperbandPruner(
+    min_resource=1,
+    max_resource=max_train_iter,
+    reduction_factor=3
+)
+
 study = optuna.create_study(direction='minimize',
-   pruner=optuna.pruners.HyperbandPruner(
-        min_resource=1,
-        max_resource=max_train_iter,
-        reduction_factor=3
-    ),
-    storage=f'postgresql://{user}:{pw}@{server}:{port}/optuna'
+   study_name=study_name, pruner=pruner,
+    storage=storage, load_if_exists=True
 )
     
 # catch RuntimeError ie CUDA error: device-side assert triggered

@@ -45,6 +45,9 @@ def sample_model(trial, datamodule, save_dir):
         ["relu", "celu", "sigmoid", "tanh", "leaky_relu", "gelu", "hardswish"])
     loss_func =  trial.suggest_categorical("loss_func",
         ["mse", "bce"])
+    batch_size =  trial.suggest_categorical("batch_size",
+        [1,4,8,16,32,64,128,256,512])
+    weight_decay = trial.suggest_loguniform("weight_decay", 1e-4,1.)
     if loss_func=="mse":
         final_nonlinearity = trial.suggest_categorical("final_nonlinearity",
             [True, False])
@@ -57,14 +60,16 @@ def sample_model(trial, datamodule, save_dir):
 
     model = VAE(n_input, H, W, n_hidden, n_latent, n_hidden2, n_output,
         nonlinearity=nonlinearity, lr=lr, beta=beta, loss_func=loss_func,
-        final_nonlinearity=final_nonlinearity,
-        save_dir=save_dir, hostname=hostname)
-    return model
+        final_nonlinearity=final_nonlinearity, weight_decay=weight_decay,
+        save_dir=save_dir, hostname=hostname, batch_size=batch_size)
+    datamodule.batch_size = batch_size
+    return model, datamodule
 
 class VAE(pl.LightningModule):
     
     def __init__(self, n_input, H, W, n_hidden, n_latent, n_hidden2, n_output,
-                 save_dir, hostname, nonlinearity=F.sigmoid, beta=1, lr = 1e-4,
+                 weight_decay, save_dir, hostname, batch_size,
+                 nonlinearity=F.sigmoid, beta=1, lr = 1e-4,
                  final_nonlinearity=True, loss_func='bce'):
         super().__init__()
         self.n_input = n_input
@@ -75,6 +80,8 @@ class VAE(pl.LightningModule):
         self.n_hidden = n_hidden
         self.n_hidden2 = n_hidden2
         self.n_latent = n_latent
+
+        self.weight_decay = weight_decay
         if loss_func == "bce":
             self.loss_func = F.binary_cross_entropy
         else:
@@ -204,7 +211,15 @@ class VAE(pl.LightningModule):
         return result
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr,
+            weight_decay=self.weight_decay)
+        return optimizer
+        # https://github.com/PyTorchLightning/pytorch-lightning/issues/1120
+        # scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        #     optimizer, max_lr=self.lr, steps_per_epoch=len(data_loader), epochs=10)
+        # scheduler = {"scheduler": scheduler, "interval" : "step" }
+        # # steps_per_epoch = (train_loader_len//self.batch_size)//self.trainer.accumulate_grad_batches
+        # return [optimizer], [scheduler]
     
     def on_sanity_check_end(self):
         Path(self.save_dir).mkdir(exist_ok=True)

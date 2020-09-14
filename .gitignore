@@ -68,3 +68,4 @@ boilerplate/
 .ipynb_checkpoints/
 ffhq_viz
 lightning_logs
+mlruns
