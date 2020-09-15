@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 . activate py38
-gpus=( 2 3 4 5 6 7 8 )
+gpus=( 2 3 4 5 6 7 8 9 )
 
 run_optuna() {
     while true; do

@@ -69,9 +69,13 @@ retina_dset = RetinaData(h5["data"], no_units=False)
 # from models.vae import sample_model
 # study_name = "2020-09-14_FEI_VAE"
 
-study_name = "2020-09-14_FEI_conv-eigsum"
-MODEL_NAME = "conv-eigsum"
-from models.conv_eigsum import sample_model
+# study_name = "2020-09-14_FEI_conv-eigsum"
+# MODEL_NAME = "conv-eigsum"
+# from models.conv_eigsum import sample_model
+
+study_name = "2020-09-15_FEI_resnet-eigsum"
+MODEL_NAME = "resnet-eigsum"
+from models.resnet_eigsum import sample_model
 
 def objective(trial, tags, save_dir, max_train_iter, datamodule,
         monitor='val_mse_loss', gpus=[0]):
@@ -84,7 +88,7 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         filepath=os.path.join(save_dir,save_name),
         save_top_k=1,
-        verbose=True,
+        verbose=False,
         monitor=monitor,
         mode='min',
         prefix=''
@@ -124,9 +128,10 @@ save_dir = os.path.join(model_base_dir,
 
 tags = [MODEL_NAME, now_str+"-optuna"]
 
-neptune.init(project_qualified_name='tbenst/retina')
-neptune.create_experiment('optuna', tags=["optuna-master"] + tags)
-neptune_callback = optuna_utils.NeptuneCallback()
+# worthless for distributed training...
+# neptune.init(project_qualified_name='tbenst/retina')
+# neptune.create_experiment('optuna', tags=["optuna-master"] + tags)
+# neptune_callback = optuna_utils.NeptuneCallback()
 
 max_train_iter = 25
 storage = f'postgresql://{user}:{pw}@{server}:{port}/optuna'
@@ -145,6 +150,6 @@ study = optuna.create_study(direction='minimize',
 # TODO not a good idea...?
 study.optimize(partial(objective, tags=tags, save_dir=save_dir,
         max_train_iter=max_train_iter, datamodule=dm, gpus=gpus),
-    callbacks=[neptune_callback],
+    # callbacks=[neptune_callback],
     timeout=60*60*8, gc_after_trial=True)
-optuna_utils.log_study(study)
+# optuna_utils.log_study(study)
