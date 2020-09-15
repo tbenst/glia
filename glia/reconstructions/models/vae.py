@@ -162,6 +162,7 @@ class VAE(pl.LightningModule):
     
     def forward(self, x):
         "A special method in PyTorch modules that is called by __call__"
+        x = x / 30
         mean, logvar = self.encode(x)
         # sample an embedding, z
         z = self.reparameterize(mean, logvar)

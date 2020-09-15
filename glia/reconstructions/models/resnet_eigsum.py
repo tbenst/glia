@@ -37,17 +37,18 @@ def sample_model(trial, datamodule, save_dir):
     image_dset = datamodule.images_dset
     imageChannels, H, W = image_dset[0].shape
 
-    nCelltypes = trial.suggest_int("nCelltypes", 1, 32)
-    kernel1 = trial.suggest_int("kernel1", 1, 16)*2-1 # must be odd
-    kernel2 = trial.suggest_int("kernel2", 1, 16)*2-1 # must be odd
+    # nCelltypes = trial.suggest_int("nCelltypes", 1, 32)
+    nCelltypes=1
+    kernel1 = trial.suggest_int("kernel1", 1, 8)*2-1 # must be odd
+    kernel2 = trial.suggest_int("kernel2", 1, 8)*2-1 # must be odd
     nLayers = trial.suggest_int("nLayers", 1, 8)
     nBlockChannels = trial.suggest_int("nBlockChannels", 1, 64)
     nonlinearity = trial.suggest_categorical("nonlinearity",
         ["relu", "celu", "sigmoid", "tanh", "leaky_relu", "gelu", "hardswish"])
-    # batch_size =  trial.suggest_categorical("batch_size",
-    #     [1,4,8,16,32,64,128,256,512])
-    batch_size = 64
-    weight_decay = trial.suggest_loguniform("weight_decay", 1e-4,1.)
+    batch_size =  trial.suggest_categorical("batch_size",
+        [8,16,32,64,128,256,512])
+    # batch_size = 64
+    weight_decay = trial.suggest_loguniform("weight_decay", 1e-6,1.)
 
     # lr = trial.suggest_loguniform("lr", 1e-8,1.)
     # beta = trial.suggest_loguniform("beta", 1e-6,1e3)
@@ -61,7 +62,7 @@ def sample_model(trial, datamodule, save_dir):
         kernel1=kernel1, kernel2=kernel2, nLayers=nLayers,
         nBlockChannels=nBlockChannels,
         nUnitChannels=nUnitChannels, meaH=meaH, meaW=meaW,
-        nonlinearity=nonlinearity,beta=beta, weight_decay=weight_decay,
+        nonlinearity=nonlinearity,beta=beta, weight_decay=weight_decay, no_eigsum=True,
         example_input_array=retina_dset[0][None], # single batch
         # lr=lr, 
         save_dir=save_dir, hostname=hostname, batch_size=batch_size)
@@ -106,7 +107,7 @@ class ResnetDecoder(pl.LightningModule):
     def __init__(self, hostname:str, save_dir:str, example_input_array,
             imageChannels:int = 3,
             nUnitChannels:int = 6, nBlockChannels:int = 16,
-            meaH:int = 64, meaW:int = 64, H:int = 64, nLayers:int = 4,
+            meaH:int = 64, meaW:int = 64, H:int = 64, nLayers:int = 4, no_eigsum:bool=False,
             W:int = 64, nTimeSteps:int = 10, nCelltypes:int = 8,
             kernel1:int = 15, kernel2:int = 15, lr:float = 1e-3,
             batch_size:int = 64, weight_decay: float = 1e-3, beta:float = 1,
@@ -126,6 +127,7 @@ class ResnetDecoder(pl.LightningModule):
         self.kernel1 = kernel1
         self.kernel2 = kernel2
         self.nLayers = nLayers
+        self.no_eigsum = no_eigsum
         self.lr = lr
         self.batch_size = batch_size
         self.weight_decay = weight_decay
@@ -156,8 +158,11 @@ class ResnetDecoder(pl.LightningModule):
             self.nCelltypes, self.nUnitChannels, self.meaH, self.meaW).fill_(
             1/self.nCelltypes)
         self.celltype_likelihood = nn.Parameter(cl) # uniform prior
-        
-        self.conv1 = nn.Conv2d(in_channels=self.nCelltypes*self.nTimeSteps,
+        if no_eigsum:
+            conv1_input = self.nTimeSteps * self.nUnitChannels
+        else:
+            conv1_input = self.nTimeSteps * self.nCelltypes
+        self.conv1 = nn.Conv2d(in_channels=conv1_input,
             out_channels=self.nBlockChannels, kernel_size=self.kernel1,
             padding=self.kernel1//2)
         self.bn1 = nn.BatchNorm2d(self.nBlockChannels)
@@ -178,9 +183,13 @@ class ResnetDecoder(pl.LightningModule):
 #         prob = F.softmax(self.celltype_likelihood, dim=0)
         if self.training:
             x = torch.poisson(x)
-        x = torch.einsum("btchw,nchw->btnhw", x, self.celltype_likelihood)
-        # combine time and unit dimensions
-        x = x.view(-1,self.nTimeSteps*self.nCelltypes, self.meaH, self.meaW)
+        if not self.no_eigsum:
+            x = torch.einsum("btchw,nchw->btnhw", x, self.celltype_likelihood)
+            # combine time and unit dimensions
+            x = x.view(-1,self.nTimeSteps*self.nCelltypes, self.meaH, self.meaW)
+        else:
+            x = x.reshape(-1, self.nUnitChannels*self.nTimeSteps, self.meaH, self.meaW)
+
         x = self.conv1(x)
         x = self.nonlinearity(self.bn1(x))
         x = self.layers(x)
