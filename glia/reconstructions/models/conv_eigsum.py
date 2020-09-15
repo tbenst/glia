@@ -45,12 +45,13 @@ def sample_model(trial, datamodule, save_dir):
     kernel3 = trial.suggest_int("kernel3", 1, 16)*2-1 # must be odd
     nonlinearity = trial.suggest_categorical("nonlinearity",
         ["relu", "celu", "sigmoid", "tanh", "leaky_relu", "gelu", "hardswish"])
-    batch_size =  trial.suggest_categorical("batch_size",
-        [1,4,8,16,32,64,128,256,512])
+    # batch_size =  trial.suggest_categorical("batch_size",
+    #     [1,4,8,16,32,64,128,256,512])
+    batch_size = 64
     weight_decay = trial.suggest_loguniform("weight_decay", 1e-4,1.)
 
-    lr = trial.suggest_loguniform("lr", 1e-8,1.)
-    beta = trial.suggest_loguniform("beta", 1e-3,1e3)
+    # lr = trial.suggest_loguniform("lr", 1e-8,1.)
+    beta = trial.suggest_loguniform("beta", 1e-6,1e3)
     
     hostname = socket.gethostname()
 
@@ -59,8 +60,8 @@ def sample_model(trial, datamodule, save_dir):
         nCelltypes=nCelltypes, conv1_out=conv1_out, conv2_out=conv2_out,
         kernel1=kernel1, kernel2=kernel2, kernel3=kernel3,
         nUnitChannels=nUnitChannels, meaH=meaH, meaW=meaW,
-        nonlinearity=nonlinearity, lr=lr, beta=beta,
-        weight_decay=weight_decay,
+        nonlinearity=nonlinearity,beta=beta, weight_decay=weight_decay,
+        # lr=lr, 
         save_dir=save_dir, hostname=hostname, batch_size=batch_size)
     datamodule.batch_size = batch_size
     return model, datamodule

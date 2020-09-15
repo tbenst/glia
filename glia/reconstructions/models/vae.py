@@ -220,6 +220,7 @@ class VAE(pl.LightningModule):
         # scheduler = {"scheduler": scheduler, "interval" : "step" }
         # # steps_per_epoch = (train_loader_len//self.batch_size)//self.trainer.accumulate_grad_batches
         # return [optimizer], [scheduler]
-    
+
+    # not needed..?    
     def on_sanity_check_end(self):
         Path(self.save_dir).mkdir(exist_ok=True)

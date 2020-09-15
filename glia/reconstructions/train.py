@@ -80,10 +80,11 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
     # torch.cuda.empty_cache()
     save_dir = os.path.join(save_dir, f"trial_{trial.number}")
     model, datamodule = sample_model(trial, datamodule, save_dir)
+    save_name = MODEL_NAME+"_{epoch}_{"+monitor+":.2f}"
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath=save_dir,
-        save_top_k=True,
-        verbose=False,
+        filepath=os.path.join(save_dir,save_name),
+        save_top_k=1,
+        verbose=True,
         monitor=monitor,
         mode='min',
         prefix=''
@@ -99,7 +100,8 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
     trainer = pl.Trainer(gpus=gpus, gradient_clip_val=0.5,
         logger=neptune_logger, checkpoint_callback=checkpoint_callback,
         early_stop_callback=PyTorchLightningPruningCallback(trial, monitor=monitor),
-        max_epochs=max_train_iter)
+        max_epochs=max_train_iter, auto_lr_find=True,
+        default_root_dir=save_dir)
     # https://pytorch-lightning.readthedocs.io/en/latest/api/pytorch_lightning.trainer.html#weights-save-path
     #     weights_save_path=save_dir)
     #                      logger=mlf_logger)
@@ -126,7 +128,7 @@ neptune.init(project_qualified_name='tbenst/retina')
 neptune.create_experiment('optuna', tags=["optuna-master"] + tags)
 neptune_callback = optuna_utils.NeptuneCallback()
 
-max_train_iter = 50
+max_train_iter = 25
 storage = f'postgresql://{user}:{pw}@{server}:{port}/optuna'
 pruner = optuna.pruners.HyperbandPruner(
     min_resource=1,
