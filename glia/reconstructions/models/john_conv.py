@@ -52,7 +52,7 @@ def sample_model(trial, datamodule, save_dir):
     if einsum:
         nCelltypes = trial.suggest_int("nCelltypes", 4,32)
     else:
-        nCelltypes = 0
+        nCelltypes = 6
     model = ConvNet(filters=filters, nLayers=nLayers, kernel1=kernel1, nCelltypes=nCelltypes,
         weight_decay=weight_decay, poisson=poisson, einsum=einsum,
         example_input_array=retina_dset[0][None])
@@ -79,13 +79,12 @@ class ConvNet(pl.LightningModule):
         super(ConvNet, self).__init__()
         self.filters = filters
         self.lr = lr
+        self.poisson = poisson
+        self.einsum = einsum
         self.weight_decay=weight_decay
         
         self.save_hyperparameters()
-        if einsum:
-            self.nCelltypes = nCelltypes
-        else:
-            self.nCelltypes = 6
+        self.nCelltypes = nCelltypes
         self.conv_in = torch.nn.Conv2d(10*self.nCelltypes, filters, kernel1, padding=4,
             stride=4, bias=False)
         
