@@ -69,6 +69,10 @@ MODEL_NAME = "VAE"
 from models.vae import sample_model
 study_name = "2020-09-14_FEI_VAE"
 
+MODEL_NAME = "VAE"
+from models.john_conv import sample_model
+study_name = "2020-09-16_john_conv"
+
 # study_name = "2020-09-14_FEI_conv-eigsum"
 # MODEL_NAME = "conv-eigsum"
 # from models.conv_eigsum import sample_model
@@ -91,7 +95,8 @@ def objective(trial, tags, save_dir, max_train_iter, datamodule,
         verbose=False,
         monitor=monitor,
         mode='min',
-        prefix=''
+        prefix='',
+        period=5
     )
 
     neptune_logger = NeptuneLogger(
@@ -133,7 +138,7 @@ tags = [MODEL_NAME, now_str+"-optuna"]
 # neptune.create_experiment('optuna', tags=["optuna-master"] + tags)
 # neptune_callback = optuna_utils.NeptuneCallback()
 
-max_train_iter = 50
+max_train_iter = 100
 storage = f'postgresql://{user}:{pw}@{server}:{port}/optuna'
 pruner = optuna.pruners.HyperbandPruner(
     min_resource=1,

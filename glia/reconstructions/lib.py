@@ -43,11 +43,11 @@ def resize_3d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray",
     return new
 
 def gray_3d(images):
-    im = cv2.cvtColor(images[0], cv2.COLOR_BGR2GRAY)
+    im = cv2.cvtColor(images[0], cv2.COLOR_RGB2GRAY)
     new = np.zeros([images.shape[0], *im.shape],
             dtype = np.float32)
     for z, img in enumerate(images):
-        new[z] = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        new[z] = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     
     return new
 
