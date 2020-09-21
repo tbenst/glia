@@ -40,22 +40,24 @@ def sample_model(trial, datamodule, save_dir):
 
     filters = trial.suggest_int("filters", 4,256)
     nLayers = trial.suggest_int("nLayers", 2,151)
-    kernel1 = trial.suggest_int("kernel1", 1, 8)*2-1
-    nonlinearity = trial.suggest_categorical("nonlinearity",
-        ["relu", "celu", "sigmoid", "tanh", "leaky_relu", "gelu", "hardswish"])
+    # kernel1 = trial.suggest_int("kernel1", 1, 8)*2-1
+    kernel1 = 9
+    # nonlinearity = trial.suggest_categorical("nonlinearity",
+    #     ["relu", "celu", "sigmoid", "tanh", "leaky_relu", "gelu", "hardswish"])
     weight_decay = trial.suggest_loguniform("weight_decay", 1e-5,1e-1)
     batch_size=64
     poisson = trial.suggest_categorical("poisson",
         [True, False])
-    einsum = trial.suggest_categorical("einsum",
-        [True, False])
+    # einsum = trial.suggest_categorical("einsum",
+    #     [True, False])
+    einsum = False
     if einsum:
         nCelltypes = trial.suggest_int("nCelltypes", 4,32)
     else:
         nCelltypes = 6
     model = ConvNet(filters=filters, nLayers=nLayers, kernel1=kernel1, nCelltypes=nCelltypes,
         weight_decay=weight_decay, poisson=poisson, einsum=einsum,
-        example_input_array=retina_dset[0][None])
+        example_input_array=retina_dset[0][None], save_dir=save_dir)
     datamodule.batch_size = batch_size
     return model, datamodule
 
@@ -75,13 +77,14 @@ class Block(torch.nn.Module):
 class ConvNet(pl.LightningModule):
     def __init__(self, filters=128, nLayers=101, lr=3e-4, kernel1=9, weight_decay=0.,
                 poisson=False, einsum=False, nCelltypes=0,
-                example_input_array=None):
+                example_input_array=None, save_dir=None):
         super(ConvNet, self).__init__()
         self.filters = filters
         self.lr = lr
         self.poisson = poisson
         self.einsum = einsum
-        self.weight_decay=weight_decay
+        self.weight_decay = weight_decay
+        self.save_dir = save_dir
         
         self.save_hyperparameters()
         self.nCelltypes = nCelltypes
