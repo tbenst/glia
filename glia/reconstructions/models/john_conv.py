@@ -1,3 +1,5 @@
+# Credit to John Thickstun for original implementation
+
 import torch, tables
 from torch import nn
 import os
