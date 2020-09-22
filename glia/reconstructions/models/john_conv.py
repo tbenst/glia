@@ -78,13 +78,14 @@ class Block(torch.nn.Module):
     
 class ConvNet(pl.LightningModule):
     def __init__(self, filters=128, nLayers=101, lr=3e-4, kernel1=9, weight_decay=0.,
-                poisson=False, einsum=False, nCelltypes=0,
+                poisson=False, einsum=False, nCelltypes=0, nTime=10,
                 example_input_array=None, save_dir=None):
         super(ConvNet, self).__init__()
         self.filters = filters
         self.lr = lr
         self.poisson = poisson
         self.einsum = einsum
+        self.nTime = 10
         self.weight_decay = weight_decay
         self.save_dir = save_dir
         
@@ -114,7 +115,7 @@ class ConvNet(pl.LightningModule):
             x = torch.poisson(x)
         if self.einsum:
             x = torch.einsum("btchw,nchw->btnhw", x, self.celltype_likelihood)
-        x = x.reshape(-1,10*self.nCelltypes,64,64)[:,:,::2,::2].contiguous() # factor of 2 downsampling
+        x = x.reshape(-1,self.nTime*self.nCelltypes,64,64)[:,:,::2,::2].contiguous() # factor of 2 downsampling
         zx = F.relu(self.conv_in(x))
         for layer in self.resnet: zx = layer(zx)
         return torch.sigmoid(self.conv_out(zx).squeeze() + self.bias[None,:,:])
