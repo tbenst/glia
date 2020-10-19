@@ -202,6 +202,8 @@ def create_stimuli(analog_file, stimulus_file, lab_notebook_fp,
     logger.debug(f"params!!!: {(analog_file, stimulus_file, lab_notebook_fp, data_name, eyecandy_url, analog_idx, ignore_extra, calibration, within_threshold)}")
     if analog_file[-4:]==".brw":
         analog = read_3brain_analog(analog_file)
+    elif analog_file[-4:]==".npz":
+        analog = np.load(analog_file)["analog"]
     else:
         analog = read_raw_voltage(analog_file)[:,analog_idx]
     if calibration=='auto':

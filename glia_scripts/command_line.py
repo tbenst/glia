@@ -36,8 +36,9 @@ from glia.types import Unit
 from matplotlib.backends.backend_pdf import PdfPages
 from random import randint
 import numpy as np
-import yaml
+import yaml, csv
 import cProfile
+from glia import iter_chunks, read_3brain_analog
 
 #%%
 def plot_function(f):
@@ -292,14 +293,23 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         try:
             filename = glia.match_filename(filename,"txt")
         except:
-            filename = glia.match_filename(filename,"bxr")
+            try:
+                filename = glia.match_filename(filename,"bxr")
+            except:
+                filename = glia.match_filename(filename,"csv")
             
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
+    # ignore first of two extensions (if applicable)
+    name, _ = os.path.splitext(name)
     analog_file = os.path.join(data_directory, name +'.analog')
     if not os.path.isfile(analog_file):
         # use 3brain analog file
         analog_file = os.path.join(data_directory, name +'.analog.brw')
+
+    if not os.path.isfile(analog_file):
+        # Tyler's format; used if files were split for example
+        analog_file = os.path.join(data_directory, name +'.analog.npz')
 
     stimulus_file = os.path.join(data_directory, name + ".stim")
     ctx.obj = {"filename": os.path.join(data_directory,name)}
@@ -326,7 +336,7 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
         notebook = glia.find_notebook(data_directory)
 
     lab_notebook = glia.open_lab_notebook(notebook)
-    logger.info(name)
+    logger.info(f"{name=}")
     experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
     flicker_version = experiment_protocol["flickerVersion"]
 
@@ -389,10 +399,12 @@ def analyze(ctx, filename, trigger, threshold, eyecandy, ignore_extra=False,
             channel_map_3brain = None
         ctx.obj["units"] = glia.read_3brain_spikes(filename, retina_id,
             channel_map_3brain, truncate=dev)
+    elif extension == ".csv":
+        ctx.obj["units"] = glia.read_csv_spikes(filename, retina_id)        
     elif re.match(spyking_regex, filename):
         ctx.obj["units"] = glia.read_spyking_results(filename)
     else:
-        raise ValueError('could not read {}. Is it a plexon or spyking circus file?')
+        raise ValueError(f'could not read {extension=}. Is it a plexon or spyking circus file?')
 
     #### DATA MUNGING OPTIONS
     if integrity_filter>0.0:
@@ -1016,6 +1028,141 @@ def combine(files, output):
     # cleanup
     out_bxr.close()
     [b.close() for b in bxrs]
+
+@main.command()
+@click.argument('analog_file', type=click.Path(exists=True), nargs=1)
+def length(analog_file):
+    """Get length (in samples) of a 3brain analog file.
+    
+    Useful for getting nsamples as argument for `glia split`."""
+    if analog_file[-10:] == 'analog.brw':
+        with h5py.File(analog_file, 'r') as file:
+            print(len(file["3BData"]["Raw"]))
+    else:
+        raise NotImplementedError("Only for use with *analog.brw files")
+    
+
+@main.command()
+@click.argument('filepath', type=click.Path(exists=True), nargs=1)
+@click.argument('nsamples', type=int, nargs=-1)
+def split(filepath, nsamples):
+    """Split single .brw or .bxr file into multiple .brw or .bxr files.
+    
+    Can pass multiple NSAMPLES, i.e. pass 5 integers to split into 5 files.
+
+    Useful if multiple experiments were spike-sorted together and now you want
+    to run through glia.
+    
+    Creates a _spikes.csv for each split, as well as a single _channel_map.npy
+    """
+    start = np.cumsum([0] + list(nsamples[:-1]))
+    if filepath[-10:] == 'analog.brw':
+        filename = filepath[:-10]
+        analog = read_3brain_analog(filepath)
+        for i, (s,n) in enumerate(zip(start, nsamples)):
+            name = f"{filename}_part_{i}_analog.npz"
+            print(f"Saving {name}")
+            sampling_rate = glia.sampling_rate(filepath)
+            np.savez(name, analog=analog[s:s+n],
+                     sampling_rate=sampling_rate)
+    elif filepath[-4:] == ".bxr":
+        filename = filepath[:-4]
+        # split spike-sorted data
+        with h5py.File(filepath, 'r') as h5:
+            # shared setup for the concatenated arrays
+            sampling_rate = float(h5["3BRecInfo"]["3BRecVars"]["SamplingRate"][0])
+            channel_map = h5["3BRecInfo"]["3BMeaStreams"]["Raw"]["Chs"][()]
+            
+            # map 3brain unit num
+            # numbers typically from -4 to 9000
+            # where negative numbers appear across multiple channels
+            # and thus are presumably bad units...?
+            # positive-numbered units appear on one channel
+            unit_id_2_num = {}
+
+            n_unit_nums = 0
+            for chunk in iter_chunks(h5['3BResults/3BChEvents/SpikeUnits'], 10000):
+                n_unit_nums = max(n_unit_nums, chunk.max())
+            
+            unit_map = {}
+            channel_unit_count = {}
+
+
+            # operate on each of the concatenated arrays, one at a time
+            for i, (s,n) in enumerate(zip(start, nsamples)):
+                startTime = s / sampling_rate
+                first_idx = None
+                for chunk in iter_chunks(h5['3BResults/3BChEvents/SpikeTimes'], 10000):
+                    valid_idxs = np.argwhere(h5["3BResults/3BChEvents/SpikeTimes"] > s)
+                    if len(valid_idxs) > 0:
+                        first_idx = valid_idxs[0][0]
+                        break
+                assert not first_idx is None
+                print(f"identified start idx of {first_idx}.")
+
+                # for simplicity, we just iterate again, could have faster implementation
+                last_idx = len(h5['3BResults/3BChEvents/SpikeTimes'])
+                chunk_size = 10000
+                for j, chunk in enumerate(iter_chunks(h5['3BResults/3BChEvents/SpikeTimes'], chunk_size)):
+                    invalid_idxs = np.argwhere(chunk > s + n)
+                    if len(invalid_idxs) > 0:
+                        last_idx = invalid_idxs[0][0] + j*chunk_size
+                        break
+                print(f"identified stop idx of {last_idx}.")
+                
+                spike_channel_ids = h5["3BResults"]["3BChEvents"]["SpikeChIDs"][first_idx:last_idx]
+                spike_unit_ids = h5["3BResults"]["3BChEvents"]["SpikeUnits"][first_idx:last_idx]
+                # poorly named; time is in units of 1/sampling_rate
+                # aka sample number
+                # subtract to adjust start time
+                spike_times = h5["3BResults"]["3BChEvents"]["SpikeTimes"][first_idx:last_idx] - s
+                                
+
+                    
+                csv_name = f'{filename}_part_{i}_spikes.csv'
+                spikes = zip(spike_channel_ids, spike_unit_ids, spike_times)
+                tot_spikes = spike_times.shape[0]
+                print(f"creating {csv_name} ...")
+                with open(csv_name, 'w', newline='') as csvfile:
+                    fieldnames = ['channel_i', 'channel_j', 'unit', "spike_time"]
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                    writer.writeheader()
+                    for channel, unit_id, spike_time in tqdm(spikes,
+                                                             total=tot_spikes):
+                        c = channel_map[channel]
+                        # convert to tuple
+                        # account for 1-indexing
+                        c = (c[0]-1,c[1]-1)
+                        
+                        # count num units on channel
+                        # first check if we've seen this channel before
+                        if not c in channel_unit_count:
+                            # if not, initialize channel_unit_count for the channel
+                            channel_unit_count[c] = 1
+                            unit_num = 0
+                            # add unit
+                            unit_id_2_num[unit_id] = unit_num
+                        else:
+                            
+                            # then check if we've seen this unit before
+                            if not unit_id in unit_id_2_num:
+                                # if not, assign unit_num for this new unit
+                                unit_num = channel_unit_count[c]
+                                unit_id_2_num[unit_id] = unit_num
+                                channel_unit_count[c] += 1
+                            else:
+                                # otherwise, look it up
+                                unit_num = unit_id_2_num[unit_id]
+                                
+                                
+                        t = spike_time / sampling_rate
+                        writer.writerow({"channel_i": c[0],
+                            "channel_j": c[1],
+                            "unit": unit_num,
+                            "spike_time": t})
+                        
+                np.save(f"{filename}_channel_map.npy", channel_map)
 
 
 if __name__ == '__main__':

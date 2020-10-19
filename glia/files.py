@@ -12,6 +12,7 @@ from .types import Unit
 from .io.mdaio import readmda
 from tqdm.auto import tqdm
 from glia.config import logger
+import pandas as pd
 
 file = str
 Dir = str
@@ -138,6 +139,31 @@ def read_3brain_analog(analog_file):
     with h5py.File(analog_file, 'r') as file:
         analog = np.array(file["3BData"]["Raw"])
     return analog
+
+def read_csv_spikes(filepath, retina_id):
+    """Read spikes from csv file: channel_i,channel_j,unit,spike_time
+    
+    unit should be integer starting at 0 for each (i,j).
+    """
+    spikes = pd.read_csv(filepath)
+    
+    unit_dictionary = {}
+    
+    for _, chan_i, chan_j, unit_num, time in tqdm(spikes.itertuples()):
+        c = (chan_i, chan_j)
+        if (c, unit_num) not in unit_dictionary:
+            # initialize key for both dictionaries
+            unit = Unit(retina_id, c, unit_num)
+            unit_dictionary[(c, unit_num)] = unit
+            # finally, we add the spike
+            unit_dictionary[(c, unit_num)].spike_train.append(time)
+
+    # convert each list to numpy array
+    for uid in unit_dictionary.keys():
+        unit_dictionary[uid].spike_train = np.array(unit_dictionary[uid].spike_train)
+
+    return {unit.id: unit for k,unit in unit_dictionary.items()}
+
 
 def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False):
     """Read spikes detected by 3brain in a .bxr file.
@@ -288,7 +314,10 @@ def sampling_rate(filename: file) -> (int):
     if filename[-4:]==".brw":
         with h5py.File(filename, 'r') as file:
             return file["3BRecInfo"]["3BRecVars"]["SamplingRate"][0]
-
+    elif filename[-4:]==".npz":
+        npz = np.load(filename)
+        return npz["sampling_rate"]
+    
     header = get_header(filename)[0]
     return int(re.search("Sample rate = (\d+)", header).group(1))
 
