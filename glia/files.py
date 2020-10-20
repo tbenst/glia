@@ -155,8 +155,8 @@ def read_csv_spikes(filepath, retina_id):
             # initialize key for both dictionaries
             unit = Unit(retina_id, c, unit_num)
             unit_dictionary[(c, unit_num)] = unit
-            # finally, we add the spike
-            unit_dictionary[(c, unit_num)].spike_train.append(time)
+        # finally, we add the spike
+        unit_dictionary[(c, unit_num)].spike_train.append(time)
 
     # convert each list to numpy array
     for uid in unit_dictionary.keys():

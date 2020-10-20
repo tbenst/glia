@@ -85,13 +85,13 @@ class ConvNet(pl.LightningModule):
         self.lr = lr
         self.poisson = poisson
         self.einsum = einsum
-        self.nTime = 10
+        self.nTime = nTime
         self.weight_decay = weight_decay
         self.save_dir = save_dir
         
         self.save_hyperparameters()
         self.nCelltypes = nCelltypes
-        self.conv_in = torch.nn.Conv2d(10*self.nCelltypes, filters, kernel1, padding=4,
+        self.conv_in = torch.nn.Conv2d(nTime*self.nCelltypes, filters, kernel1, padding=4,
             stride=4, bias=False)
         
         self.resnet = torch.nn.ModuleList()
