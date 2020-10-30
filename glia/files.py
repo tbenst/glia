@@ -165,7 +165,8 @@ def read_csv_spikes(filepath, retina_id):
     return {unit.id: unit for k,unit in unit_dictionary.items()}
 
 
-def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False):
+def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False,
+                       drop_noise_units=True):
     """Read spikes detected by 3brain in a .bxr file.
 
     If channel_map is None, read from file, else use arg. Units will
@@ -211,6 +212,9 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False):
             nnn+=1
             if truncate and nnn>1000000:
                 break
+            elif unit_id < 0 and drop_noise_units:
+                continue
+            
             c = channel_map[channel]
             # convert to tuple
             # account for 1-indexing

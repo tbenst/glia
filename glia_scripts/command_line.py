@@ -673,12 +673,21 @@ def strip_generated(name, choices=generate_choices):
 
 @main.command("process")
 @click.argument('filename', type=str, default=None)
+@click.option("--configuration", "-c", type=click.Path(exists=True), help="""Use
+    configuration file for analog calibration, etc.""")
+@click.option("--analog-idx", "-i", type=int, help="Channel of light detector", default=1)
+@click.option("--threshold", "-r", type=float, default=9, help="Set the threshold for flicker")
+@click.option("--ignore-extra",  is_flag=True, help="Ignore extra stimuli if stimulus list is longer than detected start times in analog file.")
 @click.option("--notebook", "-n", type=click.Path(exists=True))
+@click.option("--eyecandy", "-e", default="http://localhost:3000")
 @click.option("--verbose", "-v", is_flag=True)
 @click.option("--debug", "-vv", is_flag=True)
-def process_cmd(filename, notebook, debug=False, verbose=False):
+@click.pass_context
+def process_cmd(ctx, filename, notebook, eyecandy, configuration=None, debug=False,
+        analog_idx=1, threshold=9, ignore_extra=False, verbose=False):
     "Process analog + frames log to align stim/ephys in .frames file."
-
+    # TODO: deduplicate code from analyze command..
+    # problem: hard to do this due to click ctx object...perhaps can pass to function...?
     init_logging(filename, processes=None, verbose=verbose, debug=debug)
     #### FILEPATHS
     logger.debug(str(filename) + "   " + str(os.path.curdir))
@@ -686,17 +695,76 @@ def process_cmd(filename, notebook, debug=False, verbose=False):
         try:
             filename = glia.match_filename(filename,"txt")
         except:
-            filename = glia.match_filename(filename,"bxr")
+            try:
+                filename = glia.match_filename(filename,"bxr")
+            except:
+                filename = glia.match_filename(filename,"csv")
     data_directory, data_name = os.path.split(filename)
     name, extension = os.path.splitext(data_name)
     analog_file = os.path.join(data_directory, name +'.analog')
     if not os.path.isfile(analog_file):
         # use 3brain analog file
         analog_file = os.path.join(data_directory, name +'.analog.brw')
+        
+    if not os.path.isfile(analog_file):
+        # Tyler's format; used if files were split for example
+        analog_file = os.path.join(data_directory, name +'.analog.npz')
 
     stimulus_file = os.path.join(data_directory, name + ".stim")
+    ctx.obj = {"filename": os.path.join(data_directory,name)}
+    
+    if configuration!=None:
+        with open(configuration, 'r') as f:
+            user_config = yaml.safe_load(f)
+        config.user_config = user_config
+        if "analog_calibration" in user_config:
+            config.analog_calibration = user_config["analog_calibration"]
+        if "notebook" in user_config:
+            notebook = user_config["notebook"]
+        if "eyecandy" in user_config:
+            eyecandy = user_config["eyecandy"]
+        if "processes" in user_config:
+            processes = user_config["processes"]
+        if "integrity_filter" in user_config:
+            integrity_filter = user_config["integrity_filter"]
+        if "by_channel" in user_config:
+            by_channel = user_config["by_channel"]
+
     if not notebook:
         notebook = glia.find_notebook(data_directory)
+
+    lab_notebook = glia.open_lab_notebook(notebook)
+    logger.info(f"{name=}")
+    experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
+    flicker_version = experiment_protocol["flickerVersion"]
+
+
+    #### LOAD STIMULUS
+    try:
+        metadata, stimulus_list, method = glia.read_stimulus(stimulus_file)
+        ctx.obj["stimulus_list"] = stimulus_list
+        ctx.obj["metadata"] = metadata
+        # assert method=='analog-flicker'
+    except:
+        trigger = "flicker"
+        print("No .stim file found. Creating from .analog file.".format(trigger))
+        if flicker_version==0.3:
+            metadata, stimulus_list = glia.create_stimuli(
+                analog_file, stimulus_file, notebook, name, eyecandy, analog_idx, ignore_extra,
+                config.analog_calibration, threshold)
+            ctx.obj["stimulus_list"] = stimulus_list
+            ctx.obj["metadata"] = metadata
+            print('finished creating .stim file')
+        elif trigger == "ttl":
+            raise ValueError('not implemented')
+        else:
+            raise ValueError("invalid trigger: {}".format(trigger))
+
+    if not notebook:
+        notebook = glia.find_notebook(data_directory)
+        
+    ## END of code duplication
+    
     lab_notebook = glia.open_lab_notebook(notebook, convert_types=False)
     experiment_protocol = glia.get_experiment_protocol(lab_notebook, name)
     
@@ -710,10 +778,13 @@ def process_cmd(filename, notebook, debug=False, verbose=False):
     for _ in container.decode(video=0):
         n_video_frames += 1
     
+    
     stimulus_list = glia.read_stimulus(stimulus_file)
 
     if analog_file[-4:]==".brw":
         analog = glia.read_3brain_analog(analog_file)
+    elif analog_file[-11:]==".analog.npz":
+        analog = np.load(analog_file)["analog"]
     else:
         analog = glia.read_raw_voltage(analog_file)[:,1]
     sampling_rate = glia.sampling_rate(analog_file)
