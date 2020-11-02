@@ -19,7 +19,7 @@
     "http-server": "^0.12.0"
   },
   "staticFiles": {
-    "staticPath": "static",
+    "staticPath": ["../pixel2retina", "../retina2pixel"],
     "watcherGlob": "**"
   }
 }
