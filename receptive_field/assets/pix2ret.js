@@ -1,0 +1,1 @@
+require("../output/ReceptiveField.Pixel2retina/index.js").main()

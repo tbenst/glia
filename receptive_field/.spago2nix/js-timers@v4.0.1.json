@@ -1,0 +1,1 @@
+{"type":"Fetched","value":{"result":{"url":"https://github.com/purescript-contrib/purescript-js-timers.git","sha256":"1a8092sli7zqw1wflibhjza1ww21dxl7x7r602iazzwh2g70v4dg","rev":"8206d3d8034357b4665828e52f7ff1b8cb46611e"},"package":{"version":"v4.0.1","repo":{"tag":"Remote","contents":"https://github.com/purescript-contrib/purescript-js-timers.git"},"packageName":"js-timers"}}}
