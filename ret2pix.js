@@ -4305,7 +4305,7 @@ var PS = {};
           var widthPerc = ReceptiveField_Main.imgPercentile(32);
           var heightPerc = ReceptiveField_Main.imgPercentile(32);
           return Data_Functor.map(FRP_Behavior.functorABehavior(FRP_Event.functorEvent))(Data_Maybe.maybe("retina2pixel/16_16.png")(function (v1) {
-              return ReceptiveField_Main.int2img("retina2pixel/")(heightPerc(v1.y)(v.h) * 2 | 0)(widthPerc(v1.x)(v.w) * 2 | 0);
+              return ReceptiveField_Main.int2img("retina2pixel/")(heightPerc(v1.y)(v.h))(widthPerc(v1.x)(v.w));
           }))(FRP_Behavior_Mouse.position(mouse));
       };
   };

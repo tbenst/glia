@@ -1322,11 +1322,11 @@
       };
     }
     {
-      name = "browserslist___browserslist_4.14.5.tgz";
+      name = "browserslist___browserslist_4.14.6.tgz";
       path = fetchurl {
-        name = "browserslist___browserslist_4.14.5.tgz";
-        url  = "https://registry.yarnpkg.com/browserslist/-/browserslist-4.14.5.tgz";
-        sha1 = "1c751461a102ddc60e40993639b709be7f2c4015";
+        name = "browserslist___browserslist_4.14.6.tgz";
+        url  = "https://registry.yarnpkg.com/browserslist/-/browserslist-4.14.6.tgz";
+        sha1 = "97702a9c212e0c6b6afefad913d3a1538e348457";
       };
     }
     {
@@ -1375,6 +1375,14 @@
         name = "cache_base___cache_base_1.0.1.tgz";
         url  = "https://registry.yarnpkg.com/cache-base/-/cache-base-1.0.1.tgz";
         sha1 = "0a7f46416831c8b662ee36fe4e7c59d76f666ab2";
+      };
+    }
+    {
+      name = "call_bind___call_bind_1.0.0.tgz";
+      path = fetchurl {
+        name = "call_bind___call_bind_1.0.0.tgz";
+        url  = "https://registry.yarnpkg.com/call-bind/-/call-bind-1.0.0.tgz";
+        sha1 = "24127054bb3f9bdcb4b1fb82418186072f77b8ce";
       };
     }
     {
@@ -2567,6 +2575,14 @@
         name = "gensync___gensync_1.0.0_beta.2.tgz";
         url  = "https://registry.yarnpkg.com/gensync/-/gensync-1.0.0-beta.2.tgz";
         sha1 = "32a6ee76c3d7f52d46b2b1ae5d93fea8580a25e0";
+      };
+    }
+    {
+      name = "get_intrinsic___get_intrinsic_1.0.1.tgz";
+      path = fetchurl {
+        name = "get_intrinsic___get_intrinsic_1.0.1.tgz";
+        url  = "https://registry.yarnpkg.com/get-intrinsic/-/get-intrinsic-1.0.1.tgz";
+        sha1 = "94a9768fcbdd0595a1c9273aacf4c89d075631be";
       };
     }
     {
@@ -3802,11 +3818,11 @@
       };
     }
     {
-      name = "object.assign___object.assign_4.1.1.tgz";
+      name = "object.assign___object.assign_4.1.2.tgz";
       path = fetchurl {
-        name = "object.assign___object.assign_4.1.1.tgz";
-        url  = "https://registry.yarnpkg.com/object.assign/-/object.assign-4.1.1.tgz";
-        sha1 = "303867a666cdd41936ecdedfb1f8f3e32a478cdd";
+        name = "object.assign___object.assign_4.1.2.tgz";
+        url  = "https://registry.yarnpkg.com/object.assign/-/object.assign-4.1.2.tgz";
+        sha1 = "0ed54a342eceb37b38ff76eb831a0e788cb63940";
       };
     }
     {
@@ -4602,11 +4618,11 @@
       };
     }
     {
-      name = "regenerate___regenerate_1.4.1.tgz";
+      name = "regenerate___regenerate_1.4.2.tgz";
       path = fetchurl {
-        name = "regenerate___regenerate_1.4.1.tgz";
-        url  = "https://registry.yarnpkg.com/regenerate/-/regenerate-1.4.1.tgz";
-        sha1 = "cad92ad8e6b591773485fbe05a485caf4f457e6f";
+        name = "regenerate___regenerate_1.4.2.tgz";
+        url  = "https://registry.yarnpkg.com/regenerate/-/regenerate-1.4.2.tgz";
+        sha1 = "b9346d8827e8f5a32f7ba29637d398b69014848a";
       };
     }
     {
