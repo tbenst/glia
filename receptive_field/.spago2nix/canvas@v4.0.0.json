@@ -1,1 +1,0 @@
-{"type":"Fetched","value":{"result":{"url":"https://github.com/purescript-web/purescript-canvas.git","sha256":"0m7a523hr6jn8wg3d1jck1s3bar81gq4ar8bq658sbsysh73n1py","rev":"bbdc02388f2cc612324aa8c1eef7877666bf1bd2"},"package":{"version":"v4.0.0","repo":{"tag":"Remote","contents":"https://github.com/purescript-web/purescript-canvas.git"},"packageName":"canvas"}}}
