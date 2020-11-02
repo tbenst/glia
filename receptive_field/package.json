@@ -7,7 +7,7 @@
     "clean": "rm -rf output .spago dist/* node_modules output .cache .spago2nix",
     "watch": "spago bundle-app --watch --main ReceptiveField.Main --to dist/app.js",
     "dev": "yarn parcel assets/*.html",
-    "bundle": "spago bundle-app --main ReceptiveField.Retina2pixel --to ../retina2pixel.js && spago bundle-app --main ReceptiveField.Pixel2retina --to ../pixel2retina.js && parcel build assets/*.html && cp assets/*.html .. ",
+    "bundle": "spago bundle-app --main ReceptiveField.Retina2pixel --to ../ret2pix.js && spago bundle-app --main ReceptiveField.Pixel2retina --to ../pix2ret.js && parcel build assets/*.html && cp assets/*.html .. ",
     "serve": "yarn bundle && http-server dist",
     "test": "spago test"
   },

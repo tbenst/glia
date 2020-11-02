@@ -18,9 +18,10 @@ import Effect (Effect)
 import Effect.Console (log)
 import FRP.Behavior (Behavior, animate)
 
+-- addition of 'glia/' breaks local development but needed for gh-pages :/
 scene :: Mouse -> { w :: Number, h :: Number } -> Behavior String
-scene mouse { w, h } = maybe "/pixel2retina/16_16.png"
-  (\{x, y} -> int2img "/pixel2retina/" (widthPerc x w) (heightPerc y h) )
+scene mouse { w, h } = maybe "pixel2retina/16_16.png"
+  (\{x, y} -> int2img "pixel2retina/" (widthPerc x w) (heightPerc y h) )
   <$> (Mouse.position mouse) where
     heightPerc = imgPercentile 64
     widthPerc = imgPercentile 64

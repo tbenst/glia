@@ -26591,8 +26591,8 @@ var scene = function scene(mouse) {
   return function (v) {
     var widthPerc = ReceptiveField_Main.imgPercentile(64);
     var heightPerc = ReceptiveField_Main.imgPercentile(64);
-    return Data_Functor.map(FRP_Behavior.functorABehavior(FRP_Event.functorEvent))(Data_Maybe.maybe("/pixel2retina/16_16.png")(function (v1) {
-      return ReceptiveField_Main.int2img("/pixel2retina/")(widthPerc(v1.x)(v.w))(heightPerc(v1.y)(v.h));
+    return Data_Functor.map(FRP_Behavior.functorABehavior(FRP_Event.functorEvent))(Data_Maybe.maybe("glia/pixel2retina/16_16.png")(function (v1) {
+      return ReceptiveField_Main.int2img("glia/pixel2retina/")(widthPerc(v1.x)(v.w))(heightPerc(v1.y)(v.h));
     }))(FRP_Behavior_Mouse.position(mouse));
   };
 };
@@ -26623,7 +26623,7 @@ var main = function __do() {
     }
 
     ;
-    throw new Error("Failed pattern match at ReceptiveField.Pixel2retina (line 34, column 3 - line 42, column 16): " + [maybeElement.constructor.name]);
+    throw new Error("Failed pattern match at ReceptiveField.Pixel2retina (line 35, column 3 - line 43, column 16): " + [maybeElement.constructor.name]);
   })();
 
   return Data_Unit.unit;
