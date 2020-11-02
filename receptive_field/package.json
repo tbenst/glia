@@ -2,7 +2,7 @@
   "name": "receptive-field",
   "version": "0.1.0",
   "scripts": {
-    "bootstrap-nix": "yarn && spago init && spago install behaviors drawing web-html && yarn add parcel-plugin-static-files-copy --dev && yarn2nix > yarn.nix && spago2nix generate",
+    "bootstrap-nix": "yarn && spago init && spago install behaviors drawing web-html aff canvas-action && yarn add parcel-plugin-static-files-copy --dev && yarn2nix > yarn.nix && spago2nix generate",
     "full-clean": "rm -rf node_modules output .spago dist/* *.lock spago-packages.nix yarn.nix .spago2nix .cache spago.dhall packages.dhall",
     "clean": "rm -rf output .spago dist/* node_modules output .cache .spago2nix",
     "watch": "spago bundle-app --watch --main ReceptiveField.Main --to dist/app.js",

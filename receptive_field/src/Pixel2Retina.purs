@@ -2,7 +2,7 @@ module ReceptiveField.Pixel2retina where
 
 import Prelude
 
-import ReceptiveField.Main (render, int2img, imgPercentile)
+import ReceptiveField.Main (render, int2img, imgPercentile, preloadImages)
 import FRP.Event.Mouse (Mouse, getMouse)
 import FRP.Behavior.Mouse as Mouse
 import Web.DOM.NonElementParentNode (getElementById)
@@ -17,11 +17,12 @@ import Partial.Unsafe (unsafePartial)
 import Effect (Effect)
 import Effect.Console (log)
 import FRP.Behavior (Behavior, animate)
+import Effect.Aff (launchAff_)
 
 -- addition of 'glia/' breaks local development but needed for gh-pages :/
 scene :: Mouse -> { w :: Number, h :: Number } -> Behavior String
 scene mouse { w, h } = maybe "pixel2retina/16_16.png"
-  (\{x, y} -> int2img "pixel2retina/" (widthPerc x w) (heightPerc y h) )
+  (\{x, y} -> int2img "pixel2retina/" (heightPerc y h) (widthPerc x w) )
   <$> (Mouse.position mouse) where
     heightPerc = imgPercentile 64
     widthPerc = imgPercentile 64
@@ -32,6 +33,7 @@ main = do
   win ← window
   doc ← document win
   maybeElement ← getElementById "retina2pixel" $ toNonElementParentNode $ toDocument  doc
+  _ <- launchAff_ $ preloadImages "pixel2retina/" 64 64
   case maybeElement of
     Nothing → log "couldn't find img by ID"
     Just elem → do
