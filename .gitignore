@@ -69,3 +69,4 @@ boilerplate/
 ffhq_viz
 lightning_logs
 mlruns
+notebooks/pixel_to_ret_grad.npy
