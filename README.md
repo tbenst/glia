@@ -5,9 +5,7 @@ A package to support neuroscientists in analyzing multi-electrode array recordin
 
 ## Installation
 ```
-> conda env create -f environment.yml
-> pip install -r requirements.txt
-> pip install -e .
+> pip install git+https://github.com/tbenst/glia.git
 ```
 We install in development mode so can update with a simple `git pull`
 
