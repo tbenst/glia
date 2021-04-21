@@ -34,6 +34,7 @@ setup(name='glia',
             'glia-profile=glia_scripts.profile:main',
           ],
       },
-      setup_requires=['pytest-runner'],
+      setup_requires=['pytest-runner', 'setuptools_scm'],
+      include_package_data=True,
       tests_require=['pytest'],
       )
