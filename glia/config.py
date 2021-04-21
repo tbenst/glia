@@ -1,7 +1,9 @@
 import multiprocessing
 import logging
-import pkg_resources
 import numpy as np
+# see https://stackoverflow.com/questions/6028000/how-to-read-a-static-file-from-inside-a-python-package
+from io import BytesIO
+import pkgutil
 
 logger = logging.getLogger('glia')
 logger.setLevel(logging.DEBUG)
@@ -29,13 +31,16 @@ user_config = None
 global worker_args
 worker_args = []
 
-# see https://stackoverflow.com/questions/6028000/how-to-read-a-static-file-from-inside-a-python-package
-resource_package = __name__  # Could be any module/package name
-resource_path = '/'.join(('..', 'resources', '3brain_channel_map.npy'))  # Do not use os.path.join()
-# or for a file-like stream:
-channel_map_file = pkg_resources.resource_stream(resource_package, resource_path)
+# resource_package = __name__  # Could be any module/package name
+# resource_path = '/'.join(('..', 'resources', '3brain_channel_map.npy'))  # Do not use os.path.join()
+# # or for a file-like stream:
+# channel_map_file = pkg_resources.resource_stream(resource_package, resource_path)
+# channel_map_3brain = np.load(channel_map_file)
 
-channel_map_3brain = np.load(channel_map_file)
+# https://stackoverflow.com/questions/53376786/convert-byte-array-back-to-numpy-array
+np_bytes = pkgutil.get_data(__name__, "resources/3brain_channel_map.npy")
+load_bytes = BytesIO(np_bytes)
+channel_map_3brain = np.load(load_bytes, allow_pickle=True)
 
 # (x,y)
 channel_map = {
