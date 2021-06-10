@@ -803,9 +803,10 @@ def process_cmd(ctx, filename, notebook, eyecandy, configuration=None, debug=Fal
     frame_log = pd.read_csv(frame_log_file)
     
     nframes_in_log = len(frame_log)
-    if np.abs(n_video_frames - nframes_in_log) > 1:
+    frame_count_diff = np.abs(n_video_frames - nframes_in_log)
+    if frame_count_diff > 1:
         logger.warn(f"found {n_video_frames} video frames, but {nframes_in_log} frames in log")
-    assert np.abs(n_video_frames - nframes_in_log) < 2
+    assert frame_count_diff/max([n_video_frames, nframes_in_log]) < 0.001
     # assert n_video_frames == nframes_in_log or n_video_frames + 1 == nframes_in_log 
     # gross adjustment for start time
     frame_log.time = (frame_log.time - frame_log.time[0])/1000 + experiment_start_idx/sampling_rate
@@ -1152,8 +1153,9 @@ def split(filepath, nsamples):
             unit_id_2_num = {}
 
             n_unit_nums = 0
-            for chunk in iter_chunks(h5['3BResults/3BChEvents/SpikeUnits'], 10000):
-                n_unit_nums = max(n_unit_nums, chunk.max())
+            if "SpikeUnits" in h5["3BResults"]["3BChEvents"]:
+                for chunk in iter_chunks(h5['3BResults/3BChEvents/SpikeUnits'], 10000):
+                    n_unit_nums = max(n_unit_nums, chunk.max())
             
             unit_map = {}
             channel_unit_count = {}

@@ -178,7 +178,15 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False,
     with h5py.File(filepath, 'r') as h5_3brain_spikes:
         # read into memory by using [()]
         spike_channel_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeChIDs"][()]
-        spike_unit_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeUnits"][()]
+        n_unit_nums = 0
+        if "SpikeUnits" in h5_3brain_spikes["3BResults"]["3BChEvents"]:
+            spike_unit_ids = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeUnits"][()]
+            for chunk in iter_chunks(h5_3brain_spikes['3BResults/3BChEvents/SpikeUnits'], 10000):
+                n_unit_nums = max(n_unit_nums, chunk.max())
+
+        else:
+            # if not spike sorted, give same number to all
+            spike_unit_ids = np.zeros(spike_channel_ids.shape)
         spike_times = h5_3brain_spikes["3BResults"]["3BChEvents"]["SpikeTimes"][()]
         tot_spikes = spike_times.shape[0]
         spikes = zip(spike_channel_ids, spike_unit_ids, spike_times)
@@ -195,9 +203,6 @@ def read_3brain_spikes(filepath, retina_id, channel_map=None, truncate=False,
         # positive-numbered units appear on one channel
         unit_id_2_num = {}
 
-        n_unit_nums = 0
-        for chunk in iter_chunks(h5_3brain_spikes['3BResults/3BChEvents/SpikeUnits'], 10000):
-            n_unit_nums = max(n_unit_nums, chunk.max())
         
         unit_map = {}
         channel_unit_count = {}
