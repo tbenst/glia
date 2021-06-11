@@ -4206,8 +4206,8 @@ var PS = {};
   var imageStrs = function (s) {
       return function (h) {
           return function (w) {
-              return Control_Bind.bind(Control_Bind.bindArray)(Data_Array.range(1)(h))(function (i) {
-                  return Control_Bind.bind(Control_Bind.bindArray)(Data_Array.range(1)(w))(function (j) {
+              return Control_Bind.bind(Control_Bind.bindArray)(Data_Array.range(0)(h - 1 | 0))(function (i) {
+                  return Control_Bind.bind(Control_Bind.bindArray)(Data_Array.range(0)(w - 1 | 0))(function (j) {
                       return Control_Applicative.pure(Control_Applicative.applicativeArray)(int2img(s)(i)(j));
                   });
               });

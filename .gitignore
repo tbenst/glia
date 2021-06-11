@@ -1,0 +1,6 @@
+.vscode/
+.eggs/
+.vscode/
+glia.egg-info/
+glia/
+glia_scripts/

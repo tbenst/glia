@@ -6,17 +6,21 @@
       html, body {
         margin: 0;
       }
-      #canvas {
-        position: absolute;
-        left: 0;
-        right: 0;
-        width: 100%;
-        height: 100%;
+      .bg-blend {
+        background-image: url("mean-face.png");
+        background-blend-mode: multiply;
+        background-size: cover;
       }
+      img {
+        mix-blend-mode: color;
+      }
+
     </style>
   </head>
   <body>
-    <img id='retina2pixel' src="" alt="Coding field" max-width="100%" max-height="100%" width="100%" height="100%">
+    <div class="bg-blend">
+      <img id='retina2pixel' src="" alt="Coding field" max-width="100%" max-height="100%" width="100%" height="100%">
+    </div>
     <script type="text/javascript">
       var img = document.getElementById('retina2pixel');
       img.width = window.innerWidth;

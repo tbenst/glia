@@ -38,8 +38,8 @@ int2img s y x = s <> (show $ y) <> "_" <> (show $ x) <> ".png"
 
 imageStrs :: String -> Int -> Int -> Array String
 imageStrs s h w = do
-      i <- 1 .. h
-      j <- 1 .. w
+      i <- 0 .. (h-1)
+      j <- 0 .. (w-1)
       pure (int2img s i j)
 
 preloadImages :: String -> Int -> Int -> Aff Unit
