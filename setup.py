@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='glia',
-      version='0.5.1',
+      version='0.5.2',
       description='Elegant support functions for Neuroscientists.',
       url='https://github.com/tbenst/glia',
       author='Tyler Benster',
