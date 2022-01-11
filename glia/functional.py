@@ -50,7 +50,7 @@ def init_worker(*args):
         config.worker_args.append(arg)
 
 def pmap(function, data, progress=False, length=None, thread=False,
-         initializer=init_worker, initargs=[]):
+         initializer=init_worker, initargs=[], processes=processes):
     """Parallel map that accepts lists or dictionaries.
 
     Use progress for interactive sessions. Supports use of initializer per
