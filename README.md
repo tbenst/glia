@@ -3,6 +3,10 @@
 
 A package to support neuroscientists in analyzing multi-electrode array recordings. Designed with the retina in mind.
 
+Some fun visualizations:
+[retina2pixel saliency map](https://tbenst.github.io/glia/ret2pix.html) of the impact of each pixel on a given MEA channel
+[pixel2retina "forward" saliency map](https://tbenst.github.io/glia/pix2ret.html) of the impact of each MEA channel on a pixel selected by the mouse
+
 ## Installation
 ```
 > pip install git+https://github.com/tbenst/glia.git
